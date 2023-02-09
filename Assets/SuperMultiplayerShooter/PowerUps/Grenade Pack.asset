@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a49cda9170739fa4a95cca328eb5a7af, type: 3}
+  m_Name: Grenade Pack
+  m_EditorClassIdentifier: 
+  icon: {fileID: 21300000, guid: 1f753018196963a4f90adecd7a466625, type: 3}
+  pickUpEffect: {fileID: 1533019757778606, guid: e52dd03a1f161314a94ecd340fcf939b,
+    type: 2}
+  addedHealth: 0
+  addedGrenade: 3
+  fullRefillAmmo: 0
