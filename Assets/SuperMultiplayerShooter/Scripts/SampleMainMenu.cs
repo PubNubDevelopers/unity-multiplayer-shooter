@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
+using PubNubAPI;
 
 namespace Visyde
 {
@@ -51,6 +52,14 @@ namespace Visyde
 
             // Others:
             frameRateSetting.isOn = Application.targetFrameRate == 60;
+
+            //Initialize PubNub Configuration
+            PNConfiguration pnConfiguration = new PNConfiguration();
+            pnConfiguration.SubscribeKey = "sub-c-68a629b6-9566-4f83-b74b-000b0fad8a69";
+            pnConfiguration.PublishKey = "pub-c-27c9a7a7-bbb0-4210-8dd7-850512753b31";
+            pnConfiguration.LogVerbosity = PNLogVerbosity.BODY;
+            pnConfiguration.UserId = SystemInfo.deviceUniqueIdentifier; //Guarenteed to be unique for every device.
+            PubNubManager.PubNub = new PubNub(pnConfiguration);
         }
 
         // Update is called once per frame
@@ -87,6 +96,7 @@ namespace Visyde
         {
             PlayerPrefs.SetString("name", playerNameInput.text);
             PhotonNetwork.NickName = playerNameInput.text;
+            //PubNubManager.PubNub.PNConfig.UserId = playerNameInput.text;
         }
 
         // Main:

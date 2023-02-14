@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: PhotonServerSettings
   m_EditorClassIdentifier: 
   AppSettings:
-    AppIdRealtime: 
+    AppIdRealtime: 02239c15-ff26-4f2f-80ad-2b1b9f537d78
     AppIdFusion: 
-    AppIdChat: 
+    AppIdChat: 76c66464-8e96-4424-a581-d571b9a0a444
     AppIdVoice: 
     AppVersion: 
     UseNameServer: 1
@@ -28,12 +28,31 @@ MonoBehaviour:
     AuthMode: 0
     EnableLobbyStatistics: 0
     NetworkLogging: 1
-  DevRegion: 
+  DevRegion: usw
   PunLogging: 0
   EnableSupportLogger: 0
   RunInBackground: 1
   StartInOfflineMode: 0
-  RpcList: []
+  RpcList:
+  - ClickRpc
+  - CollisionSound
+  - DestroyRpc
+  - DestroySpaceship
+  - Emote
+  - Explode
+  - Fire
+  - GrabWeapon
+  - Hurt
+  - Jumped
+  - MeleeAttack
+  - Picked
+  - ReceivePowerUp
+  - RespawnSpaceship
+  - Shoot
+  - ThrowGrenade
+  - TriggerDeadZone
+  - TriggerPortal
+  - UpdateOthers
   DisableAutoOpenWizard: 1
-  ShowSettings: 0
-  DevRegionSetOnce: 0
+  ShowSettings: 1
+  DevRegionSetOnce: 1
