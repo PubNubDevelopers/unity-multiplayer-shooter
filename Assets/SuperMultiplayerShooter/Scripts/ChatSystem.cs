@@ -118,7 +118,7 @@ namespace Visyde
         {
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
-            lobbyChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + lobbyChannel : lobbyChannel;
+            //lobbyChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + lobbyChannel : lobbyChannel;
 
             // Fetch the maxMessagesToDisplay messages sent on the given PubNub channel
             PubNubManager.PubNub.FetchMessages()

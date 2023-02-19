@@ -32,12 +32,15 @@ namespace Visyde
         public InputField inputField;
         public Button sendButton;
         public GameObject loadingIndicator;
+        public TMPro.TMP_Dropdown messageOptionsDropdown;
      
         // Internals:
         VerticalLayoutGroup vlg;
 
         //Use the host user id as part of the channel name once joined a room to join a unique channel room.
         string gameChannel = "-game-chat";
+        string whisperChannel = "Private.*";
+        string publishTarget = "";
 
         // Use this for initialization
         void Start()
@@ -45,7 +48,7 @@ namespace Visyde
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
-            gameChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + gameChannel : gameChannel;
+            //gameChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + gameChannel : gameChannel;
 
             /*
             PNConfiguration pnConfiguration = new PNConfiguration();
@@ -76,9 +79,15 @@ namespace Visyde
             //Subscribe to the lobby chat channel
             PubNubManager.PubNub.Subscribe()
                .Channels(new List<string>(){
-                    gameChannel
+                    gameChannel,
+                    whisperChannel
                })
                .Execute();
+
+            messageOptionsDropdown.onValueChanged.AddListener(delegate
+            {
+                ChangeSendMessage(messageOptionsDropdown);
+            });
         }
 
         // Update is called once per frame
@@ -88,7 +97,45 @@ namespace Visyde
             if (Input.GetKeyDown(KeyCode.Return))
             {
                 SendChatMessage();
-                inputField.ActivateInputField();
+                inputField.ActivateInputField(); //set focus back to chat input field after sending message
+            }
+        }
+
+        //Handles when the user selects a different chat recipient.
+        //Choosing a different option will send a message to that user/group.
+        //Users will still see messages from other players
+        private void ChangeSendMessage(TMPro.TMP_Dropdown sender)
+        {
+            //https://www.pubnub.com/docs/general/resources/design-pattern-friend-list-status-feeds
+            //sender.value = 0 : all
+            //sender.value = 1 : whisper
+            //sender.value = 2 : friends
+            // 1. Change the publish target.
+            // 2. Create a new field called publishChannel.
+            // 3. How do users receive the message?
+            // could always find that user in pubnubnetwork and see if they exist. If they do, subscribe.
+            // another option is whenever user registers on network, create a channel with their userid and subscribe.
+            // that way another user can send a message anytime.
+            // accomplish this via channel groups?
+            // 1. Create an object
+            // 2. Search for the username in object db
+            // Look at the chat docs: https://www.pubnub.com/docs/chat/sdks/channels/channel-types-names
+            // With Access Manager disabled, any client can freely send and receive messages on any channel
+            //This method in https://www.pubnub.com/blog/creating-private-chat-requests-with-popup-alerts/ handles it to include a type
+            //and metadata...hmm.
+            //So for now, can just subscribe to the channel with username...?
+            //Perhaps take a look at how this blog does it? https://www.pubnub.com/blog/inbound-channel-pattern-decreasing-history-api-calls/
+
+            //Or perhaps do something liek a wildcard subscribe, so it would be privatechat.<userid>.<userid>?
+            //so would have a game-chat, lobby-chat, all-chat, privatechat.*, friendchat(channel group?), tradechat.*?
+            //this link helped: https://stackoverflow.com/questions/10843909/pubnub-publish-message-between-two-private-channels
+
+            //Need to change the target
+            //Change target to a whisper.
+            if(sender.value == 1)
+            {
+                //combine two user names together to create the shared channel.
+                //publishTarget = "Game.oliver&amanda-device";
             }
         }
 
