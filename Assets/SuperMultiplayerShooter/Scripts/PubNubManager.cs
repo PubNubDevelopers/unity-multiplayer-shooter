@@ -9,9 +9,6 @@ public class PubNubManager : MonoBehaviour
     //Persist the PubNub object across scenes
     private static string _userID;
 
-    //Cached players from connection.
-    private static Dictionary<string, PNUUIDMetadataResult> _cachedPlayers = new Dictionary<string, PNUUIDMetadataResult>();
-
     public static PubNub PubNub;
 
     public static string PublishKey
@@ -38,11 +35,5 @@ public class PubNubManager : MonoBehaviour
         }
         PubNubConnection = this;
         DontDestroyOnLoad(gameObject);
-    }
-
-    public static Dictionary<string, PNUUIDMetadataResult> CachedPlayers
-    {
-        get { return _cachedPlayers; }
-        set { _cachedPlayers = value; }
     }
 }
