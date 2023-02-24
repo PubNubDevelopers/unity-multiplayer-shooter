@@ -172,8 +172,6 @@ namespace Visyde
 
             // Start checking if all players are ready:
             InvokeRepeating("CheckIfAllPlayersReady", 1, 0.5f);
-            string tmp = PubNubManager.PubNub.PNConfig.PublishKey;
-            string tmp2 = "placeholder";
         }
 
         void CheckIfAllPlayersReady()

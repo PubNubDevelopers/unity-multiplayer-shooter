@@ -53,10 +53,6 @@ namespace Visyde
         [HideInInspector]
         public bool showScoreboard;
 
-        //Expand the Chat window:
-        [HideInInspector]
-        public bool expandChat;
-
         // Update is called once per frame
         void Update()
         {
@@ -86,8 +82,6 @@ namespace Visyde
             {
                 showScoreboard = Input.GetKey(KeyCode.Tab);
             }
-
-            
         }
         void LateUpdate(){
             shoot = mobileControls? shootStick.progress >= shootingThreshold && shootStick.isHolding : Input.GetButton("Fire1");
@@ -104,12 +98,6 @@ namespace Visyde
         public void ShowScoreBoard(bool show)
         {
             showScoreboard = show;
-        }
-
-        // Hit the enter button to expand/hide the chat window.
-        public void ExpandChat(bool expand)
-        {
-            expandChat = expand;
         }
     }
 }

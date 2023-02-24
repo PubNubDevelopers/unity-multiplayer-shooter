@@ -73,10 +73,6 @@ namespace Visyde
         public Transform scoreboardContent;
         public ScoreboardItem scoreboardItem;
 
-        [Header("Chat:")]
-        public GameObject gameChatObj;
-        public InputField chatInputField;
-
         [Header("Death and respawn:")]
         public GameObject deadPanel;
         public Text respawnTimeText;
@@ -108,8 +104,6 @@ namespace Visyde
             UpdateBoards();
             gameOverPanel.SetActive(false);
             hurtOverlay.color = Color.clear;
-
-            gameChatObj.SetActive(false);
 
             // Show mobile controls if needed:
             mobileControlsPanel.SetActive(gm.useMobileControls);
@@ -227,29 +221,6 @@ namespace Visyde
 
                 // Show/Hide scoreboard :
                 scoreboardObj.SetActive(gm.controlsManager.showScoreboard);
-
-                // Expand/Hide Chat :
-                //gameChatObj.SetActive(gm.controlsManager.expandChat);
-
-                //Close/open chat window only if there is no text left in input field.
-                if (Input.GetKeyDown(KeyCode.Return) && string.IsNullOrWhiteSpace(chatInputField.text))
-                {
-                    gameChatObj.SetActive(!gameChatObj.activeSelf);
-
-                    //Disable player movement if chat is enabled.
-                    if(gameChatObj.activeSelf)
-                    {
-                        chatInputField.ActivateInputField();
-                        gm.ourPlayer.movementController.enabled = false;
-                    }
-
-                    else
-                    {
-                        gm.ourPlayer.movementController.enabled = true;
-
-                    }
-
-                }
 
                 // Weapon hud:
                 if (gm.gameStarted)
