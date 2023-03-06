@@ -45,4 +45,23 @@ public class PubNubManager : MonoBehaviour
         get { return _cachedPlayers; }
         set { _cachedPlayers = value; }
     }
+
+    public static void PublishMessage(string message, string channel, Dictionary<string,string> meta)
+    {
+        PubNub.Publish()
+               .Channel(channel)
+               .Message(message)
+                .Meta(meta)
+               .Async((result, status) => {
+                   if (!status.Error)
+                   {
+                       Debug.Log(string.Format("Result: {0}", result.Timetoken));
+                   }
+                   else
+                   {
+                       Debug.Log(status.Error);
+                       Debug.Log(status.ErrorData.Info);
+                   }
+               });
+    }
 }

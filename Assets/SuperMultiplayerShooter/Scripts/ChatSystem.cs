@@ -6,9 +6,6 @@ using Photon.Pun;
 using Photon.Realtime;
 using PubNubAPI;
 using System;
-using UnityEditor.ShaderGraph.Internal;
-using System.Reflection;
-using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 using Newtonsoft.Json;
 
 namespace Visyde
@@ -32,7 +29,7 @@ namespace Visyde
         public InputField inputField;
         public Button sendButton;
         public GameObject loadingIndicator;
-     
+
         // Internals:
         VerticalLayoutGroup vlg;
 
@@ -42,14 +39,16 @@ namespace Visyde
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
-            vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();    
+            vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
         }
-       
-        void OnEnable(){
+
+        void OnEnable()
+        {
             Connector.instance.onJoinRoom += OnJoinedRoom;
             Connector.instance.onLeaveRoom += OnLeftRoom;
         }
-        void OnDisable(){
+        void OnDisable()
+        {
             Connector.instance.onJoinRoom -= OnJoinedRoom;
             Connector.instance.onLeaveRoom -= OnLeftRoom;
         }
@@ -61,12 +60,13 @@ namespace Visyde
             if (Input.GetKeyDown(KeyCode.Return))
             {
                 SendChatMessage();
-            }      
+            }
         }
-     
-        public void SendChatMessage(){
+
+        public void SendChatMessage()
+        {
             if (!string.IsNullOrEmpty(inputField.text))
-            {             
+            {
                 //Dictionary to store metadata (username)
                 Dictionary<string, string> metaDict = new Dictionary<string, string>();
                 metaDict.Add("name", PlayerPrefs.GetString("name")); //associate the name entered by user with the id.
@@ -92,17 +92,21 @@ namespace Visyde
                 inputField.text = string.Empty;
             }
         }
-        public void SendSystemChatMessage(string message, bool negative){
+        public void SendSystemChatMessage(string message, bool negative)
+        {
             //DisplayChat(message, "", false, true, negative);
         }
-        void DisplayChat(string message, string from, bool ours, bool systemMessage, bool negative){
+        void DisplayChat(string message, string from, bool ours, bool systemMessage, bool negative)
+        {
 
             string finalMessage = "";
-            
-            if (systemMessage){
+
+            if (systemMessage)
+            {
                 finalMessage = "\n" + "<color=#" + ColorUtility.ToHtmlStringRGBA(negative ? negativeNotifColor : positiveNotifColor) + ">" + message + "</color>";
             }
-            else{
+            else
+            {
                 finalMessage = "\n" + "<color=#" + ColorUtility.ToHtmlStringRGBA(ours ? ourColor : othersColor) + ">" + from + "</color>: <color=" + ColorUtility.ToHtmlStringRGBA(ours ? ourChatColor : othersChatColor) + ">" + message + "</color>";
             }
             messageDisplay.text += finalMessage;
@@ -119,7 +123,7 @@ namespace Visyde
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
             //lobbyChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + lobbyChannel : lobbyChannel;
-
+            /*
             // Fetch the maxMessagesToDisplay messages sent on the given PubNub channel
             PubNubManager.PubNub.FetchMessages()
                 .Channels(new List<string> { lobbyChannel })
@@ -144,7 +148,7 @@ namespace Visyde
                         }
                     }
                 });
-
+            */
             //Listen for any new incoming messages
             PubNubManager.PubNub.SubscribeCallback += (sender, e) => {
                 SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
@@ -185,7 +189,7 @@ namespace Visyde
         }
 
         void OnLeftRoom()
-        {         
+        {
             //Unsubscrube from lobby chat once player leaves the room.
             PubNubManager.PubNub.Unsubscribe()
                 .Channels(new List<string>()
@@ -205,10 +209,10 @@ namespace Visyde
                 });
         }
         public void OnChatStateChange(ChatState state) { }
-        public void OnStatusUpdate(string user, int status, bool gotMessage, object message){}       
+        public void OnStatusUpdate(string user, int status, bool gotMessage, object message) { }
         public void OnPrivateMessage(string sender, object message, string channelName) { }
         public void OnUserSubscribed(string channel, string user) { }
-        public void OnUserUnsubscribed(string channel, string user) { }             
+        public void OnUserUnsubscribed(string channel, string user) { }
         public void DebugReturn(ExitGames.Client.Photon.DebugLevel level, string message)
         {
             if (level == ExitGames.Client.Photon.DebugLevel.ERROR)
