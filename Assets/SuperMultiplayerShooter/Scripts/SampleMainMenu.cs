@@ -8,6 +8,7 @@ using Photon.Realtime;
 using PubNubAPI;
 using Newtonsoft.Json;
 using System;
+using ExitGames.Client.Photon.StructWrapping;
 
 namespace Visyde
 {
@@ -52,9 +53,9 @@ namespace Visyde
         private List<Transform> filteredPlayers = new List<Transform>();
 
         //Helper properties
-        private string _privateChannel = "private.*";
-        private string _friendListChannel = "private.";  //Used to listen for any buddy list events, private chat, etc.
+        private string _privateChannel = "private.";
         private string _publicChannel = "public"; // Used for global presence, all chat, etc.
+        private string _cgFriendList = "cg-";
         private int totalFriendCount = 0;
         private PubNub _pubnub;
 
@@ -68,8 +69,8 @@ namespace Visyde
         {
             //Initializes the PubNub Connection.
             _pubnub = PubNubManager.Instance.InitializePubNub();
-            _friendListChannel += PubNubManager.Instance.UserId; //Private channels in form of "private.<UserId>".
-
+            _privateChannel += PubNubManager.Instance.UserId; //Private channels in form of "private.<UserId>".
+            _cgFriendList += $"{PubNubManager.Instance.UserId}-pnpres";
             //Obtain and cache user metadata.
             GetAllUserMetadata();
 
@@ -85,7 +86,7 @@ namespace Visyde
             Subscribe(new List<string>
             {
                 _publicChannel,
-                _privateChannel
+                _cgFriendList
             });
 
             // Others:
@@ -193,14 +194,12 @@ namespace Visyde
         }
 
         /// <summary>
-        /// Load the Client's Friend List via Channel Members on initial load.
-        /// These are other players who have been registered to a specific channel (space)
-        /// when adding as friends.
+        /// Load the Client's Friend List via the channels associated with the client.
         /// </summary>
         private void GetFriendList(List<PNHereNowOccupantData> onlinePlayers)
         {
-            _pubnub.GetChannelMembers()
-                .Channel(_friendListChannel)
+            _pubnub.GetMemberships()
+                .UUID(PubNubManager.Instance.UserId)
                 .Async((result, status) =>
             {
                 //Cross-reference the onlinePlayers list with that of the channel members
@@ -210,12 +209,14 @@ namespace Visyde
                     //will be placed in the online friends category.
                     for (int i = 0; i < result.Data.Count; i++)// (PNMembers members in result.Data)
                     {
-                        //skip self
-                        if (!result.Data[i].UUID.ID.Equals(PubNubManager.Instance.UserId))
+                        //Only looking for users apart of friend list.
+                        if (result.Data[i].Channel.ID.StartsWith("private"))
                         {
+                            //extract user from channel name (remove the private.)
+                            string userId = result.Data[i].Channel.ID.Substring(8);
                             Color onlineStatus = Color.gray;
                             //The online status changes to green if there is a match in the onlinePlayers initial call.
-                            if(onlinePlayers.Count > 0 && onlinePlayers.Find(onlineUser => onlineUser.UUID.Equals(result.Data[i].UUID.ID)) != null)
+                            if (onlinePlayers.Count > 0 && onlinePlayers.Find(onlineUser => onlineUser.UUID.Equals(result.Data[i].Channel.ID.Substring(8))) != null)
                             {
                                 onlineStatus = Color.green;
                             }
@@ -223,40 +224,28 @@ namespace Visyde
                             //Create player transforms for the buddy list. Can be retained and not consistenly destroyed like filtered friends.
                             Transform playerTrans = Instantiate(player, playerContainer);
                             //Use the UserId in case there is no name associated with the friend.
-                            playerTrans.Find("PlayerUsername").GetComponent<Text>().text = !string.IsNullOrWhiteSpace(result.Data[i].UUID.Name) ? result.Data[i].UUID.Name : result.Data[i].UUID.ID ;
-                            playerTrans.gameObject.name = result.Data[i].UUID.ID; // Used to find the object later on.
+                            playerTrans.Find("PlayerUsername").GetComponent<Text>().text = !string.IsNullOrWhiteSpace(PubNubManager.Instance.CachedPlayers[result.Data[i].Channel.ID.Substring(8)].Name) ? PubNubManager.Instance.CachedPlayers[result.Data[i].Channel.ID.Substring(8)].Name : result.Data[i].Channel.ID.Substring(8);
+                            playerTrans.gameObject.name = userId; // Used to find the object later on.
                             playerTrans.Find("OnlineStatus").GetComponent<Image>().color = onlineStatus;
                             playerTrans.gameObject.SetActive(true);
                             friendList.Add(playerTrans);
-                        }
+                        }    
                     }
                 }
 
                 //The client has not registered themselves for their buddy list before. Register the client as a member of their buddy list to receive presence and the removal/addition of other users..
                 else
                 {
-                    PNChannelMembersSet input = new PNChannelMembersSet();
-                    input.UUID = new PNChannelMembersUUID
+                    PNMembershipsSet inputMemberships = new PNMembershipsSet();
+                    inputMemberships.Channel = new PNMembershipsChannel
                     {
-                        ID = PubNubManager.Instance.UserId
+                        ID = _privateChannel
                     };
-                    _pubnub.SetChannelMembers()
-                        .Channel(_friendListChannel)
-                        .Set(new List<PNChannelMembersSet> { input })
+                    _pubnub.SetMemberships()
+                        .UUID(PubNubManager.Instance.UserId)
+                        .Set(new List<PNMembershipsSet> { inputMemberships })
                         .Async((result, status) => {
-                            Debug.Log("result.Next:" + result.Next);
-                            Debug.Log("result.Prev:" + result.Prev);
-                            Debug.Log("result.TotalCount:" + result.TotalCount);
-                            foreach (PNMembers mem in result.Data)
-                            {
-                                Debug.Log(mem.UUID.ID);
-                                Debug.Log(mem.UUID.Name);
-                                Debug.Log(mem.UUID.Email);
-                                Debug.Log(mem.UUID.ExternalID);
-                                Debug.Log(mem.UUID.ProfileURL);
-                                Debug.Log(mem.UUID.ID);
-                                Debug.Log(mem.UUID.ETag);
-                            }
+                            //TODO: Handle status.
                     });
                 }
             });
@@ -281,11 +270,19 @@ namespace Visyde
                 if(subscribeEventEventArgs.PresenceEventResult.Channel.Equals(_publicChannel))
                 {
                     totalCountPlayers.text = subscribeEventEventArgs.PresenceEventResult.Occupancy.ToString();
-                }       
+                }
+
+                else if(subscribeEventEventArgs.PresenceEventResult.Channel.Equals(_publicChannel))
+                {
+
+                }
+
+                //TODO: Update buddy list status with that user.
             }
 
             if (subscribeEventEventArgs.UUIDEventResult != null)
             {
+                //TODO: Update cache when other players update their username.
                 Debug.Log(subscribeEventEventArgs.UUIDEventResult.Name);
                 Debug.Log(subscribeEventEventArgs.UUIDEventResult.Email);
                 Debug.Log(subscribeEventEventArgs.UUIDEventResult.ExternalID);
@@ -303,10 +300,20 @@ namespace Visyde
                 Debug.Log(subscribeEventEventArgs.ChannelEventResult.ObjectsEvent);
             }
 
+            //Triggerred whenever channel membership is update (client gets added/removed from another player's friend list)
             if (subscribeEventEventArgs.MembershipEventResult != null)
             {
-                //If client has been added to another channel
-                var test = "";
+                //Another player has added client as a friend
+                if(subscribeEventEventArgs.MembershipEventResult.ObjectsEvent.Equals(PNObjectsEvent.PNObjectsEventSet))
+                {
+                    AddFriend(subscribeEventEventArgs.MembershipEventResult.UUID);
+                }
+
+                //Another player has removed client as a friend.
+                else if (subscribeEventEventArgs.MembershipEventResult.ObjectsEvent.Equals(PNObjectsEvent.PNObjectsEventDelete))
+                {
+                    RemoveFriend(subscribeEventEventArgs.MembershipEventResult.UUID);
+                }
             }
         }
 
@@ -501,47 +508,15 @@ namespace Visyde
         {
             //obtain target user.
             string targetUser = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject.transform.parent.name.Substring(7); //strip out the "search."
-
-            //Set the targeted player as a channel member of the client's friend list channel (_friendListChannel).
-            PNChannelMembersSet input = new PNChannelMembersSet();
-            input.UUID = new PNChannelMembersUUID
-            {
-                ID = targetUser
-            };
-            _pubnub.SetChannelMembers()
-                .Channel(_friendListChannel)
-                .Set(new List<PNChannelMembersSet> { input })
-                .Async((result, status) => {
-                    //Add the friend to the your client buddy list.
-                    Transform newFriend = Instantiate(player, playerContainer);
-                    newFriend.Find("PlayerUsername").GetComponent<Text>().text = PubNubManager.Instance.CachedPlayers[targetUser].Name;
-                    newFriend.gameObject.name = targetUser;
-                    newFriend.gameObject.SetActive(true);
-                    friendList.Add(newFriend);
-                    GetFriendListOnlineStatus();
-                });    
+            AddFriend(targetUser);
         }
 
         //Remove friend when user clicks on "x".
         public void RemoveFriendOnClick()
         {
             //Remove target user from the friend list.
-            string targetUser = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject.transform.parent.name;           
-            PNChannelMembersRemove inputRm = new PNChannelMembersRemove();
-            inputRm.UUID = new PNChannelMembersUUID
-            {
-                ID = targetUser
-            }; ;
-
-            _pubnub.RemoveChannelMembers()
-                .Channel(_friendListChannel)
-                .Remove(new List<PNChannelMembersRemove> { inputRm })
-                .Async((result, status) => {
-                    //Find and remove the friend from the list.
-                    Transform playerToRemove = friendList.Find(player => player.name.Equals(targetUser));
-                    friendList.Remove(playerToRemove);
-                    Destroy(playerToRemove.gameObject);
-            });
+            string targetUser = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject.transform.parent.name;
+            RemoveFriend(targetUser);
         }
 
         /// <summary>
@@ -554,7 +529,7 @@ namespace Visyde
                 //Obtain information about the currently logged in users.          
                 .Channels(new List<string>()
                 {
-                   _friendListChannel
+                   _privateChannel
                 })
                 .IncludeState(true)
                 .IncludeUUIDs(true)
@@ -581,6 +556,58 @@ namespace Visyde
                         totalFriendCountText.text = totalFriendCount.ToString(); //Update at same time
                     }
                     Debug.Log(status.Error);
+                });
+        }
+
+        /// <summary>
+        /// Adds the UserId to membership for client and adds the user to the buddy list.
+        /// </summary>
+        /// <param name="userId"></param>
+        private void AddFriend(string userId)
+        {
+            string targetChannel = $"private.{userId}";
+
+            //Set the targeted player as a channel member of the client's friend list channel (_friendListChannel).
+            PNMembershipsSet inputMemberships = new PNMembershipsSet();
+            inputMemberships.Channel = new PNMembershipsChannel
+            {
+                ID = targetChannel
+            };
+            _pubnub.SetMemberships()
+                .UUID(PubNubManager.Instance.UserId)
+                .Set(new List<PNMembershipsSet> { inputMemberships })
+                .Async((result, status) => {
+                    //Add the friend to the your client buddy list.
+                    Transform newFriend = Instantiate(player, playerContainer);
+                    newFriend.Find("PlayerUsername").GetComponent<Text>().text = PubNubManager.Instance.CachedPlayers[userId].Name;
+                    newFriend.gameObject.name = userId;
+                    newFriend.gameObject.SetActive(true);
+                    friendList.Add(newFriend);
+                    GetFriendListOnlineStatus();
+                });
+        }
+
+        /// <summary>
+        /// Removes the given UserId from the client and removes the User from the buddy list.
+        /// </summary>
+        /// <param name="userId"></param>
+        private void RemoveFriend(string userId)
+        {
+            string targetChannel = $"private.{userId}";
+            PNMembershipsRemove inputMembershipsRm = new PNMembershipsRemove();
+            inputMembershipsRm.Channel = new PNMembershipsChannel
+            {
+                ID = targetChannel
+            };
+
+            _pubnub.RemoveMemberships()
+                .UUID(PubNubManager.Instance.UserId)
+                .Remove(new List<PNMembershipsRemove> { inputMembershipsRm })
+                .Async((result, status) => {
+                    //Find and remove the friend from the list.
+                    Transform playerToRemove = friendList.Find(player => player.name.Equals(userId));
+                    friendList.Remove(playerToRemove);
+                    Destroy(playerToRemove.gameObject);
                 });
         }
     }
