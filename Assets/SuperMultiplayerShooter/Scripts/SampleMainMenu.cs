@@ -57,9 +57,7 @@ namespace Visyde
         private string _privateChannel = "presence-";
         private string _publicChannel = "chat.public"; // Used for global presence, all chat, etc.
         private string _cgFriendList = "friends-"; //Used to track presence events for friends. Used to determine when friends come online/offline.
-        private int totalFriendCount = 0;
         private PubNub _pubnub;
-
 
         void Awake(){
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
@@ -135,11 +133,21 @@ namespace Visyde
         }
 
         /// <summary>
-        /// Called whenever the scene or game ends. Unsubscribe from all to trigger events
+        /// Called whenever the scene or game ends. Unsubscribe from all channels and channel groups to trigger events immediately.
         /// </summary>
         void OnDestroy()
         {
-            _pubnub.UnsubscribeAll();
+            _pubnub.UnsubscribeAll()
+                .Async((result, status) => {
+                if (status.Error)
+                {
+                    Debug.Log(string.Format("UnsubscribeAll Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
+                }
+                else
+                {
+                    Debug.Log(string.Format("DateTime {0}, In UnsubscribeAll, result: {1}", DateTime.UtcNow, result.Message));
+                }
+            });
         }
 
         /// <summary>
@@ -165,8 +173,8 @@ namespace Visyde
                 //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
                 else
                 {
-                    //Set name as first six characters of UserID for now.
-                    _pubnub.SetUUIDMetadata().Name(PubNubManager.Instance.UserId.Substring(0, 6)).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
+                    //Set name as UserId for now.
+                    _pubnub.SetUUIDMetadata().Name(PubNubManager.Instance.UserId).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
                     {
                         if (!status.Error)
                         {
@@ -297,6 +305,21 @@ namespace Visyde
                 if(subscribeEventEventArgs.PresenceEventResult.Channel.Equals(_publicChannel))
                 {
                     totalCountPlayers.text = subscribeEventEventArgs.PresenceEventResult.Occupancy.ToString();
+
+                    //When user joins, check their UUID in cached players to determine if they are a new player.                 
+                    if (!PubNubManager.Instance.CachedPlayers.ContainsKey(subscribeEventEventArgs.PresenceEventResult.UUID))
+                    {
+                        //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.
+                        _pubnub.GetUUIDMetadata()
+                            .UUID(subscribeEventEventArgs.PresenceEventResult.UUID)
+                            .Async((result, status) =>
+                            {
+                                if(result != null)
+                                {
+                                    PubNubManager.Instance.CachedPlayers.Add(result.ID, result);
+                                }
+                            });
+                    }
                 }
 
                 //Friend List - Detect current friend online status. Ignore self.
@@ -309,28 +332,32 @@ namespace Visyde
                 }
             }
 
+            //Catch other player updates (when their name changes, etc)
             if (subscribeEventEventArgs.UUIDEventResult != null)
             {
-                //TODO: Update cache when other players update their username.
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.Name);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.Email);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.ExternalID);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.ProfileURL);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.UUID);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.ETag);
-                Debug.Log(subscribeEventEventArgs.UUIDEventResult.ObjectsEvent);
-            }
-            if (subscribeEventEventArgs.ChannelEventResult != null)
-            {
-                Debug.Log(subscribeEventEventArgs.ChannelEventResult.Name);
-                Debug.Log(subscribeEventEventArgs.ChannelEventResult.Description);
-                Debug.Log(subscribeEventEventArgs.ChannelEventResult.ChannelID);
-                Debug.Log(subscribeEventEventArgs.ChannelEventResult.ETag);
-                Debug.Log(subscribeEventEventArgs.ChannelEventResult.ObjectsEvent);
+                if(PubNubManager.Instance.CachedPlayers.ContainsKey(subscribeEventEventArgs.UUIDEventResult.UUID))
+                {
+                    PNUUIDMetadataResult updatePlayer = PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.UUIDEventResult.UUID];
+                    updatePlayer.Name = subscribeEventEventArgs.UUIDEventResult.Name;
+                    updatePlayer.ExternalID = subscribeEventEventArgs.UUIDEventResult.ExternalID;
+                    updatePlayer.ProfileURL = subscribeEventEventArgs.UUIDEventResult.ProfileURL;
+                    //updatePlayer.ID = subscribeEventEventArgs.UUIDEventResult.UUID; Not allowing UUID changes for now.
+                    updatePlayer.ETag = subscribeEventEventArgs.UUIDEventResult.ETag;
+                    updatePlayer.Custom = subscribeEventEventArgs.UUIDEventResult.Custom;
+                    PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.UUIDEventResult.UUID] = updatePlayer;
+
+                    //Update friend list if the update user has updates to make.
+                    //No need to update player search, as it pulls from cached players.
+                    
+                    Transform updateFriend = friendList.Find(player => player.name.Equals(subscribeEventEventArgs.UUIDEventResult.UUID));
+                    if (updatePlayer != null)
+                    {
+                        updateFriend.Find("PlayerUsername").GetComponent<Text>().text = subscribeEventEventArgs.UUIDEventResult.Name;
+                    }                  
+                }
             }
 
             //Friend List - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
-            //Do not want to trigger the event when I am calling
             if (subscribeEventEventArgs.MembershipEventResult != null)
             {
                 //Another player has added client as a friend
@@ -366,7 +393,11 @@ namespace Visyde
             // Update metadata for current logged in user name.
             _pubnub.SetUUIDMetadata().Name(playerNameInput.text).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
             {
-                //TODO: handle in case of errors.
+                if(result != null)
+                {
+                    //Update cached players name.
+                    PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name = playerNameInput.text;
+                }
             });
 
             //Update specific gameobject if user updates while the filter list is open.          
