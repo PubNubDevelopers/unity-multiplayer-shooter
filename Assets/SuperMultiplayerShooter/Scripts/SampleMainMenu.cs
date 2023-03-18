@@ -70,7 +70,7 @@ namespace Visyde
             _pubnub = PubNubManager.Instance.InitializePubNub();
             _privateChannel += PubNubManager.Instance.UserId; //Private channels in form of "presence-<UserId>". Necessary for buddy list tracking.
             _cgFriendList += PubNubManager.Instance.UserId; //Manages the friend lists.
-
+         
             //Obtain and cache user metadata.
             GetAllUserMetadata();
 
@@ -187,7 +187,10 @@ namespace Visyde
                             Debug.Log($"An error hsa occurred: {status.Error}");
                         }
                     });
-                }   
+                }
+
+                //Nickname is used throughout the system to define the player
+                PhotonNetwork.NickName = PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name;
             });
         }
 
@@ -389,7 +392,7 @@ namespace Visyde
 
         // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
         public void SetPlayerName()
-        {
+        {       
             // Update metadata for current logged in user name.
             _pubnub.SetUUIDMetadata().Name(playerNameInput.text).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
             {
@@ -397,6 +400,8 @@ namespace Visyde
                 {
                     //Update cached players name.
                     PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name = playerNameInput.text;
+                    //Nickname is used throughout the system to define the player
+                    PhotonNetwork.NickName = PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name;
                 }
             });
 

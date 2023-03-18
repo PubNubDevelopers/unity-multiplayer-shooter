@@ -32,14 +32,16 @@ namespace Visyde
 
         // Internals:
         VerticalLayoutGroup vlg;
-
-        //Use the host user id as part of the channel name once joined a room to create a unique channel room.
-        string lobbyChannel = "-lobby-chat";
+        private PubNub _pubnub;
+ 
+        private string _lobbySubscribe = "chat.lobby.*"; //Wildcard subscribe to listen for all channels
+        private string _lobbyPublish = "chat.lobby"; //Publish channel will include
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
+            _pubnub = PubNubManager.Instance.InitializePubNub();
         }
 
         void OnEnable()
@@ -71,8 +73,8 @@ namespace Visyde
                 Dictionary<string, string> metaDict = new Dictionary<string, string>();
                 metaDict.Add("name", PlayerPrefs.GetString("name")); //associate the name entered by user with the id.
                 //PubNub Publish              
-                PubNubManager.PubNub.Publish()
-                    .Channel(lobbyChannel)
+                _pubnub.Publish()
+                    .Channel(_lobbyPublish)
                     .Message(inputField.text)
                     .Meta(metaDict)
                     .Async((result, status) => {
@@ -120,37 +122,13 @@ namespace Visyde
         // Photon stuff:
         void OnJoinedRoom()
         {
+            bool tmp = PhotonNetwork.IsMasterClient;
+            Debug.Log($"We master client? {tmp}");
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
-            //lobbyChannel = !String.IsNullOrWhiteSpace(PhotonNetwork.MasterClient.UserId) ? PhotonNetwork.MasterClient.UserId + lobbyChannel : lobbyChannel;
-            /*
-            // Fetch the maxMessagesToDisplay messages sent on the given PubNub channel
-            PubNubManager.PubNub.FetchMessages()
-                .Channels(new List<string> { lobbyChannel })
-                .Count(10)
-                .Async((result, status) =>
-                {
-                    if (status.Error)
-                    {
-                        Debug.Log(string.Format(
-                            " FetchMessages Error: {0} {1} {2}",
-                            status.StatusCode, status.ErrorData, status.Category
-                        ));
-                    }
-                    else
-                    {
-                        foreach (KeyValuePair<string, List<PNMessageResult>> kvp in result.Channels)
-                        {
-                            foreach (PNMessageResult pnMessageResult in kvp.Value)
-                            {
-                                GetUsername(pnMessageResult);
-                            }
-                        }
-                    }
-                });
-            */
+           
             //Listen for any new incoming messages
-            PubNubManager.PubNub.SubscribeCallback += (sender, e) => {
+            _pubnub.SubscribeCallback += (sender, e) => {
                 SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
                 if (mea.MessageResult != null)
                 {
@@ -164,9 +142,9 @@ namespace Visyde
             };
 
             //Subscribe to the lobby chat channel
-            PubNubManager.PubNub.Subscribe()
+            _pubnub.Subscribe()
                .Channels(new List<string>(){
-                    lobbyChannel
+                    _lobbySubscribe
                })
                .Execute();
         }
@@ -185,16 +163,16 @@ namespace Visyde
                 username = !String.IsNullOrWhiteSpace(message.IssuingClientId) ? message.IssuingClientId.Substring(0, 10) : "Guest";
             }
             //Display the chat pulled.
-            DisplayChat(message.Payload.ToString(), username, PubNubManager.PubNub.PNConfig.UserId.Equals(message.IssuingClientId), false, false);
+            DisplayChat(message.Payload.ToString(), username, PubNubManager.Instance.UserId.Equals(message.IssuingClientId), false, false);
         }
 
         void OnLeftRoom()
         {
             //Unsubscrube from lobby chat once player leaves the room.
-            PubNubManager.PubNub.Unsubscribe()
+            _pubnub.Unsubscribe()
                 .Channels(new List<string>()
                 {
-                    lobbyChannel
+                    _lobbySubscribe
                 })
                 .Async((result, status) =>
                 {
@@ -211,7 +189,12 @@ namespace Visyde
         public void OnChatStateChange(ChatState state) { }
         public void OnStatusUpdate(string user, int status, bool gotMessage, object message) { }
         public void OnPrivateMessage(string sender, object message, string channelName) { }
-        public void OnUserSubscribed(string channel, string user) { }
+        public void OnUserSubscribed(string channel, string user)
+        {
+            var tmp = user;
+
+
+        }
         public void OnUserUnsubscribed(string channel, string user) { }
         public void DebugReturn(ExitGames.Client.Photon.DebugLevel level, string message)
         {
