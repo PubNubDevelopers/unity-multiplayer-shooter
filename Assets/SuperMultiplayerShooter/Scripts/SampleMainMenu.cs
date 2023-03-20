@@ -468,30 +468,35 @@ namespace Visyde
                 LoadDefaultSearchPlayers();
             }
 
-            //Filter every cached player by name. Create gameobject for each of these players.
-            foreach (KeyValuePair<string, PNUUIDMetadataResult> cachedPlayer in PubNubManager.Instance.CachedPlayers)
-            {
-                //If users name hit a match, then add to list.
-                //Don't add own user to the list.
-                if (cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
-                    && cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId)) //lower case the text to allow for case insensitivity
-                {                  
-                    Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                    duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
-                    duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.ID;
-                    duplciateContainer.gameObject.SetActive(true);
-                    filteredPlayers.Add(duplciateContainer);                                  
-                }              
-            }
+            else
+            {          
+                //Filter every cached player by name. Create gameobject for each of these players.
+                foreach (KeyValuePair<string, PNUUIDMetadataResult> cachedPlayer in PubNubManager.Instance.CachedPlayers)
+                {
+                    //If users name hit a match, then add to list.
+                    //Don't add own user to the list.
+                    if (cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
+                        && !cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId) //lower case the text to allow for case insensitivity
+                        && filteredPlayers.Find(player => player.name.Equals("search"+cachedPlayer.Value.ID)) == null) // don't add players to search if already friends.
+                    {
+                        Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
+                        duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
+                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.ID;
+                        duplciateContainer.gameObject.SetActive(true);
+                        filteredPlayers.Add(duplciateContainer);
+                    }
+                }
 
-            //If no users are matched, give a "couldn't find user" entry.
-            if (filteredPlayers.Count == 0)
-            {
-                Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = "No players found that match this description...";
-                duplciateContainer.gameObject.SetActive(true);
-                filteredPlayers.Add(duplciateContainer);
-            }
+                //If no users are matched, give a "couldn't find user" entry.
+                if (filteredPlayers.Count == 0)
+                {
+                    Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
+                    duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = "No players found that match this description...";
+                    duplciateContainer.Find("AddFriend").GetComponent<Button>().gameObject.SetActive(false);
+                    duplciateContainer.gameObject.SetActive(true);
+                    filteredPlayers.Add(duplciateContainer);
+                }
+            }        
         }
 
         /// <summary>
@@ -523,8 +528,9 @@ namespace Visyde
 
                 else
                 {
-                    //Don't add self to list.
-                    if(!cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId))
+                    //Don't add self and friends to list.
+                    if(!cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId)
+                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.ID)) == null)                       
                     {
                         Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
                         duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
@@ -574,7 +580,11 @@ namespace Visyde
         public void SendFriendRequestOnClick()
         {
             //obtain target user.
-            string targetUser = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject.transform.parent.name.Substring(7); //strip out the "search."           
+            string targetUser = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject.transform.parent.name.Substring(7); //strip out the "search."
+
+            //remove from the cached player list
+            Transform playerToRemove = friendList.Find(player => player.name.Equals($"search.{targetUser}"));
+            filteredPlayers.Remove(playerToRemove);
             AddFriend(targetUser);
         }
 
@@ -684,7 +694,7 @@ namespace Visyde
                 .Remove(new List<PNMembershipsRemove> { inputMembershipsRm })
                 .Async((result, status) => {
                     //Find and remove the friend from the list if it exists.
-                    if(friendList.Find(player => player.name.Equals(userId)))
+                    if(friendList.Find(player => player.name.Equals(userId)) != null)
                     {
                         Transform playerToRemove = friendList.Find(player => player.name.Equals(userId));
                         friendList.Remove(playerToRemove);

@@ -34,8 +34,8 @@ namespace Visyde
         VerticalLayoutGroup vlg;
         private PubNub _pubnub;
  
-        private string _lobbySubscribe = "chat.lobby.*"; //Wildcard subscribe to listen for all channels
-        private string _lobbyPublish = "chat.lobby"; //Publish channel will include
+        private string _lobbySubscribe = "chat.lobby."; //Wildcard subscribe to listen for all channels
+        private string _lobbyPublish = "chat.lobby."; //Publish channel will include
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
@@ -65,32 +65,24 @@ namespace Visyde
             }
         }
 
+        /// <summary>
+        /// Publishes the chat message.
+        /// </summary>
         public void SendChatMessage()
         {
             if (!string.IsNullOrEmpty(inputField.text))
-            {
-                //Dictionary to store metadata (username)
-                Dictionary<string, string> metaDict = new Dictionary<string, string>();
-                metaDict.Add("name", PlayerPrefs.GetString("name")); //associate the name entered by user with the id.
-                //PubNub Publish              
+            {                  
                 _pubnub.Publish()
                     .Channel(_lobbyPublish)
                     .Message(inputField.text)
-                    .Meta(metaDict)
                     .Async((result, status) => {
-                        if (!status.Error)
-                        {
-                            Debug.Log(string.Format("DateTime {0}, In Publish Example, Timetoken: {1}", DateTime.UtcNow, result.Timetoken));
-                        }
-                        else
+                        if (status.Error)
                         {
                             Debug.Log(status.Error);
                             Debug.Log(status.ErrorData.Info);
-                        }
+                        }              
                     });
-
-
-
+                //clear input field.
                 inputField.text = string.Empty;
             }
         }
@@ -98,6 +90,15 @@ namespace Visyde
         {
             //DisplayChat(message, "", false, true, negative);
         }
+
+        /// <summary>
+        /// Displays the chat mesage
+        /// </summary>
+        /// <param name="message">The message from the user</param>
+        /// <param name="from">The user who the sent the message</param>
+        /// <param name="ours">Is the message sent from client</param>
+        /// <param name="systemMessage">Message sent by systen.</param>
+        /// <param name="negative">Color scheme</param>
         void DisplayChat(string message, string from, bool ours, bool systemMessage, bool negative)
         {
 
@@ -119,11 +120,13 @@ namespace Visyde
             vlg.enabled = true;
         }
 
-        // Photon stuff:
+        /// <summary>
+        /// Photon event triggerred when a user joins a room.
+        /// </summary>
         void OnJoinedRoom()
         {
-            bool tmp = PhotonNetwork.IsMasterClient;
-            Debug.Log($"We master client? {tmp}");
+            _lobbyPublish += PhotonNetwork.CurrentRoom.Name; //Guarenteed to be unique, set by server.
+            _lobbySubscribe += PhotonNetwork.CurrentRoom.Name;
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
            
@@ -132,7 +135,6 @@ namespace Visyde
                 SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
                 if (mea.MessageResult != null)
                 {
-                    //Extracts username and displays user plus chat.
                     GetUsername(mea.MessageResult);
                 }
                 if (mea.PresenceEventResult != null)
@@ -147,21 +149,26 @@ namespace Visyde
                     _lobbySubscribe
                })
                .Execute();
-        }
+        }  
 
-        //Extracts the username from the metadata to display in chat.
+        /// <summary>
+        /// Obtains the username and displays the chat.
+        /// </summary>
+        /// <param name="message"></param>
         private void GetUsername(PNMessageResult message)
         {
-            //Pull out name entered in app.
-            string username = "Guest";
-            var metaDataJSON = JsonConvert.SerializeObject(message.UserMetadata);
-
-            var metaDataDictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(metaDataJSON);
-            //If cannot find the metadata, grab first six chars of user id. If the user id is also blank, set back-up as guest.
-            if (metaDataDictionary == null || !metaDataDictionary.TryGetValue("name", out username))
+            string username = "";
+            if (PubNubManager.Instance.CachedPlayers.ContainsKey(message.IssuingClientId))
             {
-                username = !String.IsNullOrWhiteSpace(message.IssuingClientId) ? message.IssuingClientId.Substring(0, 10) : "Guest";
+                username = PubNubManager.Instance.CachedPlayers[message.IssuingClientId].Name;
             }
+
+            //Check in case the username is null. Set to back-up of UUID just in case.
+            if(string.IsNullOrWhiteSpace(username))
+            {
+                username = message.IssuingClientId;
+            }
+         
             //Display the chat pulled.
             DisplayChat(message.Payload.ToString(), username, PubNubManager.Instance.UserId.Equals(message.IssuingClientId), false, false);
         }
@@ -186,15 +193,11 @@ namespace Visyde
                     }
                 });
         }
+
+        //Photon functions. Will be removed as more functionality is integrated.
         public void OnChatStateChange(ChatState state) { }
         public void OnStatusUpdate(string user, int status, bool gotMessage, object message) { }
-        public void OnPrivateMessage(string sender, object message, string channelName) { }
-        public void OnUserSubscribed(string channel, string user)
-        {
-            var tmp = user;
-
-
-        }
+        public void OnPrivateMessage(string sender, object message, string channelName) { }    
         public void OnUserUnsubscribed(string channel, string user) { }
         public void DebugReturn(ExitGames.Client.Photon.DebugLevel level, string message)
         {
