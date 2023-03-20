@@ -73,6 +73,10 @@ namespace Visyde
         public Transform scoreboardContent;
         public ScoreboardItem scoreboardItem;
 
+        [Header("Chat:")]
+        public GameObject gameChatObj;
+        public InputField chatInputField;
+
         [Header("Death and respawn:")]
         public GameObject deadPanel;
         public Text respawnTimeText;
@@ -82,6 +86,9 @@ namespace Visyde
 
         [Header("Menu panel:")]
         public GameObject menuPanel;
+
+        [Header("Chat window:")]
+        public GameObject chatWindow;
 
         [Header("Floating HP bar:")]
         public Transform floatingUIPanel;
@@ -219,6 +226,30 @@ namespace Visyde
                     respawnTimeText.text = Mathf.Floor(gm.curRespawnTime + 1).ToString();
                 }
 
+                //Close/open chat window only if there is no text left in input field.
+                if (Input.GetKeyDown(KeyCode.Return) && string.IsNullOrWhiteSpace(chatInputField.text))
+                {
+                    gameChatObj.SetActive(!gameChatObj.activeSelf);
+
+                    //Disable player movement if chat is enabled.
+                    if (gameChatObj.activeSelf)
+                    {
+                        chatInputField.ActivateInputField();
+                        if(gm.ourPlayer.movementController != null)
+                        {
+                            gm.ourPlayer.movementController.enabled = false;
+                        }
+                    }
+
+                    else
+                    {
+                        if (gm.ourPlayer.movementController != null)
+                        {
+                            gm.ourPlayer.movementController.enabled = true;
+                        }
+                    }
+                }
+
                 // Show/Hide scoreboard :
                 scoreboardObj.SetActive(gm.controlsManager.showScoreboard);
 
@@ -308,6 +339,11 @@ namespace Visyde
         public void ShowMenu(bool show)
         {
             menuPanel.SetActive(show);
+        }
+
+        public void ShowChat(bool show)
+        {
+            chatWindow.SetActive(show);
         }
 
         // Create a floating health bar for a player (usually on player spawn):
