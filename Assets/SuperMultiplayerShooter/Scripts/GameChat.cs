@@ -5,6 +5,12 @@ using Photon.Pun;
 using PubNubAPI;
 using UnityEngine;
 using UnityEngine.UI;
+//Helper Class Used to Store Information when passing in the PubNub Network.
+public class MyClass
+{
+    public string text;
+}
+
 
 public class GameChat : MonoBehaviour
 {
@@ -73,9 +79,12 @@ public class GameChat : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(inputField.text))
         {
+            MyClass filter = new MyClass();
+            filter.text = inputField.text;
+
             _pubnub.Publish()
                 .Channel(_gamePublish)
-                .Message(inputField.text)
+                .Message(filter)
                 .Async((result, status) => {
                     if (status.Error)
                     {
