@@ -71,7 +71,9 @@ namespace Visyde
         public void SendChatMessage()
         {
             if (!string.IsNullOrEmpty(inputField.text))
-            {                  
+            {
+                //MessageModeration filter = new MessageModeration();
+               // filter.text = inputField.text;
                 _pubnub.Publish()
                     .Channel(_lobbyPublish)
                     .Message(inputField.text)
@@ -136,10 +138,6 @@ namespace Visyde
                 if (mea.MessageResult != null)
                 {
                     GetUsername(mea.MessageResult);
-                }
-                if (mea.PresenceEventResult != null)
-                {
-                    Debug.Log("In Example, SubscribeCallback in presence" + mea.PresenceEventResult.Channel + mea.PresenceEventResult.Occupancy + mea.PresenceEventResult.Event);
                 }
             };
 

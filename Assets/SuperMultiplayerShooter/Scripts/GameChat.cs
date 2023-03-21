@@ -5,12 +5,6 @@ using Photon.Pun;
 using PubNubAPI;
 using UnityEngine;
 using UnityEngine.UI;
-//Helper Class Used to Store Information when passing in the PubNub Network.
-public class MyClass
-{
-    public string text;
-}
-
 
 public class GameChat : MonoBehaviour
 {
@@ -26,8 +20,8 @@ public class GameChat : MonoBehaviour
     public InputField inputField;
 
     //Internals
-    private string _gameSubscribe = "chat.game."; //Wildcard subscribe to listen for all channels
-    private string _gamePublish = "chat.game."; //Publish channel will include
+    private string _gameSubscribe = "chat.ingame"; //Wildcard subscribe to listen for all channels
+    private string _gamePublish = "chat.ingame."; //Publish channel will include
     private PubNub _pubnub;
 
     // Start is called before the first frame update
@@ -46,10 +40,6 @@ public class GameChat : MonoBehaviour
             if (mea.MessageResult != null)
             {
                 GetUsername(mea.MessageResult);
-            }
-            if (mea.PresenceEventResult != null)
-            {
-                Debug.Log("In Example, SubscribeCallback in presence" + mea.PresenceEventResult.Channel + mea.PresenceEventResult.Occupancy + mea.PresenceEventResult.Event);
             }
         };
 
@@ -72,6 +62,27 @@ public class GameChat : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        //Unsubscrube from lobby chat once player leaves the room.
+        _pubnub.Unsubscribe()
+            .Channels(new List<string>()
+            {
+                _gameSubscribe
+            })
+            .Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log(string.Format("Unsubscribe Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
+                }
+                else
+                {
+                    Debug.Log(string.Format("DateTime {0}, In Unsubscribe, result: {1}", DateTime.UtcNow, result.Message));
+                }
+            });
+    }
+
     /// <summary>
     /// Publishes the chat message.
     /// </summary>
@@ -79,12 +90,12 @@ public class GameChat : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(inputField.text))
         {
-            MyClass filter = new MyClass();
-            filter.text = inputField.text;
+            //MessageModeration filter = new MessageModeration();
+            //filter.text = inputField.text;
 
             _pubnub.Publish()
                 .Channel(_gamePublish)
-                .Message(filter)
+                .Message(inputField.text)
                 .Async((result, status) => {
                     if (status.Error)
                     {
@@ -124,14 +135,6 @@ public class GameChat : MonoBehaviour
     }
 
     /// <summary>
-    /// Photon event triggerred when a user joins a room.
-    /// </summary>
-    void OnJoinedRoom()
-    {
-        var tmp = "";
-    }
-
-    /// <summary>
     /// Obtains the username and displays the chat.
     /// </summary>
     /// <param name="message"></param>
@@ -151,26 +154,5 @@ public class GameChat : MonoBehaviour
 
         //Display the chat pulled.
         DisplayChat(message.Payload.ToString(), username, PubNubManager.Instance.UserId.Equals(message.IssuingClientId), false, false);
-    }
-
-    void OnLeftRoom()
-    {
-        //Unsubscrube from lobby chat once player leaves the room.
-        _pubnub.Unsubscribe()
-            .Channels(new List<string>()
-            {
-                    _gameSubscribe
-            })
-            .Async((result, status) =>
-            {
-                if (status.Error)
-                {
-                    Debug.Log(string.Format("Unsubscribe Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
-                }
-                else
-                {
-                    Debug.Log(string.Format("DateTime {0}, In Unsubscribe, result: {1}", DateTime.UtcNow, result.Message));
-                }
-            });
     }
 }
