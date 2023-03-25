@@ -29,6 +29,7 @@ namespace Visyde
         public InputField inputField;
         public Button sendButton;
         public GameObject loadingIndicator;
+        public Dropdown languageOptions;
 
         // Internals:
         VerticalLayoutGroup vlg;
@@ -36,12 +37,16 @@ namespace Visyde
  
         private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
         private string _lobbyPublish = "chat.translate."; //Publish channel will include
+        private string targetLanguage = "en"; //Changes based on when users select a different value in the drop-down list.
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
             _pubnub = PubNubManager.Instance.InitializePubNub();
+            languageOptions.onValueChanged.AddListener(delegate {
+                OnLanguageChange(languageOptions);
+            });
         }
 
         void OnEnable()
@@ -75,17 +80,7 @@ namespace Visyde
                 MessageModeration filter = new MessageModeration();
                 filter.text = inputField.text;
                 filter.source = "en";
-                filter.target = "es";
-                //Send message based on targeted language.
-               /* string json = $@"{{             
-                ""data"": {{
-                    ""translate"": {{
-                        ""text"": ""{inputField.text}"",
-                        ""source"": ""en"",
-                        ""target"": ""es""
-                        }}               
-                    }}
-                }}";*/
+                filter.target = targetLanguage;           
                 _pubnub.Publish()
                     .Channel(_lobbyPublish)
                     .Message(filter)
@@ -203,6 +198,32 @@ namespace Visyde
                 message = "<...>";
             }
             return message.ToString();
+        }
+
+        /// <summary>
+        /// Called when the user changes the language in the drop-down.
+        /// </summary>
+        private void OnLanguageChange(Dropdown change)
+        {
+
+            switch (change.value)
+            {
+                case 0:
+                    targetLanguage = "en";
+                     break;
+                case 1:
+                    targetLanguage = "es";
+                    break;
+                case 2:
+                    targetLanguage = "fr";
+                    break;
+                case 3:
+                    targetLanguage = "ja";
+                    break;
+                default:
+                    targetLanguage = "en";
+                    break;
+            }
         }
 
         void OnLeftRoom()
