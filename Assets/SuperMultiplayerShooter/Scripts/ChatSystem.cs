@@ -34,8 +34,8 @@ namespace Visyde
         VerticalLayoutGroup vlg;
         private PubNub _pubnub;
  
-        private string _lobbySubscribe = "chat.lobby."; //Wildcard subscribe to listen for all channels
-        private string _lobbyPublish = "chat.lobby."; //Publish channel will include
+        private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
+        private string _lobbyPublish = "chat.translate."; //Publish channel will include
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
@@ -72,11 +72,23 @@ namespace Visyde
         {
             if (!string.IsNullOrEmpty(inputField.text))
             {
-                //MessageModeration filter = new MessageModeration();
-               // filter.text = inputField.text;
+                MessageModeration filter = new MessageModeration();
+                filter.text = inputField.text;
+                filter.source = "en";
+                filter.target = "es";
+                //Send message based on targeted language.
+               /* string json = $@"{{             
+                ""data"": {{
+                    ""translate"": {{
+                        ""text"": ""{inputField.text}"",
+                        ""source"": ""en"",
+                        ""target"": ""es""
+                        }}               
+                    }}
+                }}";*/
                 _pubnub.Publish()
                     .Channel(_lobbyPublish)
-                    .Message(inputField.text)
+                    .Message(filter)
                     .Async((result, status) => {
                         if (status.Error)
                         {
@@ -137,7 +149,8 @@ namespace Visyde
                 SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
                 if (mea.MessageResult != null)
                 {
-                    GetUsername(mea.MessageResult);
+                    string message = ParseMessage(mea.MessageResult.Payload);
+                    GetUsername(mea.MessageResult, message);
                 }
             };
 
@@ -153,22 +166,43 @@ namespace Visyde
         /// Obtains the username and displays the chat.
         /// </summary>
         /// <param name="message"></param>
-        private void GetUsername(PNMessageResult message)
+        private void GetUsername(PNMessageResult payload, string message)
         {
             string username = "";
-            if (PubNubManager.Instance.CachedPlayers.ContainsKey(message.IssuingClientId))
+            if (PubNubManager.Instance.CachedPlayers.ContainsKey(payload.IssuingClientId))
             {
-                username = PubNubManager.Instance.CachedPlayers[message.IssuingClientId].Name;
+                username = PubNubManager.Instance.CachedPlayers[payload.IssuingClientId].Name;
             }
 
             //Check in case the username is null. Set to back-up of UUID just in case.
             if(string.IsNullOrWhiteSpace(username))
             {
-                username = message.IssuingClientId;
+                username = payload.IssuingClientId;
             }
          
             //Display the chat pulled.
-            DisplayChat(message.Payload.ToString(), username, PubNubManager.Instance.UserId.Equals(message.IssuingClientId), false, false);
+            DisplayChat(message, username, PubNubManager.Instance.UserId.Equals(payload.IssuingClientId), false, false);
+        }
+
+        /// <summary>
+        /// Parses the payload for translating the message.
+        /// If the payload does contain profanity, simply prints the entire message as asterisks.
+        /// You can, however, isolate the profanity and replace only the words containing profanity with asterisks.
+        /// </summary>
+        /// <param name="payload"></param>
+        /// <returns></returns>
+        private string ParseMessage(object payload)
+        {
+            object message = "";
+            var metaDataJSON = JsonConvert.SerializeObject(payload);
+
+            //Extracting text from the payload. If it cannot be found, simply print a temp message.
+            var messageDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(metaDataJSON);
+            if (messageDictionary == null || !messageDictionary.TryGetValue("text", out message))
+            {
+                message = "<...>";
+            }
+            return message.ToString();
         }
 
         void OnLeftRoom()
