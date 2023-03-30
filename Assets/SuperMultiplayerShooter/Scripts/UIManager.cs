@@ -2,6 +2,8 @@
 using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
+using PubNubAPI;
+using Newtonsoft.Json;
 
 namespace Visyde
 {
@@ -9,7 +11,12 @@ namespace Visyde
     /// UI Manager
     /// - manages the in-game UI itself
     /// </summary>
-
+public class MyClass
+{
+    public string username;
+    public string score;
+    public string refresh;
+}
     public class UIManager : MonoBehaviour
     {
         public enum MessageType { Death, Kill, LeftTheGame, Normal }
@@ -59,6 +66,8 @@ namespace Visyde
         public Text weaponAmmoText;
         public Text grenadeCountText;
 
+
+
         [System.Serializable]
         public class LeaderboardItem
         {
@@ -96,6 +105,11 @@ namespace Visyde
 
         public bool isMenuShown { get { return menuPanel.activeSelf; }}
 
+
+        private PubNub _pubnub;
+        private string _leaderboardChannelPub = "score.leaderboard";
+        public bool notPublished = true; 
+
         // Internal:
         int curCountdown;
         int curRemainingTimeTick;
@@ -104,13 +118,18 @@ namespace Visyde
         // Use this for initialization
         void Start()
         {
+
+            notPublished = true; 
+
             curCountdown = gm.preparationTime;              // used for tracking starting countdown
             curRemainingTimeTick = tickWhenRemainingTimeIs; // used for tracking last second countdown
 
             // Initialize things:
             UpdateBoards();
             gameOverPanel.SetActive(false);
-            hurtOverlay.color = Color.clear;
+            hurtOverlay.color = Color.clear; 
+            //Initializes the PubNub Connection.
+            _pubnub = PubNubManager.Instance.InitializePubNub();
 
             // Show mobile controls if needed:
             mobileControlsPanel.SetActive(gm.useMobileControls);
@@ -131,6 +150,42 @@ namespace Visyde
 
             if (gm.isGameOver)
             {
+
+                PlayerInstance[] playersSorted = gm.SortPlayersByScore();
+
+                // Get the kills and deaths value of all players and store them in an INT array:
+                int[] kills = new int[playersSorted.Length];
+                int[] deaths = new int[playersSorted.Length];
+                int[] otherScore = new int[playersSorted.Length];
+                for (int i = 0; i < playersSorted.Length; i++)
+                {
+                    kills[i] = playersSorted[i].kills;
+                    deaths[i] = playersSorted[i].deaths;
+                    otherScore[i] = playersSorted[i].otherScore;
+                    if (notPublished){
+
+                         if (playersSorted[i].playerName == PhotonNetwork.NickName){
+                                    MyClass mc = new MyClass();
+                                    mc.username = PhotonNetwork.NickName;
+                                    mc.score = playersSorted[i].kills.ToString();
+                                    string json = JsonUtility.ToJson(mc);
+                            _pubnub.Publish()
+                            .Channel(_leaderboardChannelPub)
+                            .Message(json)
+                            .Async((result, status) => {
+                            if (!status.Error) {
+                                    Debug.Log(string.Format("Publish Timetoken: {0}", result.Timetoken));
+                                } else {
+                                 Debug.Log(status.Error);
+                                    Debug.Log(status.ErrorData.Info);
+                                }
+                            });
+                        }
+                        notPublished = false;
+                    }
+                    
+                }
+
                 // handling "Game Over"
                 if (gm.playerRankings.Length > 0)
                 {
@@ -140,6 +195,8 @@ namespace Visyde
                         gameOverPanel.SetActive(true);
                         winningPlayerText.text = GameManager.isDraw ? "Draw!" : gm.playerRankings[0];
                         subTextObject.SetActive(!GameManager.isDraw);
+
+
                     }
 
                     // Show the scoreboard after the "Return to main menu" button is shown:
@@ -308,6 +365,8 @@ namespace Visyde
                     item.killsText.text = kills[i].ToString();
                     item.deathsText.text = deaths[i].ToString();
                     item.scoreText.text = (otherScore[i] + kills[i]/*  - deaths[i] */).ToString();
+                    Debug.Log(item.represented);
+                
                 }
 
                 // Leaderboard:

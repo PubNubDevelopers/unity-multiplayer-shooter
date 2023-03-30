@@ -29017,7 +29017,7 @@ MonoBehaviour:
   respawnTime: 5
   invulnerabilityDuration: 2
   preparationTime: 5
-  gameLength: 180
+  gameLength: 20
   showEnemyHealth: 0
   damagePopups: 1
   multiKillMessages:

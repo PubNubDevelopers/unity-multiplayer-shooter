@@ -43,6 +43,23 @@ namespace Visyde
         public Transform searchPlayer;
         public Image onlineStatus;
 
+        // leaderboard
+        public Text leaderboardText;
+        public Text namePos1;
+        public Text namePos2;
+        public Text namePos3;
+        public Text namePos4;
+        public Text namePos5;
+
+        public Text kdPos1;
+        public Text kdPos2;
+        public Text kdPos3;
+        public Text kdPos4;
+        public Text kdPos5;
+        
+        private string _leaderboardChannelPub = "score.leaderboard";
+        private string _leaderboardChannelSub = "leaderboard_scores";
+
         //Friend List
         public Button friendListBtn;
         public Text totalFriendCountText; //total number of friends user has, both online/offline.
@@ -90,7 +107,8 @@ namespace Visyde
                .Channels(new List<string>()
                {
                    _publicChannel,
-                   _privateChannel
+                   _privateChannel,
+                   _leaderboardChannelSub
                })
                .ChannelGroups(new List<string>()
                {
@@ -99,6 +117,18 @@ namespace Visyde
                .WithPresence()
                .Execute();
 
+            //fire a refresh command to the pubnub function to get the leaderboard to update
+            _pubnub.Publish()
+                .Channel(_leaderboardChannelPub)
+                .Message("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}" )
+                .Async((result, status) => {
+                if (!status.Error) {
+                        Debug.Log(string.Format("Publish Timetoken: {0}", result.Timetoken));
+                    } else {
+                        Debug.Log(status.Error);
+                        Debug.Log(status.ErrorData.Info);
+                    }
+                });
             // Others:
             frameRateSetting.isOn = Application.targetFrameRate == 60;
         }
@@ -300,7 +330,40 @@ namespace Visyde
 
             if (subscribeEventEventArgs.MessageResult != null)
             {
-                
+             if(subscribeEventEventArgs.MessageResult.Channel.Equals(_leaderboardChannelSub))
+                {
+                    Debug.Log(subscribeEventEventArgs.MessageResult.Payload);
+                    Dictionary<string, object> msg = subscribeEventEventArgs.MessageResult.Payload as Dictionary<string, object>;
+                    string[] strArr = msg["username"] as string[];
+                    string[] strScores = msg["score"] as string[];
+
+                    if (strArr[0] != null){
+                        namePos1.text = strArr[0];
+                        kdPos1.text = strScores[0];
+                    }
+
+                     if (strArr[1] != null){
+                        namePos2.text = strArr[1];
+                        kdPos2.text = strScores[1];
+                    }
+
+                     if (strArr[2] != null){
+                        namePos3.text = strArr[2];
+                        kdPos3.text = strScores[2];
+                    }
+
+                     if (strArr[3] != null){
+                        namePos4.text = strArr[3];
+                        kdPos4.text = strScores[3];
+                    }
+
+                     if (strArr[4] != null){
+                        namePos5.text = strArr[4];
+                        kdPos5.text = strScores[4];
+                    }
+
+            
+                }
             }
 
             if (subscribeEventEventArgs.PresenceEventResult != null)
@@ -324,6 +387,8 @@ namespace Visyde
                             });
                     }
                 }
+
+
 
                 //Friend List - Detect current friend online status. Ignore self.
                 else if(subscribeEventEventArgs.PresenceEventResult.Subscription.Equals(_cgFriendList) && !PubNubManager.Instance.UserId.Equals(subscribeEventEventArgs.PresenceEventResult.UUID))
