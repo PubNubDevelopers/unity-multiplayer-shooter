@@ -1,6 +1,6 @@
-PubNub Unity Game Demo
+PubNub Unity Multiplayer Shooter Game
 ====================================
-Welcome to PubNub's Unity Game Demo!
+Welcome to PubNub's Unity Game!
 
 <p align="middle">
   <img src="/Media/in-game.png"/>
