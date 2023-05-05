@@ -35,8 +35,8 @@ public class PubNubManager : MonoBehaviour
     public PubNub InitializePubNub()
     {    
         PNConfiguration pnConfiguration = new PNConfiguration();
-        pnConfiguration.SubscribeKey = "sub-c-68a629b6-9566-4f83-b74b-000b0fad8a69";
-        pnConfiguration.PublishKey = "pub-c-27c9a7a7-bbb0-4210-8dd7-850512753b31";
+        pnConfiguration.SubscribeKey = "SUBSCRIBE_KEY";
+        pnConfiguration.PublishKey = "PUBLISH_KEY";
         pnConfiguration.LogVerbosity = PNLogVerbosity.BODY;
 
         //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
