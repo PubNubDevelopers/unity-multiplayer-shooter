@@ -9,16 +9,16 @@ Welcome to PubNub's Unity Game Demo!
 This is a Unity game built using the [Super Multiplayer Shooter Unity](https://assetstore.unity.com/packages/templates/systems/super-multiplayer-shooter-template-124977) game, an online shooting brawler game enhanced with the following PubNub real-time functionality:
 
 * In-App Messaging: Send and receive messages in the lobby and main menu.
-* Presence: Detect when knew users are online/offline
+* Presence: Detect when users are online/offline
 * Friend List: Add, Remove, and Check when new players come online/offline
 * Leaderboard: Update player scores after matches
-* Language Translation: Translate your messages to a variety of languages.
-* Profanity Filtering: Block profane and hateful messages while in-game.
-* User Metadata: Search and filter for players and view their usernames.
+* Language Translation: Translate your messages to a variety of languages using Message Filters.
+* Profanity Filtering: Block profane and hateful messages while in-game using Message Filters.
+* User Metadata: Search and filter for players and view their usernames via App Context.
 
 Note: 
 * The game is actively in development and more features are planned to be incorporated in the near future.
-* PubNub has purchased a Multi Entity License for this template from the Unity Asset Store. We are not actively selling the game, but showcasing how to enhance the game with PubNub's Real-Time capabilities.
+* PubNub has purchased a Multi-Entity License for this template from the Unity Asset Store. We are not actively selling the game, but showcasing how to enhance the game with PubNub's Real-Time capabilities.
 
 ## Prerequisites
 You'll need to perform the following before getting started.
@@ -26,14 +26,16 @@ You'll need to perform the following before getting started.
 ### Get Your PubNub Keys
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/). You are now in the Admin Portal.
 2. Click on the generated app and keyset or create your own App and Keyset by giving them a name.
-3. Enable Presence by clicking on the slider to turn it on. A pop-up will require that you enter in “ENABLE”. Enter in “ENABLE” in all caps and then press the “Enable” button. Enable the "Generate Leave on TCP FIN or RST checkbox", which generates leave events when clients close their connection (used to track occupancy and remove non-connected clients in app). You can leave the rest of the default settings.
-4. Enable App Context.
-5. Click on save changes.
-6. Save the Pub/Sub Keys.
+3. Enable Presence by clicking on the slider to turn it on. A pop-up will require that you enter in “ENABLE”. Enter “ENABLE” in all caps and then press the “Enable” button. Enable the "Generate Leave on TCP FIN or RST checkbox", which generates leave events when clients close their connection (used to track occupancy and remove non-connected clients in app). You can leave the rest of the default settings.
+4. Enable Stream Controller.
+5. Enable Message Persistence. Select a region to save your messages.
+6. Enable App Context. Select a region to save your metadata.
+7. Click on save changes.
+8. Save the Pub/Sub Keys.
 
-### Set-up Leaderboard Function
+### Set up Leaderboard Function
 The Profanity Filtering, Language Translation, and Leaderboard entries occur in real time by using the Functions feature. Set this up by:
-1. Click on the Functions tab on the left hand side of the portal.
+1. Click on the Functions tab on the left-hand side of the portal.
 2. Select your App where you would like to enable the Module.
 3. Click on Create New Module.
 4. Give the module a name.
@@ -54,8 +56,8 @@ The Profanity Filtering, Language Translation, and Leaderboard entries occur in 
 16. For the Leaderboard Function Code, enter the following code:
 ```
 //This function takes a string from a unity game that contains either a username AND and a score, OR a refresh message.
-//The function then looks at the message and creates a user/score json and sends it back. Putting the highest score in 0 and the lowest score in [9]
-//If the score submitted is lower than [9] then trhe messages succeeds without intervention
+//The function then looks at the message and creates a user/score JSON and sends it back. Putting the highest score in 0 and the lowest score in [9]
+//If the score submitted is lower than [9] then the messages succeeds without intervention
 
 //sending a refresh will trigger this function without any intervention.
 
@@ -134,7 +136,7 @@ export default (request) => {
 Install [Unity](https://store.unity.com/download-nuo) if you do not have it. The editor used for this game is 2021.3.10f1.
 
 ### Create a Photon Account
-This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengine.com/pun/) in its current state. You'll need to create a [free account](https://id.photonengine.com/Account) and set-up an application to obtain the AppID necessary to power the multiplayer sync for this game. Save the AppID for later.
+This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengine.com/pun/) in its current state. You'll need to create a [free account](https://id.photonengine.com/Account) and set up an application to obtain the AppID necessary to power the multiplayer sync for this game. Save the AppID for later.
 
 ## Building
 
@@ -147,7 +149,7 @@ This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengi
 3. In case there are errors thrown related to Photon: You will need to install the photon package, as the current addition is throwing errors when attempting to open the game. Once the repo has been downloaded, perform the following.
 -Delete Assets > Photon
 -Import the [PUN 2 package](https://assetstore.unity.com/packages/tools/network/pun-2-free-119922) from the Unity Asset Store.
--Once you have downloaded the package, it will ask you to enter in the AppID in the configuration wizard that pops up. Enter the AppId obtained earlier during the Photon account creation.
+-Once you have downloaded the package, it will ask you to enter the AppID in the configuration wizard that pops up. Enter the AppId obtained earlier during the Photon account creation.
 3. Open Assets > SuperMultiplayerShooter > Scripts > PubNubManager.cs. In the ```InitializePubNub``` function, replace ```SUBSCRIBE_KEY``` and ```PUBLISH_KEY``` with the Pub/Sub keys you obtained earlier, respectively. Save the file.
 4. Run the game in the editor.
 
@@ -163,7 +165,7 @@ When players first launch the game, this is the first Scene that loads (also ref
 
 Players can:
 * Search for a Game using Photon's Matchmaking Services
-* Host a Custom Game (Lobby, will typically be doing this way). In the custom game, players can send messages, as well send messages that will be translated in real time by selecting the language drop-down menu.
+* Host a Custom Game (Lobby, will typically be done this way). In the custom game, players can send messages, as well as send messages that will be translated in real time by selecting the language drop-down menu.
 
 <p align="middle">
   <img src="/Media/lobby.png"/>
@@ -178,7 +180,7 @@ Players can:
 The Scene that is loaded between the MainMenu and Game Scenes. No PubNub functionality occurs here.
 
 ### Game
-The Scene that is loaded where the actual game is played. View the [gameplay video](https://www.youtube.com/watch?v=f6fG-3hO19w) provided by the Super Multiplayer Shooter template developers that showcases gameplay.
+The Scene that is loaded where the actual game is played. View the [gameplay video](https://www.youtube.com/watch?v=f6fG-3hO19w) provided by the Super Multiplayer Shooter template developers that showcase gameplay.
 
 <p align="middle">
   <img src="/Media/in-game.png"/>
@@ -186,7 +188,7 @@ The Scene that is loaded where the actual game is played. View the [gameplay vid
 
 Related to PubNub Functionality, Players can:
 * Send and send messages via in-app messaging.
-* Leaderboard updates stored, sorted, and updated in real time via Functions.
+* Leaderboard updates are stored, sorted, and updated in real time via Functions.
 
 <p align="middle">
   <img src="/Media/chat.png"/>
