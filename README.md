@@ -16,6 +16,8 @@ This is a Unity game built using the [Super Multiplayer Shooter Unity](https://a
 * Profanity Filtering: Block profane and hateful messages while in-game using Message Filters.
 * User Metadata: Search and filter for players and view their usernames via App Context.
 
+While this README is focused on the PubNub functionality added to the game, please review Assets > SuperMultiplayerShooter > Guide.pdf. The developers of the original asset have provided detail instructions on how to play the game itself, how to add your own skins/weapons/bullets, and various settings to adjust in the game.
+
 Note: 
 * The game is actively in development and more features are planned to be incorporated in the near future.
 * PubNub has purchased a Multi-Entity License for this template from the Unity Asset Store. We are not actively selling the game, but showcasing how to enhance the game with PubNub's Real-Time capabilities.
@@ -154,10 +156,13 @@ This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengi
 4. Run the game in the editor.
 
 ## Playing the Game
-There are three scenes in the game to pay attention to: Assets > SuperMultiplayerShooter:
+There are three scenes in the game to pay attention to that exist in Assets > SuperMultiplayerShooter. In File > Build Settings, ensure they are in the following order:
+<p align="middle">
+  <img src="/Media/scene-order.png"/>
+</p>
 
 ### MainMenu
-When players first launch the game, this is the first Scene that loads (also referred to as MainMenu).
+When players first launch the game, this is the first Scene that loads (also referred to as MainMenu). Most functionality will take place in Assets > SuperMultiplayerShooter > Scripts > SampleMainMenu.cs.
 
 <p align="middle">
   <img src="/Media/main-menu.png"/>
@@ -176,6 +181,12 @@ Players can:
 * See the total number of users connected online via the Presence indicator in the top left corner of the screen.
 * See the Leaderboard statistics in the bottom left of the screen.
 
+The following files are of focus to review for this scene that pertain to PubNub Functionality.
+- Assets > SuperMultiplayerShooter > Scripts > SampleMainMenu.cs
+- Assets > SuperMultiplayerShooter > Scripts > ChatSystem.cs
+- Assets > SuperMultiplayerShooter > Scripts > PubNubManager.cs
+- Assets > SuperMultiplayerShooter > Scripts > MessageModeration.cs
+
 ### LoadingScene
 The Scene that is loaded between the MainMenu and Game Scenes. No PubNub functionality occurs here.
 
@@ -193,6 +204,13 @@ Related to PubNub Functionality, Players can:
 <p align="middle">
   <img src="/Media/chat.png"/>
 </p>
+
+The following files are of focus to review for this scene that pertain to PubNub Functionality.
+- Assets > SuperMultiplayerShooter > Scripts > GameChat.cs
+- Assets > SuperMultiplayerShooter > Scripts > ControlsManager.cs
+- Assets > SuperMultiplayerShooter > Scripts > PlayerController.cs
+- Assets > SuperMultiplayerShooter > Scripts > GameManager.cs
+- Assets > SuperMultiplayerShooter > Scripts > UIManager.cs
 
 ## Links
 - PubNub Unity SDK: https://developer.dolby.io/demos/GDC-demo-experience/
