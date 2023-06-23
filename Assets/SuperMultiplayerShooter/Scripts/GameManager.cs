@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
 using Photon.Pun.UtilityScripts;
+using PubNubAPI;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -17,6 +19,9 @@ namespace Visyde
     public class GameManager : MonoBehaviourPunCallbacks, IInRoomCallbacks, IConnectionCallbacks
     {
         public static GameManager instance;
+
+        //  PubNub
+        public PubNub pubnub = null;
 
         public string playerPrefab;                     // Name of player prefab. The prefab must be in a "Resources" folder.
 
@@ -31,7 +36,7 @@ namespace Visyde
         public float invulnerabilityDuration = 3;		// how long players stay invulnerable after spawn
         public int preparationTime = 3;                 // the starting countdown before the game starts
         public int gameLength = 120;                    // time in seconds
-        public bool showEnemyHealth = false;
+        public bool showEnemyHealth = true;
         public bool damagePopups = true;
         [System.Serializable]
         public class KillData
@@ -148,6 +153,34 @@ namespace Visyde
 
             // Don't allow the device to sleep while in game:
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
+            //  Initialize PubNub and subscribe to the appropriate channels
+            pubnub = PubNubManager.Instance.InitializePubNub();
+            List<string> channels = new List<string>();
+            channels.Add(PubNubUtilities.itemChannel);
+            //  Every player will send their updates on a unique channel, so subscribe to those
+            foreach (PlayerInstance playerInstance in players)
+            {
+                if (!playerInstance.isMine)
+                {
+                    channels.Add(PubNubUtilities.playerActionsChannelPrefix + playerInstance.playerID);
+                    channels.Add(PubNubUtilities.playerPositionChannelPrefix + playerInstance.playerID);
+                    channels.Add(PubNubUtilities.playerCursorChannelPrefix + playerInstance.playerID);
+                }
+            }
+            //  The master client controls the bots, so if we are not the master, register to receive bot updates
+            foreach (PlayerInstance bot in bots)
+            {
+                if (!PhotonNetwork.IsMasterClient)
+                {
+                    channels.Add(PubNubUtilities.playerActionsChannelPrefix + bot.playerID);
+                    channels.Add(PubNubUtilities.playerPositionChannelPrefix + bot.playerID);
+                    channels.Add(PubNubUtilities.playerCursorChannelPrefix + bot.playerID);
+                }
+            }
+            pubnub.Subscribe()
+            .Channels(channels)
+            .Execute();
         }
 
         // Use this for initialization
@@ -580,7 +613,8 @@ namespace Visyde
         // Others:
         public void DoEmote(int id){
             if (ourPlayer && !ourPlayer.isDead){
-                ourPlayer.photonView.RPC("Emote", RpcTarget.All, id);
+                if (pubnub != null)
+                    new PubNubUtilities().SendEmoji(pubnub, id, ourPlayer.playerInstance.playerID);
             }
         }
 

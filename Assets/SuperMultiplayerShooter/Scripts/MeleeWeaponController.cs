@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -25,6 +26,7 @@ namespace Visyde
 
         [HideInInspector] public bool isAttacking;
         PlayerController ourPlayer;
+        PubNubUtilities pubNubUtilities = new PubNubUtilities();
 
         // Update is called once per frame
         void Update()
@@ -54,7 +56,7 @@ namespace Visyde
                             // Don't hurt self and the invulnerable:
                             if (p.playerInstance != ourPlayer.playerInstance && !p.invulnerable)
                             {
-                                p.photonView.RPC("Hurt", RpcTarget.All, ourPlayer.playerInstance.playerID, damage, false);
+                                pubNubUtilities.ApplyDamage(GameManager.instance.pubnub, p.playerInstance.playerID, ourPlayer.playerInstance.playerID, damage, false);
 
                                 // VFX
                                 GameManager.instance.pooler.Spawn("BodyHit", p.transform.position);

@@ -13164,15 +13164,6 @@ MonoBehaviour:
   - name: 
     value: 4
     icon: {fileID: 0}
-  - name: 
-    value: 5
-    icon: {fileID: 0}
-  - name: 
-    value: 6
-    icon: {fileID: 0}
-  - name: 
-    value: 8
-    icon: {fileID: 0}
   loop: 0
   next: {fileID: 515416461}
   prev: {fileID: 1929730120}

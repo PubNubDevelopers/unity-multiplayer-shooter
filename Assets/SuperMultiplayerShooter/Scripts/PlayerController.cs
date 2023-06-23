@@ -1,8 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
+using PubNubAPI;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -13,6 +13,16 @@ namespace Visyde
 
     public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable, IInRoomCallbacks
     {
+        //  PubNub variables
+        private PubNubUtilities pubNubUtilities;
+        //  Control the timing to send movement data to other players
+        private float positionUpdateTimer = 0.0f;
+        private float positionUpdateInterval = 0.05f;    //  20 times a second
+        private float cursorUpdateTimer = 0.0f;
+        private float cursorUpdateInterval = 0.2f;    //  5 times a second
+
+        private long mostRecentTimeToken = 0;
+
         public bool forPreview = false;                                 // used for non in-game such as character customization preview in the main menu
 
         [System.Serializable]
@@ -114,7 +124,223 @@ namespace Visyde
         void Awake(){
             // Find essential references:
             gm = GameManager.instance;
+
+            pubNubUtilities = new PubNubUtilities();
+            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            if (gm.players.Length + gm.bots.Length <= 3)
+            {
+                positionUpdateInterval = 0.04f; //  25 times a second
+            }
         }
+
+        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        {
+            //  There is one subscribe handler per character
+            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            if (mea.MessageResult != null)
+            {
+                //  Messages (Publish)
+                if (mea.MessageResult.Payload is long[])
+                {
+                    long[] payload = (long[])mea.MessageResult.Payload;
+                    if (payload[1] == MessageConstants.idMsgReceivePowerUp)
+                    {
+                        //  Receive Power up state
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID)
+                        {
+                            int powerUpIndex = System.Convert.ToInt32(payload[2]);
+                            int spawnPointIndex = System.Convert.ToInt32(payload[3]);
+                            ReceivePowerUp(powerUpIndex, spawnPointIndex);
+                        }
+                    }
+                    else if (payload[1] == MessageConstants.idMsgUpdateOthers)
+                    {
+                        //  Someone wants their state updated
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID)
+                        {
+                            int health = System.Convert.ToInt32(payload[2]);
+                            int shield = System.Convert.ToInt32(payload[3]);
+                            UpdateOthers(health, shield);
+                        }
+                    }
+                    else if (payload[1] == MessageConstants.idMsgGrabWeapon)
+                    {
+                        //  Receive Weapon state
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID)
+                        {
+                            int weaponIndex = System.Convert.ToInt32(payload[2]);
+                            int spawnPointIndex = System.Convert.ToInt32(payload[3]);
+                            GrabWeapon(weaponIndex, spawnPointIndex);
+                        }
+                    }
+                    else if (payload[1] == MessageConstants.idMsgApplyDamage)
+                    {
+                        //  Apply Damage
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        //  The condition is a little different for Apply Damage as we want
+                        //  to be told that we have been hurt by someone (we also use a different
+                        //  channel to convey this info, so we can receive it)
+                        if (playerId == playerInstance.playerID)
+                        {
+                            int fromPlayer = System.Convert.ToInt32(payload[2]);
+                            int value = System.Convert.ToInt32(payload[3]);
+                            bool gun = 1 == System.Convert.ToInt32(payload[4]);
+                            Hurt(fromPlayer, value, gun);
+                        }
+                    }
+                    else if (payload[1] == MessageConstants.idMsgForceDead)
+                    {
+                        //  We have been killed
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID)
+                        {
+                            health = -1;
+                        }
+                    }
+                }
+                else if (mea.MessageResult.Payload is double[])
+                {
+                    double[] payload = (double[])mea.MessageResult.Payload;
+                    if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
+                    {
+                        //  Trigger Dead Zone
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        float positionX = (float)payload[2];
+                        float positionY = (float)payload[3];
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            TriggerDeadZone(new Vector2(positionX, positionY));
+                        }
+                    }
+                }
+            }
+            else if (mea.SignalEventResult != null)
+            {
+                //  Signals
+                if (mea.SignalEventResult.Payload is long[])
+                {
+                    long[] payload = (long[])mea.SignalEventResult.Payload;
+                    if (payload[1] == MessageConstants.idMsgEmoji)
+                    {
+                        //  Emote
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        int emote = System.Convert.ToInt32(payload[2]);
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            Emote(emote);
+                        }    
+                    }
+                    else if (payload[1] == MessageConstants.idMsgMelee)
+                    {
+                        //  Melee Attack
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            MeleeAttack();
+                        }
+                    }
+                }
+                else if (mea.SignalEventResult.Payload is double[])
+                {
+                    double[] payload = (double[])mea.SignalEventResult.Payload;
+                    int command = System.Convert.ToInt32(payload[1]);
+                    if (command == MessageConstants.idMsgPosition)
+                    {
+                        //  Movement message 1
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        float positionX = (float)payload[2];
+                        float positionY = (float)payload[3];
+                        float velocityX = (float)payload[4];
+                        float velocityY = (float)payload[5];
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            long serverSentTimeToken = mea.SignalEventResult.Timetoken;
+                            if (serverSentTimeToken <= mostRecentTimeToken)
+                            {
+                                //  I rarely see this happen during testing, but
+                                //  discard any packets received out of order
+                                return;
+                            }
+                            mostRecentTimeToken = serverSentTimeToken;
+
+                            if (networkPos != null)
+                                networkPos.Set(positionX, positionY);
+                            else
+                                networkPos = new Vector2();
+
+                            if (movementController.velocity != null)
+                                movementController.velocity.Set(velocityX, velocityY);
+                            else
+                                movementController.velocity = new Vector2();
+
+                            //  If is still moving, do predict next location based on current velocity and lag:
+                            if (Helper.GetDistance(lastPos, networkPos) > 0.2f) 
+                            {
+                                networkPos += (movementController.velocity);
+                            }
+                            
+                            
+                            lastPos = networkPos;
+
+                            
+                            // If network position is just too far, force to update local position:
+                            if (Helper.GetDistance(networkPos, transform.position) > 0.2f)
+                            {
+                                movementController.position = networkPos;
+                            }
+                            
+                        }
+                    }
+                    else if (command == MessageConstants.idMsgCursor)
+                    {
+                        //  Cursor movement
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        float mousePosX = (float)payload[2];
+                        float mousePosY = (float)payload[3];
+                        float movingFalling = (float)payload[4];
+                        float xInputLocal = (float)payload[5];
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            nMousePos.Set(mousePosX, mousePosY, 0.0f);
+                            if (movingFalling > 9.9f)
+                            {
+                                isFalling = true;
+                                movingFalling -= 10;
+                            }
+                            else
+                                isFalling = false;
+
+                            if (movingFalling > 0.9f)
+                            {
+                                moving = true;
+                            }
+                            else
+                                moving = false;
+
+                            xInput = xInputLocal;
+                        }
+                    }
+                    else if (command == MessageConstants.idMsgShoot)
+                    {
+                        //  Shoot message
+                        int playerId = System.Convert.ToInt32(payload[0]);
+                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        {
+                            float mousePosX = (float)payload[2];
+                            float mousePosY = (float)payload[3];
+                            float mousePosZ = (float)payload[4];
+                            Vector3 curMousePos = new Vector3(mousePosX, mousePosY, mousePosZ);
+                            Shoot(curMousePos);
+                        }
+                    }
+
+                }
+            }
+        }
+
         public override void OnEnable(){
             if (gm)
             {
@@ -180,7 +406,7 @@ namespace Visyde
 
             if (photonView.IsMine)
             {
-                // Setting up send rates:
+                // Setting up send rates: See PhotonHandler.cs
                 PhotonNetwork.SendRate = 16;
                 PhotonNetwork.SerializationRate = 16;
             }
@@ -221,7 +447,8 @@ namespace Visyde
                     {
                         if (t.position.y < gm.deadZoneOffset && !doneDeadZone)
                         {
-                            photonView.RPC("TriggerDeadZone", RpcTarget.All, movementController.position);
+                            pubNubUtilities.TriggerDeadZone(gm.pubnub, playerInstance.playerID, movementController.position);
+                            TriggerDeadZone(movementController.position);
                             doneDeadZone = true;
                         }
                     }
@@ -308,7 +535,7 @@ namespace Visyde
                 // Update the others about our status:
                 if (photonView.IsMine)
                 {
-                    photonView.RPC("UpdateOthers", RpcTarget.All, health, shield);
+                    pubNubUtilities.UpdateOthersPlayerStatus(gm.pubnub, playerInstance.playerID, health, shield);
                     
                     // If this is local player's, let the game manager know this is ours and is now dead:
                     if (isPlayerOurs && !gm.isGameOver) gm.dead = true;
@@ -330,7 +557,6 @@ namespace Visyde
         void FixedUpdate(){
             if (forPreview) return;
 
-            // Simple lag compensation (movement interpolation + movement controller velocity set at OnPhotonSerializeView()):
             if (!photonView.IsMine && movementController){
                 movementController.position = Vector2.MoveTowards(movementController.position, networkPos, Time.fixedDeltaTime * (lag * 10));
             }
@@ -347,15 +573,18 @@ namespace Visyde
                 //  so you may have to implement a more robust emote input system depending on your project's needs):
                 if (Input.GetKeyDown(KeyCode.Alpha1))
                 {
-                    photonView.RPC("Emote", RpcTarget.All, 0);
+                    pubNubUtilities.SendEmoji(gm.pubnub, 0, playerInstance.playerID);
+                    Emote(0);
                 }
                 if (Input.GetKeyDown(KeyCode.Alpha2))
                 {
-                    photonView.RPC("Emote", RpcTarget.All, 1);
+                    pubNubUtilities.SendEmoji(gm.pubnub, 1, playerInstance.playerID);
+                    Emote(1);
                 }
                 if (Input.GetKeyDown(KeyCode.Alpha3))
                 {
-                    photonView.RPC("Emote", RpcTarget.All, 2);
+                    pubNubUtilities.SendEmoji(gm.pubnub, 2, playerInstance.playerID);
+                    Emote(2);
                 }
 
                 // Player controls:
@@ -384,12 +613,6 @@ namespace Visyde
                     if (!gm.useMobileControls && Input.GetButtonDown("Fire2"))
                     {
                         OwnerMeleeAttack();
-                    }
-
-                    // Grenade throw:
-                    if (!gm.useMobileControls && Input.GetButtonDown("Fire3"))
-                    {
-                        OwnerThrowGrenade();
                     }
                 }
                 else
@@ -510,14 +733,16 @@ namespace Visyde
         }
 
         public void OwnerShootCommand(){
-            photonView.RPC("Shoot", RpcTarget.All, mousePos, movementController.position, movementController.velocity);
+            Shoot(mousePos, movementController.position, movementController.velocity);
+            pubNubUtilities.Shoot(gm.pubnub, playerInstance.playerID, mousePos);
         }
         // Called by the owner from mobile or pc input:
         public void OwnerMeleeAttack()
         {
             if (curMeleeAttackRate >= 1)
             {
-                photonView.RPC("MeleeAttack", RpcTarget.All);
+                MeleeAttack();
+                pubNubUtilities.MeleeAttack(gm.pubnub, playerInstance.playerID);
                 curMeleeAttackRate = 0;
             }
         }
@@ -526,12 +751,13 @@ namespace Visyde
             if (curGrenadeCount > 0)
             {
                 curGrenadeCount -= 1;
-                photonView.RPC("ThrowGrenade", RpcTarget.All);
+                ThrowGrenade();
             }
         }
 
         void Die()
         {
+            pubNubUtilities.ForceDead(gm.pubnub, playerInstance.playerID);
             if (!gm.isGameOver)
             {
                 // Multikill (if we are the killer and we are not the one dying):
@@ -556,12 +782,16 @@ namespace Visyde
                 }
 
                 // Let GameManager handle the other death related stuff (scoring, display kill/death message etc...):
-                gm.SomeoneDied(playerInstance.playerID, lastDamageDealer.playerID);
+                try {
+                    gm.SomeoneDied(playerInstance.playerID, lastDamageDealer.playerID);
+                }
+                catch (System.Exception) { }
 
                 // and then destroy (give a time for the death animation):
                 if (photonView.IsMine)
                 {
                     Invoke("PhotonDestroy", 1f);
+                    gm.pubnub.SubscribeCallback -= SubscribeCallbackHandler;
                 }
             }
 
@@ -575,6 +805,10 @@ namespace Visyde
             movementController.DestroyRigidbody();
             // ...and others:
             invulnerabilityIndicator.SetActive(false);
+
+            // PubNub
+            gm.pubnub.SubscribeCallback -= SubscribeCallbackHandler;
+
         }
 
         public void Teleport(Vector3 newPos)
@@ -609,9 +843,8 @@ namespace Visyde
         /// <param name="value">Can be either a weapon id (if a gun was used) or a damage value (if melee attack or grenade).</param>
         /// <param name="gun">If set to <c>true</c>, "value" will be used as weapon id.</param>
         public void ApplyDamage(int fromPlayer, int value, bool gun){
-            photonView.RPC("Hurt", RpcTarget.AllBuffered, fromPlayer, value, gun);
+            pubNubUtilities.ApplyDamage(gm.pubnub, playerInstance.playerID, fromPlayer, value, gun);
         }
-        [PunRPC]
         void Hurt(int fromPlayer, int value, bool gun)
         {
             if (!gm.isGameOver)
@@ -671,14 +904,12 @@ namespace Visyde
                 }
             }
         }
-        [PunRPC]
         void TriggerDeadZone(Vector2 position){
             movementController.position = position;
             networkPos = position;
             DeadZoned();
         }
         // Called by the owner client of this player:
-        [PunRPC]
         public void Shoot(Vector3 curMousePos, Vector2 curPlayerPos, Vector2 curVelocity)
         {
             // Set updated position and aim directly so everything's synced up on shoot:
@@ -690,7 +921,12 @@ namespace Visyde
             // ...then the shooting itself:
             curWeapon.Shoot();
         }
-        [PunRPC]
+        public void Shoot(Vector3 curMousePos)
+        {
+            mousePos = curMousePos;
+            nMousePos = curMousePos;
+            curWeapon.Shoot();
+        }
         public void ThrowGrenade()
         {
             // Sound:
@@ -701,17 +937,16 @@ namespace Visyde
             {
                 Vector2 p1 = new Vector2(grenadePoint.position.x, grenadePoint.position.y);
                 Vector2 p2 = new Vector2(weaponHandler.position.x, weaponHandler.position.y);
-                object[] data = new object[] { (p1 - p2) * grenadeThrowForce, playerInstance.playerID }; // the instantiation data of a grenade includes the direction of the throw and the owner's player ID 
+                Vector2 throwDirection = (p1 - p2) * grenadeThrowForce;
 
+                object[] data = new object[] { (p1 - p2) * grenadeThrowForce, playerInstance.playerID }; // the instantiation data of a grenade includes the direction of the throw and the owner's player ID 
                 PhotonNetwork.Instantiate(grenadePrefab, grenadePoint.position, Quaternion.identity, 0, data);
             }
         }
-        [PunRPC]
         public void MeleeAttack()
         {
             meleeWeapon.Attack(photonView.IsMine, this);
         }
-        [PunRPC]
         public void GrabWeapon(int id, int getFromSpawnPoint)
         {
             // Find the weapon in spawnable weapons of the current map:
@@ -727,7 +962,6 @@ namespace Visyde
             // Also, let's save the weapon ID:
             lastWeaponId = getFromSpawnPoint != -1 ? System.Array.IndexOf(gm.maps[gm.chosenMap].spawnableWeapons, gm.maps[gm.chosenMap].weaponSpawnPoints[getFromSpawnPoint].onlySpawnThisHere) : id;
         }
-        [PunRPC]
         public void ReceivePowerUp(int id, int getFromSpawnPoint)
         {
             // Find the power-up in spawnable power-ups of the current map:
@@ -759,10 +993,9 @@ namespace Visyde
             if (curWeapon && thePowerUp.fullRefillAmmo) curWeapon.curAmmo = curWeapon.ammo;
 
             // Update others about our current vital stats (health and shield):
-            photonView.RPC("UpdateOthers", RpcTarget.Others, health, shield);
+            pubNubUtilities.UpdateOthersPlayerStatus(gm.pubnub, playerInstance.playerID, health, shield);
         }
 
-        [PunRPC]
         public void Emote(int emote){
             if (curEmote && curEmote.isReady){
                 curEmote.Show(emote);
@@ -770,7 +1003,6 @@ namespace Visyde
         }
         // *************************************************
 
-        [PunRPC]
         public void UpdateOthers(int curHealth, int curShield)
         {
             health = curHealth;
@@ -793,46 +1025,52 @@ namespace Visyde
         }
         // *****************************************************
 
-        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        void LateUpdate()
+        {
+            //  For a multi-player game, distribute our movement data to other players
+            positionUpdateTimer += Time.deltaTime;
+            if (positionUpdateTimer > positionUpdateInterval)
+            {
+                positionUpdateTimer -= positionUpdateInterval;
+                if (gm.players.Length > 1)
+                {
+                    UpdatePlayerMovement();
+                }
+            }
+            cursorUpdateTimer += Time.deltaTime;
+            if (cursorUpdateTimer > cursorUpdateInterval)
+            {
+                cursorUpdateTimer -= cursorUpdateInterval;
+                if (gm.players.Length > 1)
+                {
+                    UpdatePlayerCursor();
+                }
+            }
+        }
+
+        private void UpdatePlayerMovement()
         {
             if (forPreview) return;
-
-            if (stream.IsWriting && photonView.IsMine)
+            if (playerInstance.isMine || (PhotonNetwork.IsMasterClient && playerInstance.isBot))
             {
-                // Send controls over network
-                stream.SendNext(movementController ? movementController.position : new Vector2());  // position
-                stream.SendNext(movementController ? movementController.velocity : new Vector2());  // velocity
-                stream.SendNext((Vector2)mousePos);                                                 // send a Vector2 version of the mouse position because we don't need the Z axis
-                stream.SendNext(moving);
-                stream.SendNext(isFalling);
-                stream.SendNext(xInput);
+                pubNubUtilities.UpdatePlayerPosition(gm.pubnub, playerInstance.playerID,
+                    movementController.position, movementController.velocity);
             }
-            else if (stream.IsReading)
+        }
+
+        private void UpdatePlayerCursor()
+        {
+            if (forPreview) return;
+            if (playerInstance.isMine || (PhotonNetwork.IsMasterClient && playerInstance.isBot))
             {
-
-                // Receive controls
-                networkPos = (Vector2)(stream.ReceiveNext());
-                movementController.velocity = (Vector2)(stream.ReceiveNext());
-                nMousePos = (Vector2)(stream.ReceiveNext());
-                moving = (bool)(stream.ReceiveNext());
-                isFalling = (bool)(stream.ReceiveNext());
-                xInput = (float)(stream.ReceiveNext());
-                
-                // Calculate lag:
-                lag = Mathf.Abs((float)(PhotonNetwork.Time - info.SentServerTime));
-                
-                // If is still moving, do predict next location based on current velocity and lag:
-                if (Helper.GetDistance(lastPos, networkPos) > 0.2f)
-                {
-                    networkPos += (movementController.velocity * lag);
-                }
-                lastPos = networkPos;
-
-                // If network position is just too far, force to update local position:
-                if (Helper.GetDistance(networkPos, transform.position) > 0.2f){
-                    movementController.position = networkPos;
-                }
+                pubNubUtilities.UpdatePlayerCursor(gm.pubnub, playerInstance.playerID,
+                    mousePos, moving, isFalling, xInput);
             }
+        }
+
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            return;
         }
     }
 }
