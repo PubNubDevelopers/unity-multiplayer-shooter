@@ -33,11 +33,16 @@ public class PubNubManager : MonoBehaviour
     /// </summary>
     /// <returns></returns>
     public PubNub InitializePubNub()
-    {    
+    {
         PNConfiguration pnConfiguration = new PNConfiguration();
         pnConfiguration.SubscribeKey = "SUBSCRIBE_KEY";
         pnConfiguration.PublishKey = "PUBLISH_KEY";
         pnConfiguration.LogVerbosity = PNLogVerbosity.BODY;
+
+        if (pnConfiguration.SubscribeKey == "SUBSCRIBE_KEY" || pnConfiguration.PublishKey == "PUBLISH_KEY")
+        {
+            Debug.LogError("Please set your PubNub keys in PubNubManager.cs");
+        }
 
         //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
         string uuid = "User#" + Random.Range(0, 9999).ToString();

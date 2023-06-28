@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;
 
 namespace Visyde
 {
@@ -10,7 +9,7 @@ namespace Visyde
     /// - The jump pad component. This requires a trigger collider to work.
     /// </summary>
 
-    public class JumpPad : MonoBehaviourPun
+    public class JumpPad : MonoBehaviour
     {
         public float force;                 // force amount
         public AudioClip launch;
@@ -32,7 +31,7 @@ namespace Visyde
                         Vector2 veloc = p.movementController.velocity;
                         veloc.y = force;
                         p.movementController.velocity = veloc;
-                        photonView.RPC("Jumped", RpcTarget.All);
+                        Jumped();
                     }
                 }
             }
@@ -49,11 +48,10 @@ namespace Visyde
             }
         }
 
-        [PunRPC]
         public void Jumped()
         {
             // Sound:
-            aus.PlayOneShot(launch);
+             aus.PlayOneShot(launch);
         }
     }
 }

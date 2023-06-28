@@ -1,7 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Photon.Pun;
+﻿using UnityEngine;
+using PubNubAPI;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -10,7 +9,7 @@ namespace Visyde
     /// - The component script for weapon pickup prefabs.
     /// </summary>
 
-    public class WeaponPickup : MonoBehaviourPun
+    public class WeaponPickup : MonoBehaviour
     {
         [Header("References:")]
         public SpriteRenderer itemGraphic;
@@ -20,7 +19,10 @@ namespace Visyde
         Weapon itemHandled;
 
         bool allowPickup = true;
-        object[] data;
+        int weaponIndex;
+        int spawnPointIndex;
+        int index;
+        PubNubUtilities pubNubUtilities;
 
         // Use this for initialization
         void Start()
@@ -28,12 +30,24 @@ namespace Visyde
 
             // References:
             gm = FindObjectOfType<GameManager>();
+            pubNubUtilities = new PubNubUtilities();
+            PubNubItemProps initProps = GetComponent<PubNubItemProps>();
+            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            if (initProps)
+            {
+                weaponIndex = initProps.itemIndex;
+                spawnPointIndex = initProps.spawnPointIndex;
+                index = initProps.index;
+            }
+            else
+            {
+                Debug.LogError("Failed to receive initialization properties");
+            }
 
             // data from network (by master client):
-            data = photonView.InstantiationData;
 
-            itemHandled = gm.maps[gm.chosenMap].spawnableWeapons[(int)data[0]];
-            if ((int)data[1] != -1) itemHandled = gm.maps[gm.chosenMap].weaponSpawnPoints[(int)data[1]].onlySpawnThisHere;
+            itemHandled = gm.maps[gm.chosenMap].spawnableWeapons[weaponIndex];
+            if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].weaponSpawnPoints[spawnPointIndex].onlySpawnThisHere;
 
             // Visual:
             itemGraphic.sprite = itemHandled.spriteRenderer.sprite;
@@ -64,21 +78,39 @@ namespace Visyde
                         // Sound and VFX:
                         Instantiate(pickUpEffect, transform.position, Quaternion.identity);
 
-                        if (PhotonNetwork.IsMasterClient)
+                        if (PubNubUtilities.IsMasterClient)
                         {
-                            p.photonView.RPC("GrabWeapon", RpcTarget.AllViaServer, (int)data[0], (int)data[1]);
-                            photonView.RPC("Picked", RpcTarget.All);
-                            PhotonNetwork.Destroy(photonView);
+                            pubNubUtilities.GrabWeapon(gm.pubnub, p.playerInstance.playerID, weaponIndex, spawnPointIndex);
+                            pubNubUtilities.PickedUpWeapon(gm.pubnub, index);
                         }
                     }
                 }
             }
         }
 
-        [PunRPC]
-        public void Picked()
+        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
         {
-            gm.itemSpawner.WeaponPickedUp((int)data[2]);
+            //  There is one subscribe handler per weapon
+            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            if (mea.MessageResult != null)
+            {
+                if (mea.MessageResult.Payload is long[])
+                {
+                    long[] payload = (long[])mea.MessageResult.Payload;
+                    if (payload[0] == MessageConstants.idMsgPickedUpWeapon)
+                    {
+                        //  Power Up has been picked up.  Check whether is corresponds to our instance
+                        int destIndex = System.Convert.ToInt32(payload[1]);
+                        if (index == destIndex)
+                            Picked(index);
+                    }
+                }
+            }
+        }
+
+        public void Picked(int index)
+        {
+            gm.itemSpawner.WeaponPickedUp(index);
         }
     }
 }

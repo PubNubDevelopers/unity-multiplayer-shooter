@@ -775,7 +775,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &67405958
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7815,7 +7815,6 @@ MonoBehaviour:
   - {fileID: 114914572192278892, guid: 12d3f76de0fec6846a22112322c09fee, type: 3}
   spawnablePowerUps:
   - {fileID: 11400000, guid: 142ddfa634d04804eb348621a4535b3b, type: 2}
-  - {fileID: 11400000, guid: af4ee599a5f5234438866e661551caac, type: 2}
   deadZoneVFX: {fileID: 1421450803725938, guid: a105db480dc1818459825301b0bb73e9,
     type: 3}
   bounds: {x: 15.29, y: 8.9}
@@ -9364,7 +9363,6 @@ MonoBehaviour:
   - {fileID: 114914572192278892, guid: 12d3f76de0fec6846a22112322c09fee, type: 3}
   spawnablePowerUps:
   - {fileID: 11400000, guid: 142ddfa634d04804eb348621a4535b3b, type: 2}
-  - {fileID: 11400000, guid: af4ee599a5f5234438866e661551caac, type: 2}
   deadZoneVFX: {fileID: 1421450803725938, guid: a105db480dc1818459825301b0bb73e9,
     type: 3}
   bounds: {x: 15.29, y: 8.9}
@@ -15700,7 +15698,6 @@ MonoBehaviour:
   - {fileID: 114914572192278892, guid: 12d3f76de0fec6846a22112322c09fee, type: 3}
   spawnablePowerUps:
   - {fileID: 11400000, guid: 142ddfa634d04804eb348621a4535b3b, type: 2}
-  - {fileID: 11400000, guid: af4ee599a5f5234438866e661551caac, type: 2}
   deadZoneVFX: {fileID: 1421450803725938, guid: a105db480dc1818459825301b0bb73e9,
     type: 3}
   bounds: {x: 15.29, y: 20.7}
@@ -16260,7 +16257,6 @@ MonoBehaviour:
   - {fileID: 114575684155971518, guid: f486fef1efddb5340b48583c1f3820a7, type: 3}
   - {fileID: 114914572192278892, guid: 12d3f76de0fec6846a22112322c09fee, type: 3}
   spawnablePowerUps:
-  - {fileID: 11400000, guid: af4ee599a5f5234438866e661551caac, type: 2}
   - {fileID: 11400000, guid: 142ddfa634d04804eb348621a4535b3b, type: 2}
   deadZoneVFX: {fileID: 1421450803725938, guid: a105db480dc1818459825301b0bb73e9,
     type: 3}
@@ -17749,7 +17745,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &955072766
 RectTransform:
   m_ObjectHideFlags: 0
@@ -23789,7 +23785,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1054587918
 RectTransform:
   m_ObjectHideFlags: 0
@@ -24187,7 +24183,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 218.2, y: -33.57503}
+  m_AnchoredPosition: {x: 115.48, y: -33.57503}
   m_SizeDelta: {x: 69.43, y: 39.62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1094757761
@@ -28994,6 +28990,7 @@ MonoBehaviour:
   floatingUIPanel: {fileID: 68241809}
   floatingHPBarPrefab: {fileID: 114187948902176396, guid: 54ea1bad75a17aa4fad5254e9ba5e341,
     type: 3}
+  notPublished: 1
 --- !u!114 &1596447576
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29016,9 +29013,9 @@ MonoBehaviour:
   useMobileControls: 0
   respawnTime: 5
   invulnerabilityDuration: 2
-  preparationTime: 5
-  gameLength: 20
-  showEnemyHealth: 0
+  preparationTime: 1
+  gameLength: 2000
+  showEnemyHealth: 1
   damagePopups: 1
   multiKillMessages:
   - notify: 1
@@ -37686,7 +37683,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 218.54, y: 15.099976}
+  m_AnchoredPosition: {x: 115.48, y: 15.099976}
   m_SizeDelta: {x: 38.67999, y: 57.73}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2058669427
@@ -38371,7 +38368,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2116946387
 RectTransform:
   m_ObjectHideFlags: 0
