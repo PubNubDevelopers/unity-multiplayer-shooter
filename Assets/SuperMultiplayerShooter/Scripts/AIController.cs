@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;
 using Photon.Realtime;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -762,7 +762,7 @@ namespace Visyde
             {
                 if (chosenEmote > 0)
                 {
-                    player.photonView.RPC("Emote", RpcTarget.All, 0);
+                    new PubNubUtilities().SendEmoji(GameManager.instance.pubnub, chosenEmote, botID);
                     chosenEmote = -1;
                 }
                 yield return new WaitForSecondsRealtime(Random.Range(1f, 6f));

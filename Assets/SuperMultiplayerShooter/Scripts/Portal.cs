@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;
+using PubNubAPI;
 
 namespace Visyde
 {
@@ -10,7 +10,7 @@ namespace Visyde
     /// - If there are multiple exit points specified, a random one will be chosen every time.
     /// </summary>
 
-    public class Portal : MonoBehaviourPun
+    public class Portal : MonoBehaviour
     {
         [Tooltip("The portal to exit to. If there are more than one exit specified, this portal will choose a random one.")]
         public Portal[] exit;
@@ -54,7 +54,10 @@ namespace Visyde
                 if (!player.photonView.IsMine) return;
 
                 // Prevent arriving players from triggering the "portal enter" action and only allow those that aren't in the "arriving" list:
-                if (!arriving.Contains(player.playerInstance.playerID)) photonView.RPC("TriggerPortal", RpcTarget.All, player.playerInstance.playerID);
+                if (!arriving.Contains(player.playerInstance.playerID))
+                {
+                    TriggerPortal(player.playerInstance.playerID);
+                }
             }
         }
         void OnTriggerExit2D(Collider2D col){
@@ -67,7 +70,6 @@ namespace Visyde
             }
         }
 
-        [PunRPC]
         void TriggerPortal(int playerID){
             DoEnterPortal(GameManager.instance.GetPlayerControllerOfPlayer(GameManager.instance.GetPlayerInstance(playerID)));
         }

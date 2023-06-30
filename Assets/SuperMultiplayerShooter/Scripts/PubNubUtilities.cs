@@ -1,0 +1,388 @@
+using UnityEngine;
+using PubNubAPI;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using Photon.Pun;
+
+/// <summary>
+/// PubNubUtilities
+/// - Helper functions to facilitiate easier connection to PubNub.
+/// </summary>
+
+namespace PubNubUnityShowcase
+{
+    public static class MessageConstants
+    {
+        public static int idMsgEmoji            = 0;
+        static public int idMsgShoot            = 1;
+        static public int idMsgMelee            = 2;
+        static public int idMsgPosition         = 3;
+        static public int idMsgCursor           = 4;
+        static public int idMsgSpawnPowerUp     = 6;
+        static public int idMsgPickedUpPowerUp  = 7;
+        static public int idMsgReceivePowerUp   = 8;
+        static public int idMsgUpdateOthers     = 9;
+        static public int idMsgSpawnWeapon      = 10;
+        static public int idMsgGrabWeapon       = 11;
+        static public int idMsgPickedUpWeapon   = 12;
+        static public int idMsgApplyDamage      = 13;
+        static public int idMsgForceDead        = 14;
+        static public int idMsgTriggerDeadZone  = 15;
+    }
+
+    public class PubNubUtilities
+    {
+        //  For updates where we do not need to receive our own values, for example
+        //  sending our position to others, there is 1 channel per player, 1 to 4.
+        static public string playerActionsChannelPrefix = "player_action_";       //  E.g. shooting
+        static public string playerPositionChannelPrefix= "player_position_";     //  position, velocity
+        static public string playerCursorChannelPrefix  = "player_cursor_";       //  cursor
+        static public string itemChannel = "item_update";
+
+        //  Some values, such as player position or cursor location will not change
+        //  between update intervals, only send out date if it changes.
+        private bool cachedPosition = false;
+        private Vector2 cachePosition;
+        private Vector2 cacheVelocity;
+        private Vector3 cacheMousePos;
+        private bool cachedCursor = false;
+        private bool cacheMoving;
+        private bool cacheIsFalling;
+        private float cacheXInput;
+
+        public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
+
+        public PubNubUtilities()
+        {
+        }
+
+        public static bool IsMasterClient
+        {
+            get
+            {
+                return PhotonNetwork.IsMasterClient;
+            }
+        }
+
+        //  Send an emoji to others via Signal
+        public void SendEmoji(PubNub pubnub, int emojiId, int playerID)
+        {
+            int[] emojiMsg = new int[3];
+            emojiMsg[0] = playerID;
+            emojiMsg[1] = MessageConstants.idMsgEmoji;
+            emojiMsg[2] = emojiId;
+            string channelName = playerActionsChannelPrefix + playerID;
+            //  Note: int[] gets serialized to long[] by PubNub
+            pubnub.Signal().Message(emojiMsg).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Emoji): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Notify others we are shooting via Signal
+        public void Shoot(PubNub pubnub, int playerID, Vector3 mousePos)
+        {
+            float[] shootData = new float[5];
+            shootData[0] = playerID;   
+            shootData[1] = MessageConstants.idMsgShoot;
+            shootData[2] = mousePos.x;
+            shootData[3] = mousePos.y;
+            shootData[4] = mousePos.z;
+            string channelName = playerActionsChannelPrefix + playerID;
+            pubnub.Signal().Message(shootData).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Shoot): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Notify others we have our knife out and are shaking it around, through Signal
+        public void MeleeAttack(PubNub pubnub, int playerID)
+        {
+            int[] meleeMsg = new int[2];
+            meleeMsg[0] = playerID;
+            meleeMsg[1] = MessageConstants.idMsgMelee;
+            string channelName = playerActionsChannelPrefix + playerID;
+            pubnub.Signal().Message(meleeMsg).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Melee): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Notify others we have hurt them, through Publish message
+        public void ApplyDamage(PubNub pubnub, int playerID, int fromPlayer, int value, bool gun)
+        {
+            int[] applyDamageMsg = new int[5];
+            applyDamageMsg[0] = playerID;
+            applyDamageMsg[1] = MessageConstants.idMsgApplyDamage;
+            applyDamageMsg[2] = fromPlayer;
+            applyDamageMsg[3] = value;
+            applyDamageMsg[4] = gun ? 1 : 0;
+            pubnub.Publish().Message(applyDamageMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Apply Damage): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Tell the recipient they are dead, to ensure game state consistency across all players.
+        public void ForceDead(PubNub pubnub, int playerID)
+        {
+            int[] forceDeadMsg = new int[2];
+            forceDeadMsg[0] = playerID;
+            forceDeadMsg[1] = MessageConstants.idMsgForceDead;
+            pubnub.Publish().Message(forceDeadMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Apply Damage): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Only the master client can initiate a power up spawn, notify all players to spawn a power-up in the same location (index)
+        public void SpawnPowerUp(PubNub pubnub, int index, int powerUpIndex)
+        {
+            int[] spawnPowerUpMsg = new int[3];
+            spawnPowerUpMsg[0] = MessageConstants.idMsgSpawnPowerUp;
+            spawnPowerUpMsg[1] = index;
+            spawnPowerUpMsg[2] = powerUpIndex;
+            pubnub.Publish().Message(spawnPowerUpMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Spawn Power Up " + index + "):");
+                }
+            });
+        }
+
+        //  Notify the player instance that they have recevied a power up (only sent from Master, who controls all power ups)
+        public void ReceivePowerUp(PubNub pubnub, int playerID, int powerUpIndex, int spawnPointIndex)
+        {
+            int[] receivePowerUpMsg = new int[4];
+            receivePowerUpMsg[0] = playerID;
+            receivePowerUpMsg[1] = MessageConstants.idMsgReceivePowerUp;
+            receivePowerUpMsg[2] = powerUpIndex;
+            receivePowerUpMsg[3] = spawnPointIndex;
+            pubnub.Publish().Message(receivePowerUpMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Receive Power Up " + powerUpIndex + "):");
+                }
+            });
+        }
+
+        //  A player has picked up a power-up, notify everyone else to ensure a consistent game state
+        public void PickedUpPowerUp(PubNub pubnub, int index)
+        {
+            int[] pickedUpPowerUpMsg = new int[2];
+            pickedUpPowerUpMsg[0] = MessageConstants.idMsgPickedUpPowerUp;
+            pickedUpPowerUpMsg[1] = index;
+            pubnub.Publish().Message(pickedUpPowerUpMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Picked Power Up " + index + "):");
+                }
+            });
+        }
+
+        //  All players can see other players' health and shield status.  This message ensures a consistent game state
+        public void UpdateOthersPlayerStatus(PubNub pubnub, int playerID, int health, int shield)
+        {
+            //  Notify other players that my health and shield have updated so they can render me correctly
+            int[] updateOthersMsg = new int[4];
+            updateOthersMsg[0] = playerID;
+            updateOthersMsg[1] = MessageConstants.idMsgUpdateOthers;
+            updateOthersMsg[2] = health;
+            updateOthersMsg[3] = shield;
+            string channelName = playerActionsChannelPrefix + playerID;
+            pubnub.Publish().Message(updateOthersMsg).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Update Others)");
+                }
+            });
+        }
+
+        //  Only the master client can initiate a weapon spawn, notify all players to spawn a weapon in the same location (index)
+        public void SpawnWeapon(PubNub pubnub, int index, int weaponIndex)
+        {
+            int[] spawnWeaponMsg = new int[3];
+            spawnWeaponMsg[0] = MessageConstants.idMsgSpawnWeapon;
+            spawnWeaponMsg[1] = index;
+            spawnWeaponMsg[2] = weaponIndex;
+            pubnub.Publish().Message(spawnWeaponMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Spawn Weapon" + index + "):");
+                }
+            });
+        }
+
+        //  Notify the player instance that they have recevied a weapon (only sent from Master, who controls all weapons)
+        public void GrabWeapon(PubNub pubnub, int playerID, int weaponIndex, int spawnPointIndex)
+        {
+            int[] grabWeaponMsg = new int[4];
+            grabWeaponMsg[0] = playerID;
+            grabWeaponMsg[1] = MessageConstants.idMsgGrabWeapon;
+            grabWeaponMsg[2] = weaponIndex;
+            grabWeaponMsg[3] = spawnPointIndex;
+            pubnub.Publish().Message(grabWeaponMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Grab Weapon " + weaponIndex + "):");
+                }
+            });
+        }
+
+        //  A player has picked up a weapon, notify everyone else to ensure a consistent game state
+        public void PickedUpWeapon(PubNub pubnub, int index)
+        {
+            int[] pickedUpWeaponMsg = new int[2];
+            pickedUpWeaponMsg[0] = MessageConstants.idMsgPickedUpWeapon;
+            pickedUpWeaponMsg[1] = index;
+            pubnub.Publish().Message(pickedUpWeaponMsg).Channel(itemChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Picked Up Weapon " + index + "):");
+                }
+            });
+        }
+
+        //  You have been a right wally and falling in a hole, tell everyone else so they can laugh at you
+        public void TriggerDeadZone(PubNub pubnub, int playerID, Vector2 position)
+        {
+            float[] triggerDeadZoneData = new float[4];
+            triggerDeadZoneData[0] = playerID;
+            triggerDeadZoneData[1] = MessageConstants.idMsgTriggerDeadZone;
+            triggerDeadZoneData[2] = position.x;
+            triggerDeadZoneData[3] = position.y;
+            string channelName = playerPositionChannelPrefix + playerID;
+            pubnub.Publish().Message(triggerDeadZoneData).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Trigger Dead Zone): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Called frequently to notify everyone else what your position is (so they can update their game state)
+        public void UpdatePlayerPosition(PubNub pubnub, int playerID, Vector2 position, Vector2 velocity)
+        {
+            //  Send player movement as a PubNub signal since we can sacrifice reliability for cost here.
+            //  Maximum size of a signal is 64 bytes but the floats in the payload are serialized to doubles.
+            if (cachedPosition && (position == cachePosition && velocity == cacheVelocity))
+                return;
+            else
+            {
+                cachedPosition = true;
+                cachePosition = position;
+                cacheVelocity = velocity;
+            }
+            float[] movementData = new float[6];
+            movementData[0] = playerID;     
+            movementData[1] = MessageConstants.idMsgPosition;
+            movementData[2] = position.x;
+            movementData[3] = position.y;
+            movementData[4] = velocity.x;
+            movementData[5] = velocity.y;
+
+            string channelName = playerPositionChannelPrefix + playerID;
+            pubnub.Signal().Message(movementData).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Position): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Called frequently to notify everyone else what your cursor is (so they can rotate your player's gun).
+        //  Other data is also sent to help with animations
+        public void UpdatePlayerCursor(PubNub pubnub, int playerID, Vector3 mousePos, bool moving, bool isFalling, float xInput)
+        {
+            //  Send player cursor as a PubNub signal since we can sacrifice reliability for cost here.
+            //  Maximum size of a signal is 64 bytes but the floats in the payload are serialized to doubles.
+            if (cachedCursor && (mousePos == cacheMousePos && moving == cacheMoving && isFalling == cacheIsFalling && xInput == cacheXInput))
+                return;
+            else
+            {
+                cachedCursor = true;
+                cacheMousePos = mousePos;
+                cacheMoving = moving;
+                cacheIsFalling = isFalling;
+                cacheXInput = xInput;
+            }
+            float[] cursorData = new float[6];
+            cursorData[0] = playerID;       
+            cursorData[1] = MessageConstants.idMsgCursor;
+            cursorData[2] = mousePos.x;
+            cursorData[3] = mousePos.y;
+            float movingFalling = 0;
+            if (moving) movingFalling += 1;
+            if (isFalling) movingFalling += 10;
+            cursorData[4] = movingFalling;
+            cursorData[5] = xInput;
+
+            string channelName = playerCursorChannelPrefix + playerID;
+            pubnub.Signal().Message(cursorData).Channel(channelName).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Signal (Cursor): " + status.ErrorData.Info);
+                }
+            });
+        }
+
+        //  Create an object in the game and assign it some initial parameters.  Used when spawning weapons and power-ups.
+        public GameObject InstantiateItem(string prefabId, Vector3 position, Quaternion rotation, int itemIndex, int spawnPointIndex, int index)
+        {
+            GameObject res = null;
+            bool cached = this.ResourceCache.TryGetValue(prefabId, out res);
+            if (!cached)
+            {
+                res = Resources.Load<GameObject>(prefabId);
+                if (res == null)
+                    Debug.LogError("DefaultPool failed to load " + prefabId + ", did you add it to a Resources folder?");
+                else
+                    this.ResourceCache.Add(prefabId, res);
+            }
+
+            if (res.activeSelf)
+                res.SetActive(false);
+
+            GameObject instance = GameObject.Instantiate(res, position, rotation) as GameObject;
+            PubNubItemProps properties = instance.GetComponent<PubNubItemProps>() as PubNubItemProps;
+            if (properties == null)
+            {
+                Debug.LogError("Collectable items must have a PubNubItem associated with the Prefab");
+            }
+            else
+            {
+                properties.itemIndex = itemIndex;
+                properties.spawnPointIndex = spawnPointIndex;
+                properties.index = index;
+            }
+            instance.SetActive(true);
+            return instance;
+        }
+    }
+}

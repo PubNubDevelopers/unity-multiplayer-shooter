@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;
+using PubNubAPI;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -10,7 +11,7 @@ namespace Visyde
     /// - The component script for power-up pickup prefabs.
     /// </summary>
 
-    public class PowerUpPickup : MonoBehaviourPunCallbacks
+    public class PowerUpPickup : MonoBehaviour
     {
         [Header("References:")]
         public SpriteRenderer itemGraphic;
@@ -19,7 +20,11 @@ namespace Visyde
         PowerUp itemHandled;
 
         bool allowPickup = true;
-        object[] data;
+        int powerUpIndex;
+        int spawnPointIndex;
+        int index;
+        PubNubUtilities pubNubUtilities;
+
 
         // Use this for initialization
         void Start()
@@ -27,12 +32,24 @@ namespace Visyde
 
             // References:
             gm = FindObjectOfType<GameManager>();
+            pubNubUtilities = new PubNubUtilities();
+            PubNubItemProps initProps = GetComponent<PubNubItemProps>();
+            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            if (initProps)
+            {
+                powerUpIndex = initProps.itemIndex;
+                spawnPointIndex = initProps.spawnPointIndex;
+                index = initProps.index;
+            }
+            else
+            {
+                Debug.LogError("Failed to receive initialization properties");
+            }
 
             // data from network (by master client):
-            data = photonView.InstantiationData;
 
-            itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[(int)data[0]];
-            if ((int)data[1] != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[(int)data[1]].onlySpawnThisHere;
+            itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[powerUpIndex];
+            if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[spawnPointIndex].onlySpawnThisHere;
 
             // Visual:
             itemGraphic.sprite = itemHandled.icon;
@@ -61,28 +78,47 @@ namespace Visyde
                         allowPickup = false;
 
                         // Sound and VFX:
-                        Instantiate(itemHandled.pickUpEffect, transform.position, Quaternion.identity);
+                        try
+                        {
+                            Instantiate(itemHandled.pickUpEffect, transform.position, Quaternion.identity);
+                        }
+                        catch (System.Exception) { }
 
                         // Only the master client will handle the power-up actions:
-                        if (PhotonNetwork.IsMasterClient)
+                        if (PubNubUtilities.IsMasterClient)
                         {
-                            p.photonView.RPC("ReceivePowerUp", RpcTarget.AllViaServer, (int)data[0], (int)data[1]);
-                            photonView.RPC("Picked", RpcTarget.AllViaServer);
+                            pubNubUtilities.ReceivePowerUp(gm.pubnub, p.playerInstance.playerID, powerUpIndex, spawnPointIndex);
+                            pubNubUtilities.PickedUpPowerUp(gm.pubnub, index);
                         }
                     }
                 }
             }
         }
 
-        [PunRPC]
-        public void Picked()
+        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
         {
-            gm.itemSpawner.PowerUpPickedUp((int)data[2]);
-
-            if (PhotonNetwork.IsMasterClient)
+            //  There is one subscribe handler per character
+            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            if (mea.MessageResult != null)
             {
-                PhotonNetwork.Destroy(photonView);
+                if (mea.MessageResult.Payload is long[])
+                {
+                    long[] payload = (long[])mea.MessageResult.Payload;
+                    if (payload[0] == MessageConstants.idMsgPickedUpPowerUp)
+                    {
+                        //  Power Up has been picked up.  Check whether is corresponds to our instance
+                        int destIndex = System.Convert.ToInt32(payload[1]);
+                        if (index == destIndex)
+                            Picked(index);
+                    }
+                }
             }
+        }
+
+
+        public void Picked(int index)
+        {
+            gm.itemSpawner.PowerUpPickedUp(index);
         }
     }
 }
