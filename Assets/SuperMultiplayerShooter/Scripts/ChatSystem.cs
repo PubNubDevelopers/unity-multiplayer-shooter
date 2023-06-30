@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine.UI;
 using Photon.Chat;
 using Photon.Pun;
-using Photon.Realtime;
-using PubNubAPI;
 using System;
 using Newtonsoft.Json;
 
@@ -33,7 +31,7 @@ namespace Visyde
 
         // Internals:
         VerticalLayoutGroup vlg;
-        private PubNub _pubnub;
+       // private PubNub _pubnub;
  
         private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
         private string _lobbyPublish = "chat.translate."; //Publish channel will include
@@ -43,7 +41,7 @@ namespace Visyde
         void Start()
         {
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
-            _pubnub = PubNubManager.Instance.InitializePubNub();
+           // _pubnub = PubNubManager.Instance.InitializePubNub();
             languageOptions.onValueChanged.AddListener(delegate {
                 OnLanguageChange(languageOptions);
             });
@@ -81,7 +79,7 @@ namespace Visyde
                 filter.text = inputField.text;
                 filter.source = "en";
                 filter.target = targetLanguage;           
-                _pubnub.Publish()
+               /* _pubnub.Publish()
                     .Channel(_lobbyPublish)
                     .Message(filter)
                     .Async((result, status) => {
@@ -90,7 +88,7 @@ namespace Visyde
                             Debug.Log(status.Error);
                             Debug.Log(status.ErrorData.Info);
                         }              
-                    });
+                    });*/
                 //clear input field.
                 inputField.text = string.Empty;
             }
@@ -140,7 +138,7 @@ namespace Visyde
             messageDisplay.text = "";
            
             //Listen for any new incoming messages
-            _pubnub.SubscribeCallback += (sender, e) => {
+           /* _pubnub.SubscribeCallback += (sender, e) => {
                 SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
                 if (mea.MessageResult != null)
                 {
@@ -154,9 +152,9 @@ namespace Visyde
                .Channels(new List<string>(){
                     _lobbySubscribe
                })
-               .Execute();
+               .Execute();*/
         }  
-
+        /*
         /// <summary>
         /// Obtains the username and displays the chat.
         /// </summary>
@@ -177,7 +175,7 @@ namespace Visyde
          
             //Display the chat pulled.
             DisplayChat(message, username, PubNubManager.Instance.UserId.Equals(payload.IssuingClientId), false, false);
-        }
+        }*/
 
         /// <summary>
         /// Parses the payload for translating the message.
@@ -228,6 +226,7 @@ namespace Visyde
 
         void OnLeftRoom()
         {
+            /*
             //Unsubscrube from lobby chat once player leaves the room.
             _pubnub.Unsubscribe()
                 .Channels(new List<string>()
@@ -245,6 +244,7 @@ namespace Visyde
                         Debug.Log(string.Format("DateTime {0}, In Unsubscribe, result: {1}", DateTime.UtcNow, result.Message));
                     }
                 });
+            */
         }
 
         //Photon functions. Will be removed as more functionality is integrated.

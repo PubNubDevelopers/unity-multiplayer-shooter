@@ -1,15 +1,15 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
-using PubNubAPI;
-using Newtonsoft.Json;
 using System;
-using ExitGames.Client.Photon.StructWrapping;
-using UnityEngine.Networking;
+using PubnubApi;
+using PubnubApi.Unity;
+using static PubnubApi.Unity.PubnubExtensions;
+using Unity.VisualScripting.FullSerializer;
+using Newtonsoft.Json;
+using UnityEditor;
 
 namespace Visyde
 {
@@ -74,64 +74,213 @@ namespace Visyde
         private string _privateChannel = "presence-";
         private string _publicChannel = "chat.public"; // Used for global presence, all chat, etc.
         private string _cgFriendList = "friends-"; //Used to track presence events for friends. Used to determine when friends come online/offline.
-        private PubNub _pubnub;
+        private Pubnub pubnub;
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
-        void Awake(){
-            Screen.sleepTimeout = SleepTimeout.SystemSetting;
+        void Awake()
+        {
+            Screen.sleepTimeout = SleepTimeout.SystemSetting;        
         }
 
         // Use this for initialization
         void Start()
-        {
+        {                     
             //Initializes the PubNub Connection.
-            _pubnub = PubNubManager.Instance.InitializePubNub();
-            _privateChannel += PubNubManager.Instance.UserId; //Private channels in form of "presence-<UserId>". Necessary for buddy list tracking.
-            _cgFriendList += PubNubManager.Instance.UserId; //Manages the friend lists.
-         
+            pubnub = PNManager.pubnubInstance;
+
+            //Add Listeners
+            pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
+            listener.onPresence += OnPnPresence;
+            listener.onObject += OnPnObject;
+
+            _privateChannel += pubnub.GetCurrentUserId(); //Private channels in form of "presence-<UserId>". Necessary for buddy list tracking.
+            _cgFriendList += pubnub.GetCurrentUserId(); //Manages the friend lists.
+
             //Obtain and cache user metadata.
             GetAllUserMetadata();
 
             //Add client to Channel Group just in case first time load. Will not add if already present.
-            AddChannelsToGroup(_cgFriendList, new List<string> { _privateChannel });
-
-            //Loads the Initial Online Occupants and Populate Friend List.
-            InitialPresenceFriendListLoad();
-
-            //Listen for any events.
-            _pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            AddChannelsToGroup(_cgFriendList, new string[] { _privateChannel });
 
             //Subscribe to the list of Channels
             //Currently listening on a public channel (for presence and all chat for all users)
             //and a buddylist channel for personal user to listen for any buddy list events.
-            _pubnub.Subscribe()
-               .Channels(new List<string>()
+            pubnub.Subscribe<string>()
+               .Channels(new string[]
                {
                    _publicChannel,
                    _privateChannel,
                    _leaderboardChannelSub
                })
-               .ChannelGroups(new List<string>()
+               .ChannelGroups(new string[]
                {
                    _cgFriendList + "-pnpres" // Watch friends come online/go offline by watching presence events of this channel group and not message of users.
                })
                .WithPresence()
                .Execute();
 
+            //Loads the Initial Online Occupants and Populate Friend List.
+            InitialPresenceFriendListLoad();
+
             //fire a refresh command to the pubnub function to get the leaderboard to update
-            _pubnub.Publish()
-                .Channel(_leaderboardChannelPub)
-                .Message("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}" )
-                .Async((result, status) => {
-                if (!status.Error) {
-                        Debug.Log(string.Format("Publish Timetoken: {0}", result.Timetoken));
-                    } else {
-                        Debug.Log(status.Error);
-                        Debug.Log(status.ErrorData.Info);
-                    }
-                });
+            PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", _leaderboardChannelPub);
+
             // Others:
             frameRateSetting.isOn = Application.targetFrameRate == 60;
         }
+
+        /// <summary>
+        /// Publishes a Message to the PubNub Network
+        /// </summary>
+        /// <param name="text"></param>
+        private async void PublishMessage(string text, string channel)
+        {
+            await pubnub.Publish()
+             .Channel(channel)
+             .Message(text)
+             .ExecuteAsync();
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        {
+            // Debug.Log($"Message received: {result.Message}");
+
+            // Leaderboard Updates
+            if (result.Channel.Equals(_leaderboardChannelSub))
+            {
+                Debug.Log(result.Message);
+                Dictionary<string, object> msg = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());// as Dictionary<string, object>;
+                //Dictionary<string, object> msg = result.Message
+                var usernames = (msg["username"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
+                var scores = (msg["score"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
+
+                if (usernames[0] != null)
+                {
+                    namePos1.text = usernames[0];
+                    kdPos1.text = scores[0];
+                }
+
+                if (usernames[1] != null)
+                {
+                    namePos2.text = usernames[1];
+                    kdPos2.text = scores[1];
+                }
+
+                if (usernames[2] != null)
+                {
+                    namePos3.text = usernames[2];
+                    kdPos3.text = scores[2];
+                }
+
+                if (usernames[3] != null)
+                {
+                    namePos4.text = usernames[3];
+                    kdPos4.text = scores[3];
+                }
+
+                if (usernames[4] != null)
+                {
+                    namePos5.text = usernames[4];
+                    kdPos5.text = scores[4];
+                }               
+            }
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Presence events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnPresence(Pubnub pn, PNPresenceEventResult result)
+        {
+            // Debug.Log(result.Event);
+            if (result.Channel.Equals(_publicChannel))
+            {
+                totalCountPlayers.text = result.Occupancy.ToString();
+
+                //When user joins, check their UUID in cached players to determine if they are a new player.                 
+                if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Uuid))
+                {
+                    GetUserMetadata(result.Uuid);
+                }
+            }
+
+            //Friend List - Detect current friend online status. Ignore self.
+            else if (result.Subscription.Equals(_cgFriendList) && !pubnub.GetCurrentUserId().Equals(result.Uuid))
+            {
+                //Friend is offline when they leave or timeout.
+                bool isOnline = !(result.Event.Equals("leave") ||result.Event.Equals("timeout"));
+                //Search for the friend and update status
+                UpdateCachedPlayerOnlineStatus(result.Uuid, isOnline);
+            }
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Object events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnObject(Pubnub pn, PNObjectEventResult result)
+        {
+            //Catch other player updates (when their name changes, etc)
+            if (result != null)
+            {
+                //User Metadata Update from another player, such as a name change. Update chached players, as well as friend list.
+                if (result.Type.Equals("uuid"))
+                {
+                    UserMetadata meta = new UserMetadata
+                    {
+                        Uuid = result.UuidMetadata.Uuid,
+                        Name = result.UuidMetadata.Name,
+                        Email = result.UuidMetadata.Email,
+                        ExternalId = result.UuidMetadata.ExternalId,
+                        ProfileUrl = result.UuidMetadata.ProfileUrl,
+                        Custom = result.UuidMetadata.Custom,
+                        Updated = result.UuidMetadata.Updated
+                    };
+                    PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
+
+                    //Update friend list if the update user has updates to make.
+                    //No need to update player search, as it pulls from cached players.
+                    Transform updateFriend = friendList.Find(player => player.name.Equals(result.UuidMetadata.Uuid));
+                    if (updateFriend != null)
+                    {
+                        updateFriend.Find("PlayerUsername").GetComponent<Text>().text = result.UuidMetadata.Name;
+                    }
+                }
+                //Friend List - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
+                else if (result.Type.Equals("membership"))
+                {
+                    //Another player has added client as a friend
+                    if (result.Event.Equals("set"))
+                    {
+                        AddFriend(result.UuidMetadata.Uuid);
+                    }
+
+                    //Another player has removed client as a friend.
+                    else if (result.Event.Equals("delete"))
+                    {
+                        RemoveFriend(result.UuidMetadata.Uuid);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Status events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="status"></param>
+        private void OnPnStatus(Pubnub pn, PNStatus status)
+        {
+            Debug.Log(status.Category == PNStatusCategory.PNConnectedCategory ? "Connected" : "Not connected");
+        } 
 
         // Update is called once per frame
         void Update()
@@ -167,119 +316,189 @@ namespace Visyde
         /// </summary>
         void OnDestroy()
         {
-            _pubnub.UnsubscribeAll()
-                .Async((result, status) => {
-                if (status.Error)
-                {
-                    Debug.Log(string.Format("UnsubscribeAll Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
-                }
-                else
-                {
-                    Debug.Log(string.Format("DateTime {0}, In UnsubscribeAll, result: {1}", DateTime.UtcNow, result.Message));
-                }
-            });
+            listener.onStatus -= OnPnStatus;
+            listener.onMessage -= OnPnMessage;
+            listener.onPresence -= OnPnPresence;
+            listener.onObject -= OnPnObject;
         }
 
         /// <summary>
+        /// Get the User Metadata given the UserId.
+        /// </summary>
+        /// <param name="Uuid">UserId of the Player</param>
+        private async void GetUserMetadata(string Uuid)
+        {
+            //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
+            // Get Metadata for a specific UUID
+            PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
+                .Uuid(Uuid)
+                .ExecuteAsync();
+            PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
+            PNStatus status = getUuidMetadataResponse.Status;
+            if (!status.Error && getUuidMetadataResult != null)
+            {
+                UserMetadata meta = new UserMetadata
+                {
+                    Uuid = getUuidMetadataResult.Uuid,
+                    Name = getUuidMetadataResult.Name,
+                    Email = getUuidMetadataResult.Email,
+                    ExternalId = getUuidMetadataResult.ExternalId,
+                    ProfileUrl = getUuidMetadataResult.ProfileUrl,
+                    Custom = getUuidMetadataResult.Custom,
+                    Updated = getUuidMetadataResult.Updated
+                };
+                PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+            }
+        }
+      
+        /// <summary>
         /// Obtains all player metadata from this PubNub Keyset to cache.
         /// </summary>
-        private void GetAllUserMetadata()
+        private async void GetAllUserMetadata()
         {
-            _pubnub.GetAllUUIDMetadata().Async((result, status) => {
-                //Populate Cached Players Dictionary only if they have been set previously
-                if (result.Data.Count > 0)
+            PNResult<PNGetAllUuidMetadataResult> getAllUuidMetadataResponse = await pubnub.GetAllUuidMetadata()
+                .IncludeCustom(true)
+                .IncludeCount(true)
+                .ExecuteAsync();
+
+            PNGetAllUuidMetadataResult getAllUuidMetadataResult = getAllUuidMetadataResponse.Result;
+            PNStatus status = getAllUuidMetadataResponse.Status;
+
+            //Populate Cached Players Dictionary only if they have been set previously
+            if (!status.Error && getAllUuidMetadataResult.TotalCount > 0)
+            {
+                foreach (PNUuidMetadataResult pnUUIDMetadataResult in getAllUuidMetadataResult.Uuids)
                 {
-                    foreach (PNUUIDMetadataResult pnUUIDMetadataResult in result.Data)
+                    UserMetadata meta = new UserMetadata
                     {
-                        PubNubManager.Instance.CachedPlayers.Add(pnUUIDMetadataResult.ID, pnUUIDMetadataResult);
-                    }
+                        Uuid = pnUUIDMetadataResult.Uuid,
+                        Name = pnUUIDMetadataResult.Name,
+                        Email = pnUUIDMetadataResult.Email,
+                        ExternalId = pnUUIDMetadataResult.ExternalId,
+                        ProfileUrl = pnUUIDMetadataResult.ProfileUrl,
+                        Custom = pnUUIDMetadataResult.Custom,
+                        Updated = pnUUIDMetadataResult.Updated
+                    };
+
+                    PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
+                }
+            }
+
+            //Change playerInput name to be set to username of the user as long as the name was originally set.
+            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
+            {
+                playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+                //Nickname is used throughout the system to define the player
+                //TODO: Remove once Photon Engine is removed for finding and supporting multiplayer sync.
+                PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+            }
+            //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
+            else
+            {
+                // Set Metadata for UUID set in the pubnub instance
+                PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
+                    .Uuid(pubnub.GetCurrentUserId())
+                    .Name(pubnub.GetCurrentUserId())
+                    .ExecuteAsync();
+                PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
+                PNStatus setUUIDResponseStatus = setUuidMetadataResponse.Status;
+
+                if(!setUUIDResponseStatus.Error)
+                {
+                    UserMetadata meta = new UserMetadata
+                    {
+                        Uuid = setUuidMetadataResult.Uuid,
+                        Name = setUuidMetadataResult.Name,
+                        Email = setUuidMetadataResult.Email,
+                        ExternalId = setUuidMetadataResult.ExternalId,
+                        ProfileUrl = setUuidMetadataResult.ProfileUrl,
+                        Custom = setUuidMetadataResult.Custom,
+                        Updated = setUuidMetadataResult.Updated
+                    };
+                    PNManager.pubnubInstance.CachedPlayers.Add(setUuidMetadataResult.Uuid, meta);
+                    playerNameInput.text = setUuidMetadataResult.Uuid;
                 }
 
-                //Change playerInput name to be set to username of the user as long as the name was originally set.
-                if (PubNubManager.Instance.CachedPlayers.Count > 0 && PubNubManager.Instance.CachedPlayers.ContainsKey(PubNubManager.Instance.UserId))
-                {
-                    playerNameInput.text = PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name;
-                }
-                //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
                 else
                 {
-                    //Set name as UserId for now.
-                    _pubnub.SetUUIDMetadata().Name(PubNubManager.Instance.UserId).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
-                    {
-                        if (!status.Error)
-                        {
-                            PubNubManager.Instance.CachedPlayers.Add(result.ID, result);
-                            playerNameInput.text = result.ID;
-                        }
-
-                        else
-                        {
-                            Debug.Log($"An error hsa occurred: {status.Error}");
-                        }
-                    });
-                }
-
-                //Nickname is used throughout the system to define the player
-                PhotonNetwork.NickName = PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name;
-            });
+                    Debug.Log($"An error has occurred: {setUUIDResponseStatus.Error}");
+                }    
+            }          
         }
 
         /// <summary>
         /// Initial presence request for the channel name. Used for the initial total count, as well as to
         /// construct the client's friend list.
         /// </summary>
-        private void InitialPresenceFriendListLoad()
+        private async void InitialPresenceFriendListLoad()
         {
-            _pubnub.HereNow()
-                .Channels(new List<string>(){
+
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[] {
                     _publicChannel
                 })
                 .IncludeState(true)
                 .IncludeUUIDs(true)
-                .Async((result, status) => {
-                    //handle any errors
-                    if (status.Error)
-                    {
-                        UnityEngine.Debug.Log(string.Format("HereNow Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
-                    }
-                    //Success
-                    else
-                    {
-                        //Initial count of players in the game
-                        totalCountPlayers.text = result.Channels[_publicChannel].Occupants.Count.ToString();
-                        
-                        //Use this list to construct the friend list for the client.
-                        GetFriendList(result.Channels[_publicChannel].Occupants);
-                    }
-                });
-        }
+                .ExecuteAsync();
 
+            PNHereNowResult herenowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+
+            if (status.Error)
+            {
+                UnityEngine.Debug.Log(string.Format("HereNow Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
+            }
+            //Success
+            else
+            {
+                //Initial count of players in the game
+                if(herenowResult.Channels.Count > 0)
+                {
+                    totalCountPlayers.text = herenowResult.Channels[_publicChannel].Occupants.Count.ToString();
+
+                    //Use this list to construct the friend list for the client.
+                    GetFriendList(herenowResult.Channels[_publicChannel].Occupants);
+                }          
+            }
+        }
+      
         /// <summary>
         /// Load the Client's Friend List via the channels associated with the client.
         /// </summary>
-        private void GetFriendList(List<PNHereNowOccupantData> onlinePlayers)
+        private async void GetFriendList(List<PNHereNowOccupantData> onlinePlayers)
         {
             int onlineFriendCount = 0;
             int totalFriendCount = 0;
-            _pubnub.GetMemberships()
-                .UUID(PubNubManager.Instance.UserId)
-                .Async((result, status) =>
-            {
-                //Cross-reference the onlinePlayers list with that of the channel members
-                if (result.Data != null)
-                {          
-                    //The players that are online and match those in the client's members for their channel (space)
-                    //will be placed in the online friends category.
-                    for (int i = 0; i < result.Data.Count; i++)// (PNMembers members in result.Data)
+
+            PNResult<PNMembershipsResult> getMembershipsResponse = await pubnub.GetMemberships()
+                .Uuid(pubnub.GetCurrentUserId())
+                .Include(new PNMembershipField[] { PNMembershipField.CUSTOM, PNMembershipField.CHANNEL, PNMembershipField.CHANNEL_CUSTOM })
+                .IncludeCount(true)
+                .Page(new PNPageObject() { Next = "", Prev = "" })
+                .ExecuteAsync();
+
+            PNMembershipsResult getMembeshipsResult = getMembershipsResponse.Result;
+            PNStatus status = getMembershipsResponse.Status;
+
+            //Cross-reference the onlinePlayers list with that of the channel members
+            if (!status.Error && getMembeshipsResult.TotalCount > 0)
+            {                      
+                //The players that are online and match those in the client's members for their channel (space)
+                //will be placed in the online friends category.
+                for (int i = 0; i < getMembeshipsResult.TotalCount; i++)// (PNMembers members in result.Data)
+                {                  
+                    //Only looking for users apart of friend list.
+                    if (getMembeshipsResult.Memberships[i].ChannelMetadata.Channel.StartsWith("presence"))
                     {
-                        //Only looking for users apart of friend list.
-                        if (result.Data[i].Channel.ID.StartsWith("presence"))
+                        //extract user from channel name (remove the presence-)
+                        string userId = getMembeshipsResult.Memberships[i].ChannelMetadata.Channel.Substring(9);
+
+                        //Do not include self.
+                        if(!pubnub.GetCurrentUserId().Equals(userId))
                         {
-                            //extract user from channel name (remove the presence-)
-                            string userId = result.Data[i].Channel.ID.Substring(9);
                             Color onlineStatus = Color.gray;
                             //The online status changes to green if there is a match in the onlinePlayers initial call.
-                            if (onlinePlayers.Count > 0 && onlinePlayers.Find(onlineUser => onlineUser.UUID.Equals(userId)) != null)
+                            if (onlinePlayers.Count > 0 && onlinePlayers.Find(onlineUser => onlineUser.Uuid.Equals(userId)) != null)
                             {
                                 onlineStatus = Color.green;
                                 onlineFriendCount++;
@@ -288,198 +507,73 @@ namespace Visyde
                             //Create player transforms for the buddy list. Can be retained and not consistenly destroyed like filtered friends.
                             Transform playerTrans = Instantiate(player, playerContainer);
                             //Use the UserId in case there is no name associated with the friend.
-                            playerTrans.Find("PlayerUsername").GetComponent<Text>().text = !string.IsNullOrWhiteSpace(PubNubManager.Instance.CachedPlayers[userId].Name) ? PubNubManager.Instance.CachedPlayers[userId].Name : userId;
+                            playerTrans.Find("PlayerUsername").GetComponent<Text>().text = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[userId].Name) ? PNManager.pubnubInstance.CachedPlayers[userId].Name : userId;
                             playerTrans.gameObject.name = userId; // Used to find the object later on.
                             playerTrans.Find("OnlineStatus").GetComponent<Image>().color = onlineStatus;
                             playerTrans.gameObject.SetActive(true);
                             friendList.Add(playerTrans);
                             totalFriendCount++;
-                        }
-                    }
-                }
-
-                //The client has not registered themselves for their buddy list before. Register the client as a member of their buddy list to receive presence and the removal/addition of other users..
-                else
-                {
-                    PNMembershipsSet inputMemberships = new PNMembershipsSet();
-                    inputMemberships.Channel = new PNMembershipsChannel
-                    {
-                        ID = _privateChannel
-                    };
-                    _pubnub.SetMemberships()
-                        .UUID(PubNubManager.Instance.UserId)
-                        .Set(new List<PNMembershipsSet> { inputMemberships })
-                        .Async((result, status) => {
-                            //TODO: Handle status.
-                    });
-                }
-
-                onlineFriendsCountText.text = onlineFriendCount.ToString(); // dont include self.
-                totalFriendCountText.text = totalFriendCount.ToString(); //Update at same time
-            });
-        }
-
-        /// <summary>
-        ///  Event Handlers for listening for events on the PubNub network.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public void SubscribeCallbackHandler(object sender, EventArgs e)
-        {
-            SubscribeEventEventArgs subscribeEventEventArgs = e as SubscribeEventEventArgs;
-
-            if (subscribeEventEventArgs.MessageResult != null)
-            {
-             if(subscribeEventEventArgs.MessageResult.Channel.Equals(_leaderboardChannelSub))
-                {
-                    Debug.Log(subscribeEventEventArgs.MessageResult.Payload);
-                    Dictionary<string, object> msg = subscribeEventEventArgs.MessageResult.Payload as Dictionary<string, object>;
-                    string[] strArr = msg["username"] as string[];
-                    string[] strScores = msg["score"] as string[];
-
-                    if (strArr[0] != null){
-                        namePos1.text = strArr[0];
-                        kdPos1.text = strScores[0];
-                    }
-
-                     if (strArr[1] != null){
-                        namePos2.text = strArr[1];
-                        kdPos2.text = strScores[1];
-                    }
-
-                     if (strArr[2] != null){
-                        namePos3.text = strArr[2];
-                        kdPos3.text = strScores[2];
-                    }
-
-                     if (strArr[3] != null){
-                        namePos4.text = strArr[3];
-                        kdPos4.text = strScores[3];
-                    }
-
-                     if (strArr[4] != null){
-                        namePos5.text = strArr[4];
-                        kdPos5.text = strScores[4];
-                    }
-
-            
+                        }                       
+                    }                
                 }
             }
-
-            if (subscribeEventEventArgs.PresenceEventResult != null)
+          
+            //The client has not registered themselves for their buddy list before. Register the client as a member of their buddy list to receive presence and the removal/addition of other users..
+            else
             {
-                if(subscribeEventEventArgs.PresenceEventResult.Channel.Equals(_publicChannel))
+                PNMembership membership = new PNMembership() {
+                    Channel = _privateChannel
+                };        
+
+                PNResult<PNMembershipsResult> setMembershipsResponse = await pubnub.SetMemberships()
+                    .Uuid(pubnub.GetCurrentUserId())
+                    .Channels(new List<PNMembership> { membership })
+                    .Include(new PNMembershipField[] { PNMembershipField.CUSTOM, PNMembershipField.CHANNEL, PNMembershipField.CHANNEL_CUSTOM })
+                    .IncludeCount(true)
+                    .ExecuteAsync();
+
+                PNMembershipsResult setMembershipsResult = setMembershipsResponse.Result;
+                PNStatus setStatus = setMembershipsResponse.Status;
+                if(setStatus.Error)
                 {
-                    totalCountPlayers.text = subscribeEventEventArgs.PresenceEventResult.Occupancy.ToString();
+                    Debug.Log($"Error when setting PN Membership: {setStatus.ErrorData }");
 
-                    //When user joins, check their UUID in cached players to determine if they are a new player.                 
-                    if (!PubNubManager.Instance.CachedPlayers.ContainsKey(subscribeEventEventArgs.PresenceEventResult.UUID))
-                    {
-                        //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.
-                        _pubnub.GetUUIDMetadata()
-                            .UUID(subscribeEventEventArgs.PresenceEventResult.UUID)
-                            .Async((result, status) =>
-                            {
-                                if(result != null)
-                                {
-                                    PubNubManager.Instance.CachedPlayers.Add(result.ID, result);
-                                }
-                            });
-                    }
-                }
-
-
-
-                //Friend List - Detect current friend online status. Ignore self.
-                else if(subscribeEventEventArgs.PresenceEventResult.Subscription.Equals(_cgFriendList) && !PubNubManager.Instance.UserId.Equals(subscribeEventEventArgs.PresenceEventResult.UUID))
-                {
-                    //Friend is offline when they leave or timeout.
-                    bool isOnline = !(subscribeEventEventArgs.PresenceEventResult.Event.Equals("leave") || subscribeEventEventArgs.PresenceEventResult.Event.Equals("timeout"));
-                    //Search for the friend and update status
-                    UpdateCachedPlayerOnlineStatus(subscribeEventEventArgs.PresenceEventResult.UUID, isOnline);
                 }
             }
-
-            //Catch other player updates (when their name changes, etc)
-            if (subscribeEventEventArgs.UUIDEventResult != null)
-            {
-                if(PubNubManager.Instance.CachedPlayers.ContainsKey(subscribeEventEventArgs.UUIDEventResult.UUID))
-                {
-                    PNUUIDMetadataResult updatePlayer = PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.UUIDEventResult.UUID];
-                    updatePlayer.Name = subscribeEventEventArgs.UUIDEventResult.Name;
-                    updatePlayer.ExternalID = subscribeEventEventArgs.UUIDEventResult.ExternalID;
-                    updatePlayer.ProfileURL = subscribeEventEventArgs.UUIDEventResult.ProfileURL;
-                    //updatePlayer.ID = subscribeEventEventArgs.UUIDEventResult.UUID; Not allowing UUID changes for now.
-                    updatePlayer.ETag = subscribeEventEventArgs.UUIDEventResult.ETag;
-                    updatePlayer.Custom = subscribeEventEventArgs.UUIDEventResult.Custom;
-                    PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.UUIDEventResult.UUID] = updatePlayer;
-
-                    //Update friend list if the update user has updates to make.
-                    //No need to update player search, as it pulls from cached players.
-                    
-                    Transform updateFriend = friendList.Find(player => player.name.Equals(subscribeEventEventArgs.UUIDEventResult.UUID));
-                    if (updatePlayer != null)
-                    {
-                        updateFriend.Find("PlayerUsername").GetComponent<Text>().text = subscribeEventEventArgs.UUIDEventResult.Name;
-                    }                  
-                }
-            }
-
-            //Friend List - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
-            if (subscribeEventEventArgs.MembershipEventResult != null)
-            {
-                //Another player has added client as a friend
-                if(subscribeEventEventArgs.MembershipEventResult.ObjectsEvent.Equals(PNObjectsEvent.PNObjectsEventSet))
-                {
-                    AddFriend(subscribeEventEventArgs.MembershipEventResult.UUID);
-                    
-                }
-
-                //Another player has removed client as a friend.
-                else if (subscribeEventEventArgs.MembershipEventResult.ObjectsEvent.Equals(PNObjectsEvent.PNObjectsEventDelete))
-                {
-                    RemoveFriend(subscribeEventEventArgs.MembershipEventResult.UUID);        
-                }
-            }
-        }
-
-        /// <summary>
-        /// Subscribe to the specified List of Channels.
-        /// </summary>
-        /// <param name="channels"></param>
-        public void Subscribe(List<string> channels)
-        {
-            _pubnub.Subscribe()
-                .Channels(channels)
-                .WithPresence()
-                .Execute();
+            onlineFriendsCountText.text = onlineFriendCount.ToString(); // dont include self.
+            totalFriendCountText.text = totalFriendCount.ToString(); //Update at same time         
         }
 
         // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
-        public void SetPlayerName()
-        {       
-            // Update metadata for current logged in user name.
-            _pubnub.SetUUIDMetadata().Name(playerNameInput.text).UUID(PubNubManager.Instance.UserId).Async((result, status) =>
+        public async void SetPlayerName()
+        {
+            // Set Metadata for UUID set in the pubnub instance
+            PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
+                .Uuid(pubnub.GetCurrentUserId())
+                .Name(playerNameInput.text)
+                .ExecuteAsync();
+            PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
+            PNStatus status = setUuidMetadataResponse.Status;
+            if(!status.Error && setUuidMetadataResult != null)
             {
-                if(result != null)
-                {
-                    //Update cached players name.
-                    PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name = playerNameInput.text;
-                    //Nickname is used throughout the system to define the player
-                    PhotonNetwork.NickName = PubNubManager.Instance.CachedPlayers[PubNubManager.Instance.UserId].Name;
-                }
-            });
+                //Update cached players name.
+                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
+                //Nickname is used throughout the system to define the player
+                //TODO: Remove once Photon has been removed.
+                PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+            }
 
             //Update specific gameobject if user updates while the filter list is open.          
-            GameObject playerContainer = GameObject.Find(PubNubManager.Instance.UserId);
+            GameObject playerContainer = GameObject.Find(pubnub.GetCurrentUserId());
             if(playerContainer != null)
             {
                 playerContainer.transform.GetChild(1).GetComponent<Text>().text = playerNameInput.text; // Update the text field
-            }
+            }  
         }
 
         // Main:
-        public void FindMatch(){
+        public void FindMatch()
+        {
             // Enable the "finding match" panel:
             findingMatchPanel.SetActive(true);
             // ...then finally, find a match:
@@ -488,7 +582,8 @@ namespace Visyde
 
         // Others:
         // *called by the toggle itself in the "On Value Changed" event:
-        public void ToggleTargetFps(){
+        public void ToggleTargetFps()
+        {
             Application.targetFrameRate = frameRateSetting.isOn? 60 : 30;
 
             // Display a notif message:
@@ -534,19 +629,20 @@ namespace Visyde
             }
 
             else
-            {          
+            {
+             
                 //Filter every cached player by name. Create gameobject for each of these players.
-                foreach (KeyValuePair<string, PNUUIDMetadataResult> cachedPlayer in PubNubManager.Instance.CachedPlayers)
+                foreach (KeyValuePair<string, UserMetadata> cachedPlayer in PNManager.pubnubInstance.CachedPlayers)
                 {
                     //If users name hit a match, then add to list.
                     //Don't add own user to the list.
                     if (cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
-                        && !cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId) //lower case the text to allow for case insensitivity
-                        && filteredPlayers.Find(player => player.name.Equals("search"+cachedPlayer.Value.ID)) == null) // don't add players to search if already friends.
+                        && !cachedPlayer.Value.Uuid.Equals(pubnub.GetCurrentUserId()) //lower case the text to allow for case insensitivity
+                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.Uuid)) == null) // don't add players to search if already friends.
                     {
                         Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
                         duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
-                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.ID;
+                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.Uuid;
                         duplciateContainer.gameObject.SetActive(true);
                         filteredPlayers.Add(duplciateContainer);
                     }
@@ -556,7 +652,7 @@ namespace Visyde
                 if (filteredPlayers.Count == 0)
                 {
                     Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                    duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = "No players found that match this description...";
+                    duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = "No players found...";
                     duplciateContainer.Find("AddFriend").GetComponent<Button>().gameObject.SetActive(false);
                     duplciateContainer.gameObject.SetActive(true);
                     filteredPlayers.Add(duplciateContainer);
@@ -583,8 +679,9 @@ namespace Visyde
         /// </summary>
         public void LoadDefaultSearchPlayers()
         {
+           
             int count = 0;
-            foreach (KeyValuePair<string, PNUUIDMetadataResult> cachedPlayer in PubNubManager.Instance.CachedPlayers)
+            foreach (KeyValuePair<string, UserMetadata> cachedPlayer in PNManager.pubnubInstance.CachedPlayers)
             {
                 if (count > 20)
                 {
@@ -594,12 +691,12 @@ namespace Visyde
                 else
                 {
                     //Don't add self and friends to list.
-                    if(!cachedPlayer.Value.ID.Equals(PubNubManager.Instance.UserId)
-                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.ID)) == null)                       
+                    if(!cachedPlayer.Value.Uuid.Equals(pubnub.GetCurrentUserId())
+                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.Uuid)) == null)                       
                     {
                         Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
                         duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
-                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.ID;
+                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.Uuid;
                         duplciateContainer.gameObject.SetActive(true);
                         filteredPlayers.Add(duplciateContainer);
                         count++;
@@ -608,15 +705,18 @@ namespace Visyde
             }
         }
 
-        //Sets the CachedPlayer Transform's online status that is in the list with the given UserID.
-        //If the IsOnline is true, then the icon will be changed to green. If false, then the icon will be changed to gray.
+        /// <summary>
+        /// Sets the CachedPlayer Transform's online status that is in the list with the given UserID.
+        /// If the IsOnline is true, then the icon will be changed to green. If false, then the icon will be changed to gray.
+        /// </summary>
+        /// <param name="UserID">The UserId (Uuid) of the Player</param>
+        /// <param name="IsOnline">The online status of the player</param>
         public void UpdateCachedPlayerOnlineStatus(string UserID, bool IsOnline)
         {
             Transform updatePlayer = friendList.Find(player => player.name.Equals(UserID));
             if (updatePlayer != null)
             {
                 updatePlayer.Find("OnlineStatus").GetComponent<Image>().color = IsOnline ? Color.green : Color.gray;
-
             }
         }
 
@@ -664,75 +764,89 @@ namespace Visyde
         /// <summary>
         /// Obtains the online status for friends.
         /// </summary>
-        private void GetFriendListOnlineStatus()
+        private async void GetFriendListOnlineStatus()
         {
             //Determine which friends are currently online for the buddy list.
-            _pubnub.HereNow()
-                //Obtain information about the currently logged in users.          
-                .ChannelGroups(new List<string> { _cgFriendList })
-                .IncludeState(true)
-                .IncludeUUIDs(true)
-                .Async((result, status) => {
-                    if (status.Error)
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+               .ChannelGroups(new string[] {
+                    _cgFriendList
+               })
+               .IncludeState(true)
+               .IncludeUUIDs(true)
+               .ExecuteAsync();
+
+            PNHereNowResult herenowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+           
+            if (status.Error)
+            {
+                Debug.Log(string.Format("HereNow Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
+            }
+            else
+            {
+                int count = 0;
+                //Update buddy list to show which friends are online.
+                foreach (KeyValuePair<string, PNHereNowChannelData> kvp in herenowResult.Channels)
+                {
+                    //User ID is everything after "presence-"
+                    string userId = kvp.Key.Substring(9);
+                    if (!userId.Equals(pubnub.GetCurrentUserId()))
                     {
-                        Debug.Log(string.Format("HereNow Error: {0} {1} {2}", status.StatusCode, status.ErrorData, status.Category));
+                        UpdateCachedPlayerOnlineStatus(userId, true);
+                        count++;
                     }
-                    else
-                    {
-                        int count = 0;
-                        //Update buddy list to show which friends are online.
-                        foreach (KeyValuePair<string, PNHereNowChannelData> kvp in result.Channels)
-                        {
-                            //User ID is everything after "presence-"
-                            string userId = kvp.Key.Substring(9);
-                            if (!userId.Equals(PubNubManager.Instance.UserId))
-                            {
-                                UpdateCachedPlayerOnlineStatus(userId, true);
-                                count++;
-                            }
-                        }
-                        onlineFriendsCountText.text = count.ToString(); // dont include self.
-                        totalFriendCountText.text = friendList.Count.ToString(); //Update at same time
-                    }
-                    Debug.Log(status.Error);
-                });
+                }
+                onlineFriendsCountText.text = count.ToString(); // dont include self.
+                totalFriendCountText.text = friendList.Count.ToString(); //Update at same time
+            }
         }
 
         /// <summary>
         /// Adds the UserId to membership for client and adds the user to the buddy list.
         /// </summary>
         /// <param name="userId"></param>
-        private void AddFriend(string userId)
+        private async void AddFriend(string userId)
         {
             string targetChannel = $"presence-{userId}";
 
             //Add the friend to the channel group for presence updates.
-            AddChannelsToGroup(_cgFriendList, new List<string>() {
+            AddChannelsToGroup(_cgFriendList, new string[] {
                 targetChannel
             });
-            //Set the targeted player as a channel member of the client's friend list channel (_friendListChannel).
-            PNMembershipsSet inputMemberships = new PNMembershipsSet();
-            inputMemberships.Channel = new PNMembershipsChannel
+
+            PNMembership membership = new PNMembership()
             {
-                ID = targetChannel
+                Channel = targetChannel
             };
 
-            //add membershipt to trigger memebership event and allow other users to update their own friend lists.
-            _pubnub.SetMemberships()
-                .UUID(PubNubManager.Instance.UserId)
-                .Set(new List<PNMembershipsSet> { inputMemberships })
-                .Async((result, status) => {
-                    //Add the friend to the your client buddy list if it does not exist.
-                    if(!friendList.Find(player => player.name.Equals(userId)))
-                    {
-                        Transform newFriend = Instantiate(player, playerContainer);
-                        newFriend.Find("PlayerUsername").GetComponent<Text>().text = PubNubManager.Instance.CachedPlayers[userId].Name;
-                        newFriend.gameObject.name = userId;
-                        newFriend.gameObject.SetActive(true);
-                        friendList.Add(newFriend);
-                        GetFriendListOnlineStatus();
-                    }      
-                });
+            PNResult<PNMembershipsResult> setMembershipsResponse = await pubnub.SetMemberships()
+                .Uuid(pubnub.GetCurrentUserId())
+                .Channels(new List<PNMembership> { membership })
+                .Include(new PNMembershipField[] { PNMembershipField.CUSTOM, PNMembershipField.CHANNEL, PNMembershipField.CHANNEL_CUSTOM })
+                .IncludeCount(true)
+                .ExecuteAsync();
+
+            PNMembershipsResult setMembershipsResult = setMembershipsResponse.Result;
+            PNStatus status = setMembershipsResponse.Status;
+            if (status.Error)
+            {
+                Debug.Log($"Error when setting PN Membership: {status.ErrorData}");
+
+            }
+
+            else
+            {
+                //Add the friend to the your client buddy list if it does not exist.
+                if (!friendList.Find(player => player.name.Equals(userId)))
+                {
+                    Transform newFriend = Instantiate(player, playerContainer);
+                    newFriend.Find("PlayerUsername").GetComponent<Text>().text = PNManager.pubnubInstance.CachedPlayers[userId].Name;
+                    newFriend.gameObject.name = userId;
+                    newFriend.gameObject.SetActive(true);
+                    friendList.Add(newFriend);
+                    GetFriendListOnlineStatus();
+                }
+            }
         }
 
         /// <summary>
@@ -740,84 +854,79 @@ namespace Visyde
         /// Only adds the user to the physical list of friends if from an event.
         /// </summary>
         /// <param name="userId"></param>
-        private void RemoveFriend(string userId)
+        private async void RemoveFriend(string userId)
         {
             string targetChannel = $"presence-{userId}";
 
             //Remove friend from the group for channel updates.
-            RemoveChannelsFromGroup(_cgFriendList, new List<string>() {
+            RemoveChannelsFromGroup(_cgFriendList, new string[] {
                 targetChannel
             });
-            PNMembershipsRemove inputMembershipsRm = new PNMembershipsRemove();
-            inputMembershipsRm.Channel = new PNMembershipsChannel
+
+            PNResult<PNMembershipsResult> removeMembershipsResponse = await pubnub.RemoveMemberships()
+                .Uuid(pubnub.GetCurrentUserId())
+                .Channels(new List<string> { targetChannel })
+                .Include(new PNMembershipField[] { PNMembershipField.CUSTOM, PNMembershipField.CHANNEL, PNMembershipField.CHANNEL_CUSTOM })
+                .IncludeCount(true)
+                .ExecuteAsync();
+
+            PNMembershipsResult removeMembershipsResult = removeMembershipsResponse.Result;
+            PNStatus status = removeMembershipsResponse.Status;
+            if (status.Error)
             {
-                ID = targetChannel
-            };
-            //Remove membership to trigger membership event and allow other users to update their own friend lists.
-            _pubnub.RemoveMemberships()
-                .UUID(PubNubManager.Instance.UserId)
-                .Remove(new List<PNMembershipsRemove> { inputMembershipsRm })
-                .Async((result, status) => {
-                    //Find and remove the friend from the list if it exists.
-                    if(friendList.Find(player => player.name.Equals(userId)) != null)
-                    {
-                        Transform playerToRemove = friendList.Find(player => player.name.Equals(userId));
-                        friendList.Remove(playerToRemove);
-                        Destroy(playerToRemove.gameObject);
-                        GetFriendListOnlineStatus();
-                    }                  
-                });
+                Debug.Log($"Error when removing PN Membership: {status.ErrorData}");
+
+            }
+
+            else
+            {
+                //Find and remove the friend from the list if it exists.
+                if (friendList.Find(player => player.name.Equals(userId)) != null)
+                {
+                    Transform playerToRemove = friendList.Find(player => player.name.Equals(userId));
+                    friendList.Remove(playerToRemove);
+                    Destroy(playerToRemove.gameObject);
+                    GetFriendListOnlineStatus();
+                }
+            }     
         }
 
-        //Adds the specified channels to the channel group.
-        public void AddChannelsToGroup(string channelGroup, List<string> channels)
+        /// <summary>
+        /// Adds the specified channels to the channel group.
+        /// </summary>
+        /// <param name="channelGroup">The Channel Group to add the specified channels</param>
+        /// <param name="channels">The channels to add to the Channel Group</param>
+        public async void AddChannelsToGroup(string channelGroup, string[] channels)
         {
-            _pubnub.AddChannelsToChannelGroup()
-                .Channels(channels)
+            PNResult<PNChannelGroupsAddChannelResult> cgAddChResponse = await pubnub.AddChannelsToChannelGroup()
                 .ChannelGroup(channelGroup)
-                .Async((result, status) => {
-                    if (status.Error)
-                    {
-                        //Channel groups need at least one channel.
-                        Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", status.StatusCode, status.ErrorData, status.Category));
-                    }
-                    //success. 
-                    else
-                    {
-                        Debug.Log($"Result: {result.Message}");
-                        //Update Total Friend Count
-                        //Update online status.
+                .Channels(channels)
+                .ExecuteAsync();
 
-                        //Increase friend count
-                        //TODO: Might change this to using list channel groups to get accurate info.
-                        //int numTotalFriends = 0;
-                        //if (int.TryParse(totalFriendCountText.text, out numTotalFriends))
-                        
-                        //    totalFriendCount += 1;
-                        //}
-                        //GetOnlineStatus();
-                    }
-                });
+            //Channel groups need at least one channel.
+            if (cgAddChResponse.Status.Error)
+            {
+                Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", cgAddChResponse.Status.StatusCode, cgAddChResponse.Status.ErrorData, cgAddChResponse.Status.Category));
+            }      
         }
 
-        //Removes the specified channels from the channel group.
-        public void RemoveChannelsFromGroup(string channelGroup, List<string> channels)
-        {
-           _pubnub.RemoveChannelsFromChannelGroup()
-                .Channels(channels)
+        /// <summary>
+        /// Removes the specified channels from the channel group.
+        /// </summary>
+        /// <param name="channelGroup">The Channel Group to remove the specified channesl</param>
+        /// <param name="channels">The channels to remove from the Channel Group</param>
+        public async void RemoveChannelsFromGroup(string channelGroup, string[] channels)
+        {    
+            PNResult<PNChannelGroupsRemoveChannelResult> rmChFromCgResponse = await pubnub.RemoveChannelsFromChannelGroup()
                 .ChannelGroup(channelGroup)
-                .Async((result, status) => {
-                    if (status.Error)
-                    {
-                        //Channel groups need at least one channel.
-                        Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", status.StatusCode, status.ErrorData, status.Category));
-                    }
-                    //success. 
-                    else
-                    {
-                        Debug.Log($"Result: {result.Message}");        
-                    }
-            });
+                .Channels(channels)
+                .ExecuteAsync();
+
+            //Channel groups need at least one channel.
+            if (rmChFromCgResponse.Status.Error)
+            {
+                Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", rmChFromCgResponse.Status.StatusCode, rmChFromCgResponse.Status.ErrorData, rmChFromCgResponse.Status.Category));
+            }
         }
     }
 }

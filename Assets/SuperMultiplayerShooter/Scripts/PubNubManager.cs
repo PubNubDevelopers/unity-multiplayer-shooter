@@ -1,18 +1,23 @@
 using System.Collections;
 using System.Collections.Generic;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using UnityEngine;
 
 public class PubNubManager : MonoBehaviour
 {
-    public static PubNubManager Instance;
+    //public static PubNubManager Instance;
     //Persist the PubNub object across scenes
-    private string _userID;
+    //private string _userID;
+
+    
 
     //Cached players from connection.
-    private static Dictionary<string, PNUUIDMetadataResult> _cachedPlayers = new Dictionary<string, PNUUIDMetadataResult>();
+   // private static Dictionary<string, PNUuidMetadataResult> _cachedPlayers = new Dictionary<string, PNUuidMetadataResult>();
 
-    public static PubNub PubNub;
+   // public static Pubnub PubNub;
+
+    /*
 
     /// <summary>
     /// Do not destroy the PubNubManager object when transitioning between scenes.
@@ -27,35 +32,36 @@ public class PubNubManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
-
+    
     /// <summary>
     /// Returns the PNConfiguration to reinitialize the PubNub object in different scenes.
     /// </summary>
     /// <returns></returns>
-    public PubNub InitializePubNub()
-    {    
-        PNConfiguration pnConfiguration = new PNConfiguration();
-        pnConfiguration.SubscribeKey = "SUBSCRIBE_KEY";
-        pnConfiguration.PublishKey = "PUBLISH_KEY";
-        pnConfiguration.LogVerbosity = PNLogVerbosity.BODY;
-
-        //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
-        string uuid = "User#" + Random.Range(0, 9999).ToString();
+    public Pubnub InitializePubNub()
+    {
+        string userId = string.Empty;
+        
+        //Note: SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
         //Check if the user id already exists on this device. If not, save it.
         if (PlayerPrefs.HasKey("uuid"))
         {
-            uuid = PlayerPrefs.GetString("uuid");
+            userId = PlayerPrefs.GetString("uuid");
         }
 
         else
         {
-            PlayerPrefs.SetString("uuid", uuid);
+            userId = SystemInfo.deviceUniqueIdentifier;
+            PlayerPrefs.SetString("uuid", userId);
         }
 
-        _userID = uuid;
+        PNConfiguration pnConfiguration = new PNConfiguration(new UserId(userId))
+        {
+            SubscribeKey = "SUBSCRIBE_KEY",
+            PublishKey = "PUBLISH_KEY",
+            LogVerbosity = PNLogVerbosity.BODY
+        };
 
-        pnConfiguration.UserId = uuid;
-        return new PubNub(pnConfiguration);
+        return new Pubnub(pnConfiguration);
     }
 
     /// <summary>
@@ -70,7 +76,7 @@ public class PubNubManager : MonoBehaviour
     /// <summary>
     /// Tracks a cached list of all players to be used throughout the application.
     /// </summary>
-    public Dictionary<string, PNUUIDMetadataResult> CachedPlayers
+    public Dictionary<string, PNUuidMetadataResult> CachedPlayers
     {
         get { return _cachedPlayers; }
         set { _cachedPlayers = value; }
@@ -94,4 +100,5 @@ public class PubNubManager : MonoBehaviour
                    }
                });
     }
+    */
 }
