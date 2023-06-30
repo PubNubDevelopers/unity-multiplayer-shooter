@@ -35,6 +35,12 @@ public class PNManager : PNManagerBehaviour {
     /// <returns></returns>
     private Pubnub InitializePubNub()
     {
+        /*
+        if (.SubscribeKey == "SUBSCRIBE_KEY" || pnConfiguration.PublishKey == "PUBLISH_KEY")
+        {
+            Debug.LogError("Please set your PubNub keys in PubNubManager.cs");
+        }
+        */
         //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
         //string uuid = "User#" + Random.Range(0, 9999).ToString();
         string uuid = System.Guid.NewGuid().ToString();

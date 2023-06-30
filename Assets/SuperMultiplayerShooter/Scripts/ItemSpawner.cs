@@ -1,8 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using PubNubUnityShowcase;
+using Newtonsoft.Json;
+using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 
 namespace Visyde
 {
@@ -32,6 +35,7 @@ namespace Visyde
         [HideInInspector] public Transform[] currentPowerUpSpawns;                      // used for checking if a certain spawn point still has a power-up pickup
 
         private PubNubUtilities pubNubUtilities;
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         void Start()
         {
@@ -43,7 +47,9 @@ namespace Visyde
             nextPowerUpSpawnIn = new double[currentPowerUpSpawns.Length];
 
             pubNubUtilities = new PubNubUtilities();
-            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            //Add Listeners
+            gm.pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
         }
 
         // Update is called once per frame
@@ -73,15 +79,24 @@ namespace Visyde
             }
         }
 
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        private void OnDestroy()
+        {
+            listener.onMessage -= OnPnMessage;
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per character
-            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
-            if (mea.MessageResult != null)
-            {
-                if (mea.MessageResult.Payload is long[])
+            if (result.Message != null)
+            {           
+                long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
+                if( payload != null)
                 {
-                    long[] payload = (long[])mea.MessageResult.Payload;
                     if (payload[0] == MessageConstants.idMsgSpawnPowerUp)
                     {
                         //  Spawn a Power Up

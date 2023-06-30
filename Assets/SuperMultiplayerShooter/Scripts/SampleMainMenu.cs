@@ -347,7 +347,10 @@ namespace Visyde
                     Custom = getUuidMetadataResult.Custom,
                     Updated = getUuidMetadataResult.Updated
                 };
-                PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+                if(!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
+                {
+                    PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+                }
             }
         }
       

@@ -1,8 +1,14 @@
 ﻿using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using PubNubUnityShowcase;
+using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Linq;
 
 namespace Visyde
 {
@@ -15,6 +21,8 @@ namespace Visyde
     {
         //  PubNub variables
         private PubNubUtilities pubNubUtilities;
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
+
         //  Control the timing to send movement data to other players
         private float positionUpdateTimer = 0.0f;
         private float positionUpdateInterval = 0.05f;    //  20 times a second
@@ -126,23 +134,34 @@ namespace Visyde
             gm = GameManager.instance;
 
             pubNubUtilities = new PubNubUtilities();
-            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+
+            //Add Listeners
+            gm.pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
+            listener.onSignal += OnPnSignal;
+
             if (gm.players.Length + gm.bots.Length <= 3)
             {
                 positionUpdateInterval = 0.04f; //  25 times a second
             }
         }
 
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
-            //  There is one subscribe handler per character
-            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
-            if (mea.MessageResult != null)
+            if (result.Message!= null)
             {
-                //  Messages (Publish)
-                if (mea.MessageResult.Payload is long[])
+                object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
+                bool containsDoubles = payloadCheck.OfType<double>().Any();
+                //  Signals
+                if (!containsDoubles)
                 {
-                    long[] payload = (long[])mea.MessageResult.Payload;
+                    long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
+                    //long[] payload = (long[])result.Message;
                     if (payload[1] == MessageConstants.idMsgReceivePowerUp)
                     {
                         //  Receive Power up state
@@ -201,28 +220,42 @@ namespace Visyde
                         }
                     }
                 }
-                else if (mea.MessageResult.Payload is double[])
+                else
                 {
-                    double[] payload = (double[])mea.MessageResult.Payload;
-                    if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
+                    double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
+                    if (payload != null)
                     {
-                        //  Trigger Dead Zone
-                        int playerId = System.Convert.ToInt32(payload[0]);
-                        float positionX = (float)payload[2];
-                        float positionY = (float)payload[3];
-                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
                         {
-                            TriggerDeadZone(new Vector2(positionX, positionY));
+                            //  Trigger Dead Zone
+                            int playerId = System.Convert.ToInt32(payload[0]);
+                            float positionX = (float)payload[2];
+                            float positionY = (float)payload[3];
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            {
+                                TriggerDeadZone(new Vector2(positionX, positionY));
+                            }
                         }
-                    }
+                    }                 
                 }
             }
-            else if (mea.SignalEventResult != null)
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Signal events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
+        {
+            if (result.Message != null)
             {
+                object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
+                bool containsDoubles = payloadCheck.OfType<double>().Any();
                 //  Signals
-                if (mea.SignalEventResult.Payload is long[])
+                if (!containsDoubles)
                 {
-                    long[] payload = (long[])mea.SignalEventResult.Payload;
+                    long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                     if (payload[1] == MessageConstants.idMsgEmoji)
                     {
                         //  Emote
@@ -231,7 +264,7 @@ namespace Visyde
                         if (playerId == playerInstance.playerID && !playerInstance.isMine)
                         {
                             Emote(emote);
-                        }    
+                        }
                     }
                     else if (payload[1] == MessageConstants.idMsgMelee)
                     {
@@ -243,100 +276,103 @@ namespace Visyde
                         }
                     }
                 }
-                else if (mea.SignalEventResult.Payload is double[])
+                else
                 {
-                    double[] payload = (double[])mea.SignalEventResult.Payload;
-                    int command = System.Convert.ToInt32(payload[1]);
-                    if (command == MessageConstants.idMsgPosition)
+                    double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
+                    if (payload != null)
                     {
-                        //  Movement message 1
-                        int playerId = System.Convert.ToInt32(payload[0]);
-                        float positionX = (float)payload[2];
-                        float positionY = (float)payload[3];
-                        float velocityX = (float)payload[4];
-                        float velocityY = (float)payload[5];
-                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        int command = System.Convert.ToInt32(payload[1]);
+                        if (command == MessageConstants.idMsgPosition)
                         {
-                            long serverSentTimeToken = mea.SignalEventResult.Timetoken;
-                            if (serverSentTimeToken <= mostRecentTimeToken)
+                            //  Movement message 1
+                            int playerId = System.Convert.ToInt32(payload[0]);
+                            float positionX = (float)payload[2];
+                            float positionY = (float)payload[3];
+                            float velocityX = (float)payload[4];
+                            float velocityY = (float)payload[5];
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
                             {
-                                //  I rarely see this happen during testing, but
-                                //  discard any packets received out of order
-                                return;
+                                long serverSentTimeToken = result.Timetoken;
+                                if (serverSentTimeToken <= mostRecentTimeToken)
+                                {
+                                    //  I rarely see this happen during testing, but
+                                    //  discard any packets received out of order
+                                    return;
+                                }
+                                mostRecentTimeToken = serverSentTimeToken;
+
+                                if (networkPos != null)
+                                    networkPos.Set(positionX, positionY);
+                                else
+                                    networkPos = new Vector2();
+
+                                if (movementController.velocity != null)
+                                    movementController.velocity.Set(velocityX, velocityY);
+                                else
+                                    movementController.velocity = new Vector2();
+
+                                //  If is still moving, do predict next location based on current velocity and lag:
+                                if (Helper.GetDistance(lastPos, networkPos) > 0.2f)
+                                {
+                                    networkPos += (movementController.velocity);
+                                }
+
+
+                                lastPos = networkPos;
+
+
+                                // If network position is just too far, force to update local position:
+                                if (Helper.GetDistance(networkPos, transform.position) > 0.2f)
+                                {
+                                    movementController.position = networkPos;
+                                }
+
                             }
-                            mostRecentTimeToken = serverSentTimeToken;
-
-                            if (networkPos != null)
-                                networkPos.Set(positionX, positionY);
-                            else
-                                networkPos = new Vector2();
-
-                            if (movementController.velocity != null)
-                                movementController.velocity.Set(velocityX, velocityY);
-                            else
-                                movementController.velocity = new Vector2();
-
-                            //  If is still moving, do predict next location based on current velocity and lag:
-                            if (Helper.GetDistance(lastPos, networkPos) > 0.2f) 
-                            {
-                                networkPos += (movementController.velocity);
-                            }
-                            
-                            
-                            lastPos = networkPos;
-
-                            
-                            // If network position is just too far, force to update local position:
-                            if (Helper.GetDistance(networkPos, transform.position) > 0.2f)
-                            {
-                                movementController.position = networkPos;
-                            }
-                            
                         }
-                    }
-                    else if (command == MessageConstants.idMsgCursor)
-                    {
-                        //  Cursor movement
-                        int playerId = System.Convert.ToInt32(payload[0]);
-                        float mousePosX = (float)payload[2];
-                        float mousePosY = (float)payload[3];
-                        float movingFalling = (float)payload[4];
-                        float xInputLocal = (float)payload[5];
-                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        else if (command == MessageConstants.idMsgCursor)
                         {
-                            nMousePos.Set(mousePosX, mousePosY, 0.0f);
-                            if (movingFalling > 9.9f)
-                            {
-                                isFalling = true;
-                                movingFalling -= 10;
-                            }
-                            else
-                                isFalling = false;
-
-                            if (movingFalling > 0.9f)
-                            {
-                                moving = true;
-                            }
-                            else
-                                moving = false;
-
-                            xInput = xInputLocal;
-                        }
-                    }
-                    else if (command == MessageConstants.idMsgShoot)
-                    {
-                        //  Shoot message
-                        int playerId = System.Convert.ToInt32(payload[0]);
-                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
-                        {
+                            //  Cursor movement
+                            int playerId = System.Convert.ToInt32(payload[0]);
                             float mousePosX = (float)payload[2];
                             float mousePosY = (float)payload[3];
-                            float mousePosZ = (float)payload[4];
-                            Vector3 curMousePos = new Vector3(mousePosX, mousePosY, mousePosZ);
-                            Shoot(curMousePos);
-                        }
-                    }
+                            float movingFalling = (float)payload[4];
+                            float xInputLocal = (float)payload[5];
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            {
+                                nMousePos.Set(mousePosX, mousePosY, 0.0f);
+                                if (movingFalling > 9.9f)
+                                {
+                                    isFalling = true;
+                                    movingFalling -= 10;
+                                }
+                                else
+                                    isFalling = false;
 
+                                if (movingFalling > 0.9f)
+                                {
+                                    moving = true;
+                                }
+                                else
+                                    moving = false;
+
+                                xInput = xInputLocal;
+                            }
+                        }
+                        else if (command == MessageConstants.idMsgShoot)
+                        {
+                            //  Shoot message
+                            int playerId = System.Convert.ToInt32(payload[0]);
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            {
+                                float mousePosX = (float)payload[2];
+                                float mousePosY = (float)payload[3];
+                                float mousePosZ = (float)payload[4];
+                                Vector3 curMousePos = new Vector3(mousePosX, mousePosY, mousePosZ);
+                                Shoot(curMousePos);
+                            }
+                        }
+
+                    }
                 }
             }
         }
@@ -720,7 +756,7 @@ namespace Visyde
 
                 if (character.data.jumpSFX.Length > 0)
                 {
-                    aus.PlayOneShot(character.data.jumpSFX[Random.Range(0, character.data.jumpSFX.Length)]);
+                    aus.PlayOneShot(character.data.jumpSFX[UnityEngine.Random.Range(0, character.data.jumpSFX.Length)]);
                 }
             }
         }
@@ -729,7 +765,7 @@ namespace Visyde
         {
             gm.pooler.Spawn("LandDust", transform.position);
             // Sound:
-            if (character.data.landingsSFX.Length > 0) aus.PlayOneShot(character.data.landingsSFX[Random.Range(0, character.data.landingsSFX.Length)]);
+            if (character.data.landingsSFX.Length > 0) aus.PlayOneShot(character.data.landingsSFX[UnityEngine.Random.Range(0, character.data.landingsSFX.Length)]);
         }
 
         public void OwnerShootCommand(){
@@ -791,7 +827,8 @@ namespace Visyde
                 if (photonView.IsMine)
                 {
                     Invoke("PhotonDestroy", 1f);
-                    gm.pubnub.SubscribeCallback -= SubscribeCallbackHandler;
+                    listener.onMessage -= OnPnMessage;
+                    listener.onSignal -= OnPnSignal;
                 }
             }
 
@@ -807,8 +844,8 @@ namespace Visyde
             invulnerabilityIndicator.SetActive(false);
 
             // PubNub
-            gm.pubnub.SubscribeCallback -= SubscribeCallbackHandler;
-
+            listener.onMessage -= OnPnMessage;
+            listener.onSignal -= OnPnSignal;
         }
 
         public void Teleport(Vector3 newPos)
@@ -893,7 +930,7 @@ namespace Visyde
                     }
 
                     // Sound:
-                    aus.PlayOneShot(hurtSFX[Random.Range(0, hurtSFX.Length)]);
+                    aus.PlayOneShot(hurtSFX[UnityEngine.Random.Range(0, hurtSFX.Length)]);
 
                     // Do the "hurt screen" effect:
                     if (isPlayerOurs)
@@ -1071,6 +1108,17 @@ namespace Visyde
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
         {
             return;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the JSON string starts with a long 
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        private bool IsLong(string text)
+        {
+            var array = JArray.Parse(text);
+            return array[0].Type == JTokenType.Integer ? true : false;  
         }
     }
 }
