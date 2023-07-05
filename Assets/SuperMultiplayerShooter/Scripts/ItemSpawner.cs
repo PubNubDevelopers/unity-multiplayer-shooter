@@ -77,8 +77,11 @@ namespace Visyde
                     }
                 }
             }
-        }
 
+        }
+        /// <summary>
+        /// Called whenever the scene or game ends. Unsubscribe from PubNub listeners.
+        /// </summary>
         private void OnDestroy()
         {
             listener.onMessage -= OnPnMessage;

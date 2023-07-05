@@ -1056,9 +1056,14 @@ namespace Visyde
             }
         }
 
+        /// <summary>
+        /// Called whenever the scene or game ends. Unsubscribe from PubNub listeners.
+        /// </summary>
         void OnDestroy()
         {
             if (!forPreview) gm.playerControllers.RemoveAll(p => p == null);
+            listener.onMessage -= OnPnMessage;
+            listener.onSignal -= OnPnSignal;
         }
         // *****************************************************
 

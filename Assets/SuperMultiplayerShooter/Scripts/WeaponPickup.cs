@@ -65,6 +65,14 @@ namespace Visyde
             itemGraphic.enabled = allowPickup;
         }
 
+        /// <summary>
+        /// Called when the scene is changed. Remove any PubNub listeners.
+        /// </summary>
+        private void OnDestroy()
+        {
+            listener.onMessage -= OnPnMessage;
+        }
+
         void Allow()
         {
             allowPickup = true;
@@ -116,11 +124,6 @@ namespace Visyde
                     }
                 }
             }
-        }
-
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
-        {
-            
         }
 
         public void Picked(int index)

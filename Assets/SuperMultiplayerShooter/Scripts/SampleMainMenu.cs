@@ -312,7 +312,7 @@ namespace Visyde
         }
 
         /// <summary>
-        /// Called whenever the scene or game ends. Unsubscribe from all channels and channel groups to trigger events immediately.
+        /// Called whenever the scene or game ends. Unsubscribe event listeners.
         /// </summary>
         void OnDestroy()
         {
@@ -320,6 +320,10 @@ namespace Visyde
             listener.onMessage -= OnPnMessage;
             listener.onPresence -= OnPnPresence;
             listener.onObject -= OnPnObject;
+
+            //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
+            //there are new players.
+            PNManager.pubnubInstance.CachedPlayers.Clear();
         }
 
         /// <summary>

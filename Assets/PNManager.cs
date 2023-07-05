@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Newtonsoft.Json;
 using PubnubApi;
 using PubnubApi.Unity;
 
@@ -16,17 +15,13 @@ public class PNManager : PNManagerBehaviour {
 
     private async void Awake()
 	{
-
-        if (pubnubInstance != null)
+        if (pubnubInstance == null)
         {
-            Destroy(gameObject);
-            return;
-        }
-     
-		// Initialize will create a PubNub instance, pass the configuration object, and prepare the listener. 
-		InitializePubNub();
-        pubnubInstance = this;
-        DontDestroyOnLoad(gameObject);
+            // Initialize will create a PubNub instance, pass the configuration object, and prepare the listener. 
+            InitializePubNub();
+            pubnubInstance = this;
+            DontDestroyOnLoad(gameObject);
+        }	
     }
 
     /// <summary>
@@ -35,12 +30,10 @@ public class PNManager : PNManagerBehaviour {
     /// <returns></returns>
     private Pubnub InitializePubNub()
     {
-        /*
-        if (.SubscribeKey == "SUBSCRIBE_KEY" || pnConfiguration.PublishKey == "PUBLISH_KEY")
+        if (pnConfiguration.SubscribeKey == "SUBSCRIBE_KEY" || pnConfiguration.PublishKey == "PUBLISH_KEY")
         {
             Debug.LogError("Please set your PubNub keys in PubNubManager.cs");
         }
-        */
         //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
         //string uuid = "User#" + Random.Range(0, 9999).ToString();
         string uuid = System.Guid.NewGuid().ToString();
@@ -57,7 +50,7 @@ public class PNManager : PNManagerBehaviour {
         }
 
         userId = uuid;
-        
+     
         return Initialize(userId);
     }
 
@@ -69,11 +62,4 @@ public class PNManager : PNManagerBehaviour {
         get { return cachedPlayers; }
         set { cachedPlayers = value; }
     }
-
-    
-    protected override void OnDestroy()
-    {
-		base.OnDestroy();
-        cachedPlayers.Clear();
-	}
 }
