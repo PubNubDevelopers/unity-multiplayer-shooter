@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using PubNubUnityShowcase;
+using Newtonsoft.Json;
 
 namespace Visyde
 {
@@ -22,7 +24,9 @@ namespace Visyde
         int weaponIndex;
         int spawnPointIndex;
         int index;
+
         PubNubUtilities pubNubUtilities;
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         // Use this for initialization
         void Start()
@@ -32,7 +36,11 @@ namespace Visyde
             gm = FindObjectOfType<GameManager>();
             pubNubUtilities = new PubNubUtilities();
             PubNubItemProps initProps = GetComponent<PubNubItemProps>();
-            gm.pubnub.SubscribeCallback += SubscribeCallbackHandler;
+
+            //Listeners
+            gm.pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
+
             if (initProps)
             {
                 weaponIndex = initProps.itemIndex;
@@ -57,6 +65,14 @@ namespace Visyde
         {
             // Hide when someone already picked this pickup:
             itemGraphic.enabled = allowPickup;
+        }
+
+        /// <summary>
+        /// Called when the scene is changed. Remove any PubNub listeners.
+        /// </summary>
+        private void OnDestroy()
+        {
+            listener.onMessage -= OnPnMessage;
         }
 
         void Allow()
@@ -88,15 +104,19 @@ namespace Visyde
             }
         }
 
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per weapon
-            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
-            if (mea.MessageResult != null)
+            if (result.Message != null)
             {
-                if (mea.MessageResult.Payload is long[])
+                long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
+                if (payload != null)
                 {
-                    long[] payload = (long[])mea.MessageResult.Payload;
                     if (payload[0] == MessageConstants.idMsgPickedUpWeapon)
                     {
                         //  Power Up has been picked up.  Check whether is corresponds to our instance

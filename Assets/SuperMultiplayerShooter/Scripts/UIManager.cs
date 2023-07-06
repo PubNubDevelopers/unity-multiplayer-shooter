@@ -2,7 +2,8 @@
 using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using Newtonsoft.Json;
 
 namespace Visyde
@@ -105,8 +106,7 @@ public class MyClass
 
         public bool isMenuShown { get { return menuPanel.activeSelf; }}
 
-
-        private PubNub _pubnub;
+        private Pubnub pubnub;
         private string _leaderboardChannelPub = "score.leaderboard";
         public bool notPublished = true; 
 
@@ -127,9 +127,9 @@ public class MyClass
             // Initialize things:
             UpdateBoards();
             gameOverPanel.SetActive(false);
-            hurtOverlay.color = Color.clear; 
+            hurtOverlay.color = Color.clear;
             //Initializes the PubNub Connection.
-            _pubnub = PubNubManager.Instance.InitializePubNub();
+            pubnub = PNManager.pubnubInstance;
 
             // Show mobile controls if needed:
             mobileControlsPanel.SetActive(gm.useMobileControls);
@@ -169,17 +169,7 @@ public class MyClass
                                     mc.username = PhotonNetwork.NickName;
                                     mc.score = playersSorted[i].kills.ToString();
                                     string json = JsonUtility.ToJson(mc);
-                            _pubnub.Publish()
-                            .Channel(_leaderboardChannelPub)
-                            .Message(json)
-                            .Async((result, status) => {
-                            if (!status.Error) {
-                                    Debug.Log(string.Format("Publish Timetoken: {0}", result.Timetoken));
-                                } else {
-                                 Debug.Log(status.Error);
-                                    Debug.Log(status.ErrorData.Info);
-                                }
-                            });
+                            PublishMessage(json, _leaderboardChannelPub);
                         }
                         notPublished = false;
                     }
@@ -503,6 +493,18 @@ public class MyClass
             Text m = Instantiate(messageTextPrefab, messagePanel);
             m.color = mColor;
             m.text = message;
+        }
+
+        /// <summary>
+        /// Publishes a Message to the PubNub Network
+        /// </summary>
+        /// <param name="text"></param>
+        private async void PublishMessage(string text, string channel)
+        {
+            await pubnub.Publish()
+             .Channel(channel)
+             .Message(text)
+             .ExecuteAsync();
         }
     }
 }
