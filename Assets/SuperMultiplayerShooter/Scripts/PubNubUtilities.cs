@@ -4,7 +4,7 @@ using PubnubApi.Unity;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Photon.Pun;
+//using Photon.Pun;
 
 /// <summary>
 /// PubNubUtilities
@@ -40,6 +40,7 @@ namespace PubNubUnityShowcase
         static public string playerPositionChannelPrefix= "player_position_";     //  position, velocity
         static public string playerCursorChannelPrefix  = "player_cursor_";       //  cursor
         static public string itemChannel = "item_update";
+        static public string roomStatusChannel = "currentRoomStatus";             //  E.g. game starting or scores update
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.
@@ -62,7 +63,8 @@ namespace PubNubUnityShowcase
         {
             get
             {
-                return PhotonNetwork.IsMasterClient;
+                //return PhotonNetwork.IsMasterClient;
+                return Visyde.Connector.instance.isMasterClient;
             }
         }
 
@@ -394,6 +396,25 @@ namespace PubNubUnityShowcase
             }
             instance.SetActive(true);
             return instance;
+        }
+
+        public void PubNubSendRoomProperties(PubNub pubnub, Dictionary<string, object> payload)
+        {
+            Debug.Log("Sending Room Properties");
+            pubnub.Publish().Message(payload).Channel(PubNubUtilities.roomStatusChannel).Async((result, status) =>
+            {
+                if (status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Room Status)");
+                }
+            });
+        }
+
+        public void PubNubSendRoomProperties(PubNub pubnub, string property, object value)
+        {
+            Dictionary<string, object> payload = new Dictionary<string, object>();
+            payload[property] = value;
+            PubNubSendRoomProperties(pubnub, payload);
         }
     }
 }

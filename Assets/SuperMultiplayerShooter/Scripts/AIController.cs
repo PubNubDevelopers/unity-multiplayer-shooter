@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Realtime;
+//using Photon.Realtime;
 using PubNubUnityShowcase;
 
 namespace Visyde
@@ -40,7 +40,7 @@ namespace Visyde
         [HideInInspector] public bool doMeleeAttack;
 
         // Others:
-        [HideInInspector] public Player owner;
+        //[HideInInspector] public Player owner;
         [HideInInspector] public PlayerController player;
         [HideInInspector] public PlayerController nearestPlayer;
         [HideInInspector] public WeaponPickup nearestWeapon;
@@ -57,6 +57,7 @@ namespace Visyde
         float wanderDelay;
         int lastHp, doMoveDir;
         public int chosenEmote = -1;
+        private BotSpawner bs;
 
         // Map bounds knowledge so we know where should we not go:
         float worldBoundXPos, worldBoundXNeg, worldBoundYPos, worldBoundYNeg;
@@ -96,22 +97,29 @@ namespace Visyde
         }
 
         // Bot initialization. This is called by the PlayerController component on spawn/start:
-        public void InitializeBot(int id)
+        public void InitializeBot(int id, int ownerId, bool isMine)
         {
             botID = id;  // this is now basically the same as the player ID of this bot
 
             // Create a bot spawner for this bot:
-            if (!GameManager.instance.gameStarted)
+            //if (!GameManager.instance.gameStarted)
+            if (!GameManager.instance.spawnComplete)
             {
-                BotSpawner bs = Instantiate(botSpawnerPrefab, new Vector3(), Quaternion.identity);
-                bs.Initialize(botID, player);
+                bs = Instantiate(botSpawnerPrefab, new Vector3(), Quaternion.identity);
+                bs.Initialize(botID, player, ownerId, isMine);
             }
+        }
+
+        public void Die()
+        {
+            bs.Died();
         }
 
         // Update is called once per frame
         void Update()
         {
-            if (player.photonView.IsMine)
+            //if (player.photonView.IsMine)
+            if (player.pubNubPlayerProps.IsMine)
             {
                 if (player)
                 {
@@ -155,6 +163,7 @@ namespace Visyde
                         }
                         else
                         {
+                            Debug.Log("AI: There is no nearest player");
                             if (wanderDelay <= 0)
                             {
                                 // Wander/Get a weapon:
@@ -233,6 +242,7 @@ namespace Visyde
         }
         void GetNearestPlayer()
         {
+            Debug.Log("AI: Finding a nearest player");
             // Forget the current target (if we have one):
             nearestPlayer = null;
 
@@ -241,6 +251,7 @@ namespace Visyde
             GameManager gm = GameManager.instance;
 
             // Since we already have a list of currently existing player controllers, we can just iterate through it and find the nearest:
+            Debug.Log("AI: Considering this many players: " + gm.playerControllers.Count);
             for (int i = 0; i < gm.playerControllers.Count; i++)
             {
                 PlayerController p = gm.playerControllers[i];
@@ -314,11 +325,14 @@ namespace Visyde
         // Actions:
         void Attack()
         {
+            Debug.Log("AI: Attacking");
             if (player.isDead) return;  // Don't proceed if dead
+            Debug.Log("AI: Not attacking since Dead"); 
 
             // Check if we're close enough that we can just melee-attack our target:
             if (Helper.GetDistance(transform.position, nearestPlayer.transform.position) <= player.meleeWeapon.attackRange.x)
             {
+                Debug.Log("AI: Within Melee Range");
                 // ...then attack:
                 doMeleeAttack = true;
                 doShoot = false;
@@ -327,6 +341,7 @@ namespace Visyde
             // ...else, check if we have a weapon and some ammo to shoot the target:
             else
             {
+                Debug.Log("AI: Not Within Melee Range");
                 if (HasWeaponAndAmmo())
                 {
                     // If we can see the target, shoot them:
@@ -762,6 +777,7 @@ namespace Visyde
             {
                 if (chosenEmote > 0)
                 {
+                    Debug.Log("AI Emoji");
                     new PubNubUtilities().SendEmoji(GameManager.instance.pubnub, chosenEmote, botID);
                     chosenEmote = -1;
                 }

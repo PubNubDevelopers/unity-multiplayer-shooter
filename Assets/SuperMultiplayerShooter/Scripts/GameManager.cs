@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Photon.Pun;
-using Photon.Realtime;
-using Photon.Pun.UtilityScripts;
+//using Photon.Pun;
+//using Photon.Realtime;
+//using Photon.Pun.UtilityScripts;
 using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
+using System;
+using UnityEngine.Windows;
 
 namespace Visyde
 {
@@ -17,12 +19,16 @@ namespace Visyde
     /// connecting other components to communicate with each other.
     /// </summary>
 
-    public class GameManager : MonoBehaviourPunCallbacks, IInRoomCallbacks, IConnectionCallbacks
+    public class GameManager : MonoBehaviour //MonoBehaviourPunCallbacks, IInRoomCallbacks, IConnectionCallbacks
     {
         public static GameManager instance;
 
-        //  PubNub
+        //  PubNub Properties
         public Pubnub pubnub = null;
+        private PubNubUtilities pubNubUtilities = new PubNubUtilities();
+        public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
+        private bool overallAllPlayersReady = false;
+        //  End PubNub properties
 
         public string playerPrefab;                     // Name of player prefab. The prefab must be in a "Resources" folder.
 
@@ -74,7 +80,7 @@ namespace Visyde
         // the progress of the starting countdown:
         public float countdown
         {
-            get { return (float)(gameStartsIn - PhotonNetwork.Time); }
+            get { return (float)(gameStartsIn - epochTime() /*Time.timeAsDouble PhotonNetwork.Time*/); }
         }
         // the time elapsed after the starting countdown:
         public float timeElapsed
@@ -110,41 +116,76 @@ namespace Visyde
 
         // Local copy of bot stats (so we don't periodically have to download them when we need them):
         string[] bNames = new string[0];		// Bot names
-        Vector3[] bScores = new Vector3[0];		// Bot scores (x = kills, y = deaths, z = other scores)
+        //Vector3[] bScores = new Vector3[0];		// Bot scores (x = kills, y = deaths, z = other scores)
+        int[] bScoresKills = new int[4];
+        int[] bScoresDeaths = new int[4];
+        int[] bScoresOther = new int[4];
         int[] bChars = new int[0];				// Bot's chosen character's index
         int[] bHats = new int[0];               // Bot hats (cosmetics)
 
         // Used for time syncronization:
         [System.NonSerialized] public double startTime, elapsedTime, remainingTime, gameStartsIn;
-        bool startingCountdownStarted, doneGameStart;
+        public bool startingCountdownStarted, doneGameStart;
 
         // For respawning:
         double deathTime;
 
         // Others:
-        Player[] punPlayersAll;
+        //Player[] punPlayersAll;
+        List<PubNubPlayer> playersAll;
+        public bool spawnComplete = false;
 
         void Awake()
         {
             instance = this;
+            //  DCC 123
+            /*if (Connector.instance.isMasterClient && Connector.instance.CurrentRoom.PlayerList.Count > 1)
+            {
+                startingCountdownStarted = Connector.instance.atLeastOnePlayerReady;
+                Debug.Log("Have set starting countdown started to " + startingCountdownStarted);
+            }
+            else if (Connector.instance.isMasterClient)
+            {
+                Debug.Log("Init: " + Connector.instance.CurrentRoom.PlayerList.Count);
+                startingCountdownStarted = true;
+            }
+            */
 
             // Prepare player instance arrays:
             bots = new PlayerInstance[0];
             players = new PlayerInstance[0];
 
             // Cache current player list:
-            punPlayersAll = PhotonNetwork.PlayerList;
+            //punPlayersAll = PhotonNetwork.PlayerList;
+            playersAll = Connector.instance.CurrentRoom.PlayerList;
 
             // Do we have bots in the game? Download bot stats if we have:
-            hasBots = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("botNames");
+            //  DCC todo do we need the .Bots variable / property at all??
+            //hasBots = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("botNames");
+            hasBots = ((Connector.instance.CurrentRoom.Bots != null && Connector.instance.CurrentRoom.Bots.Count > 0) ||
+                (Connector.instance.CurrentRoom.BotObjects != null && Connector.instance.CurrentRoom.BotObjects.Length > 0));
             if (hasBots)
             {
+
                 // Download the stats:
-                bNames = (string[])PhotonNetwork.CurrentRoom.CustomProperties["botNames"];
-                bScores = (Vector3[])PhotonNetwork.CurrentRoom.CustomProperties["botScores"];
-                bChars = (int[])PhotonNetwork.CurrentRoom.CustomProperties["botCharacters"];
+                //bNames = (string[])PhotonNetwork.CurrentRoom.CustomProperties["botNames"];
+                //bNames = (string[])Connector.instance.CurrentRoom.Bots["botNames"];
+                bNames = Connector.instance.CurrentRoom.bNames;
+                bChars = Connector.instance.CurrentRoom.bChars;
+                bHats = Connector.instance.CurrentRoom.bHats;
+                //bScores = (Vector3[])PhotonNetwork.CurrentRoom.CustomProperties["botScores"];
+                //bScores = (Vector3[])Connector.instance.CurrentRoom.Bots["botScores"];
+                //bScoresKills = (int[])Connector.instance.CurrentRoom.Bots["botScoresKills"];
+                //bScoresDeaths = (int[])Connector.instance.CurrentRoom.Bots["botScoresDeaths"];
+                //bScoresOther = (int[])Connector.instance.CurrentRoom.Bots["botScoresOther"];
+                //bScoresKills = new int[Connector.instance.CurrentRoom.Bots.Count];
+                //bScoresDeaths = new int[Connector.instance.CurrentRoom.Bots.Count];
+                //bScoresOther = new int[Connector.instance.CurrentRoom.Bots.Count];
+                //bChars = (int[])PhotonNetwork.CurrentRoom.CustomProperties["botCharacters"];
+                //bChars = (int[])Connector.instance.CurrentRoom.Bots["botCharacters"];
                 // And their "chosen" cosmetics:
-                bHats = (int[])PhotonNetwork.CurrentRoom.CustomProperties["botHats"];
+                //bHats = (int[])PhotonNetwork.CurrentRoom.CustomProperties["botHats"];
+                //bHats = (int[])Connector.instance.CurrentRoom.Bots["botHats"];
 
                 // ...then generate the player instances:
                 bots = GenerateBotPlayerInstances();
@@ -153,12 +194,16 @@ namespace Visyde
             players = GeneratePlayerInstances(true);
 
             // Don't allow the device to sleep while in game:
+
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             //  Initialize PubNub and subscribe to the appropriate channels
             pubnub = PNManager.pubnubInstance.InitializePubNub();
             List<string> channels = new List<string>();
+            //  Room status updates, such as bot attributes or game started?
+            channels.Add(PubNubUtilities.roomStatusChannel);  //  DCC todo add this to PubNubUtilities
             channels.Add(PubNubUtilities.itemChannel);
+            channels.Add(PubNubUtilities.itemChannel + "-pnpres");
             //  Every player will send their updates on a unique channel, so subscribe to those
             foreach (PlayerInstance playerInstance in players)
             {
@@ -172,7 +217,8 @@ namespace Visyde
             //  The master client controls the bots, so if we are not the master, register to receive bot updates
             foreach (PlayerInstance bot in bots)
             {
-                if (!PhotonNetwork.IsMasterClient)
+                //if (!PhotonNetwork.IsMasterClient)
+                if (!Connector.instance.isMasterClient)
                 {
                     channels.Add(PubNubUtilities.playerActionsChannelPrefix + bot.playerID);
                     channels.Add(PubNubUtilities.playerPositionChannelPrefix + bot.playerID);
@@ -196,7 +242,8 @@ namespace Visyde
             controlsManager.mobileControls = useMobileControls;
 
             // Get the chosen map then enable it:
-            chosenMap = (int)PhotonNetwork.CurrentRoom.CustomProperties["map"];
+            //chosenMap = (int)PhotonNetwork.CurrentRoom.CustomProperties["map"];
+            chosenMap = Connector.instance.CurrentRoom.Map;
             for (int i = 0; i < maps.Length; i++)
             {
                 maps[i].gameObject.SetActive(chosenMap == i);
@@ -206,7 +253,16 @@ namespace Visyde
             Ready();
 
             // Start checking if all players are ready:
-            InvokeRepeating("CheckIfAllPlayersReady", 1, 0.5f);
+            if (Connector.instance.isMasterClient)
+            {
+                InvokeRepeating("CheckIfAllPlayersReady", 1, 0.5f);
+            }
+        }
+
+        void OnDestroy()
+        {
+            pubnub.UnsubscribeAll();
+            pubnub.SubscribeCallback -= SubscribeCallbackHandler;
         }
 
         void CheckIfAllPlayersReady()
@@ -218,18 +274,28 @@ namespace Visyde
                 {
                     bool allPlayersReady = true;
 
-                    for (int i = 0; i < punPlayersAll.Length; i++)
+                    //for (int i = 0; i < punPlayersAll.Length; i++)
+                    for (int i = 0; i < playersAll.Count; i++)
                     {
                         // If a player hasn't yet finished loading, don't start:
-                        if (punPlayersAll[i].GetScore() == -1)
+                        //if (punPlayersAll[i].GetScore() == -1)
+                        if (playersAll[i].GetScore() == -1)
                         {
+                            Debug.Log("Setting all Players ready to false because " + playersAll[i].NickName);
                             allPlayersReady = false;
                         }
                     }
                     // Start the preparation countdown when all players are done loading:
-                    if (allPlayersReady && PhotonNetwork.IsMasterClient)
+                    //  DCC 123
+                    if ((true || allPlayersReady) && Connector.instance.isMasterClient)//PhotonNetwork.IsMasterClient)
                     {
+                        Debug.Log("Init: All players are ready");
                         StartGamePrepare();
+                        this.overallAllPlayersReady = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Init: All players are NOT ready");
                     }
                 }
             }
@@ -243,19 +309,34 @@ namespace Visyde
                 // Start the game when preparation countdown is finished:
                 if (startingCountdownStarted)
                 {
+                    Debug.Log("Starting Countdown Started is true");
                     if (elapsedTime >= (gameStartsIn - startTime) && !gameStarted && !doneGameStart)
                     {
                         // GAME HAS STARTED!
-                        if (PhotonNetwork.IsMasterClient)
+                        //if (PhotonNetwork.IsMasterClient)
+                        //  DCC 123
+                        if (Connector.instance.isMasterClient && (true || overallAllPlayersReady))
                         {
                             doneGameStart = true;
-                            ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
-                            h["started"] = true;
-                            PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+                            gameStarted = true;
+                            //  DCC todo do this properly
+                            //pnSendGameState("started", true);
+                            //  DCC todo.  If the non-master users are not listening for this, we can probably make a direct call?
+                            //  DCC 123 commented this
+                            pubNubUtilities.PubNubSendRoomProperties(pubnub, "started", true);
+                            //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+                            //h["started"] = true;
+                            //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
                             StartGameTimer();
+                            CancelInvoke("CheckIfAllPlayersReady");
+                        }
+                        else
+                        {
+                            doneGameStart = true;
+                            gameStarted = true;
+                            Debug.Log("Init: Overall All Players were not readyyyy");
                         }
 
-                        CancelInvoke("CheckIfAllPlayersReady");
                     }
                 }
 
@@ -264,14 +345,20 @@ namespace Visyde
                 {
                     if (deathTime == 0)
                     {
-                        deathTime = PhotonNetwork.Time + respawnTime;
+                        //deathTime = PhotonNetwork.Time + respawnTime;
+                        deathTime = /*Time.timeAsDouble*/ epochTime() + respawnTime;
                     }
-                    curRespawnTime = (float)(deathTime - PhotonNetwork.Time);
+                    //curRespawnTime = (float)(deathTime - PhotonNetwork.Time);
+                    curRespawnTime = (float)(deathTime - epochTime() /*Time.timeAsDouble*/);
                     if (curRespawnTime <= 0)
                     {
                         dead = false;
                         deathTime = 0;
-                        Spawn();
+                        Spawn(Connector.instance.GetMyId(), true);
+                        //  Tell everyone else in the Game to respawn
+                        Dictionary<string, object> props = new Dictionary<string, object>();
+                        props.Add("respawn", Connector.instance.GetMyId());
+                        pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
                     }
                 }
 
@@ -282,7 +369,8 @@ namespace Visyde
                 if (elapsedTime + 1 >= gameLength && gameStarted && !isGameOver)
                 {
                     // Post the player rankings:
-                    if (PhotonNetwork.IsMasterClient)
+                    //if (PhotonNetwork.IsMasterClient)
+                    if (Connector.instance.isMasterClient)
                     {
                         // Get player list by order based on scores and also set "draw" to true (the player sorter will set this to false if not draw):
                         isDraw = true;
@@ -298,13 +386,16 @@ namespace Visyde
                         isDraw = ps.Length > 1 && isDraw;
 
                         // Mark as game over:
-                        ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+                        //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+                        Dictionary<string, object> h = new Dictionary<string, object>();
                         h.Add("rankings", p);
                         h.Add("draw", isDraw);
-                        PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+                        //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+                        pubNubUtilities.PubNubSendRoomProperties(pubnub, h);
 
                         // Hide room from lobby:
-                        PhotonNetwork.CurrentRoom.IsVisible = false;
+                        //PhotonNetwork.CurrentRoom.IsVisible = false;
+                        Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, true);
                     }
                 }
 
@@ -316,56 +407,182 @@ namespace Visyde
         }
 
         void CheckTime(){
-            elapsedTime = (PhotonNetwork.Time - startTime);
-            remainingTime = gameLength - (elapsedTime % gameLength);
+            //elapsedTime = (PhotonNetwork.Time - startTime);
+            elapsedTime = (/*Time.timeAsDouble*/ epochTime() - startTime);
+            //remainingTime = gameLength - (elapsedTime % gameLength);
+            remainingTime = gameLength - elapsedTime;
         }
 
         // Called when we enter the game world:
         void Ready()
         {
-            // Set our score to 0 on start (this is not the player's actual score, this is only used to determine if we're ready or not, 0 = ready, -1 = not):
-            PhotonNetwork.LocalPlayer.SetScore(0);
-
             // Spawn our player:
-            Spawn();
+            Spawn(Connector.instance.GetMyId(), true);
+            for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+            {
+                if (!Connector.instance.CurrentRoom.PlayerList[i].IsLocal)
+                {
+                    //  We have other real players in this game, spawn in their players
+                    //  DCC todo, probably makes sense to spawn in players in response to a message from them containing their location
+                    //  DCC todo TEST ONLY
+                    Spawn(Connector.instance.CurrentRoom.PlayerList[i].ID, false);
+                }
+            }
+
+            //  DCC todo also spawn the other players in the current room (they should already have up to date information)
 
             // ... and the bots if we have some and if we are the master client:
-            if (hasBots && PhotonNetwork.IsMasterClient)
+            //if (hasBots && PhotonNetwork.IsMasterClient)
+            //if (hasBots && Connector.instance.isMasterClient)
+            if (hasBots)
             {
                 for (int i = 0; i < bots.Length; i++)
                 {
-                    SpawnBot(i + PhotonNetwork.CurrentRoom.MaxPlayers);    // parameter is the bot ID
+                    //SpawnBot(i + PhotonNetwork.CurrentRoom.MaxPlayers);    // parameter is the bot ID
+                    if (Connector.instance.isMasterClient)
+                    {
+                        //  Spawn a bot instance which we will own and control
+                        //  DCC xxx
+                        SpawnBot(i + Connector.instance.CurrentRoom.MaxPlayers, Connector.instance.LocalPlayer.ID, true);    // parameter is the bot ID
+                    }
+                    else
+                    {
+                        //  Spawn a bot instance which will be controlled by the master
+                        SpawnBot(i + Connector.instance.CurrentRoom.MaxPlayers, Connector.instance.GetMasterId(), false);    
+                    }
                 }
             }
+
+            if (!Connector.instance.isMasterClient)
+            {
+                //  If we have started and we are not the master, the master must have
+                //  started the game for us
+                //  DCC 123
+                //gameStarted = true;
+                Debug.Log("Setting starting countdown started to true");
+                startingCountdownStarted = true;
+                startTime = epochTime();
+                gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
+
+                //  Notify the master we are ready by setting our Score to 0
+                //  DCC todo I don't think this is necessary since I assume that the game is ready to start straight away
+                Dictionary<string, object> p = new Dictionary<string, object>();
+                p.Add("playerStats", "stats");
+                p.Add("score", 0);
+                p.Add("userId", Connector.instance.LocalPlayer.UserId);
+
+                Debug.Log("Init: Sending message to master to say I am ready");
+                pubNubUtilities.PubNubSendRoomProperties(pubnub, p);
+                Connector.instance.LocalPlayer.SetScore(0);
+            }
+            else
+            {
+                //  DCC todo this is a hack to get the master to load if there are two real players
+                //  DCC 123
+                //startingCountdownStarted = true;
+                //  DCC 123
+                startTime = epochTime();
+                gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
+
+                // Set our score to 0 on start (this is not the player's actual score, this is only used to determine if we're ready or not, 0 = ready, -1 = not):
+                //  DCC todo check this works
+                Connector.instance.LocalPlayer.SetScore(0);
+            }
+
+
         }
 
         /// <summary>
         /// Spawns the player.
         /// </summary>
-        public void Spawn()
+        public void Spawn(int playerId, bool isMine)
         {
             Transform spawnPoint = maps[chosenMap].playerSpawnPoints[UnityEngine.Random.Range(0, maps[chosenMap].playerSpawnPoints.Count)];
             // There are 2 values in the player's instatiation data. The first one is reserved and only used if the player is a bot, while the 
             // second is for the cosmetics (in this case we only have 1 which is for the chosen hat, but you can add as many as your game needs):
-            ourPlayer = PhotonNetwork.Instantiate(playerPrefab, spawnPoint.position, Quaternion.identity, 0, new object[] { 0, DataCarrier.chosenHat }).GetComponent<PlayerController>();
+            //  DCC todo spawn the player
+            //ourPlayer = PhotonNetwork.Instantiate(playerPrefab, spawnPoint.position, Quaternion.identity, 0, new object[] { 0, DataCarrier.chosenHat }).GetComponent<PlayerController>();
+            if (Connector.instance.CurrentRoom != null)
+            {
+                //  DCC todo At some point we will need to spawn the other human players, presumably after being told to do so by a PN message.  The PlayerID to spawn (below set to the LocalPlayer.ID) will need to be part of that message
+                GameObject tempOurPlayer = InstantiatePlayer(playerPrefab, spawnPoint.position, Quaternion.identity, false, playerId, -1, isMine, new object[] { 0, DataCarrier.chosenHat });
+                if (isMine)
+                {
+                    ourPlayer = tempOurPlayer.GetComponent<PlayerController>();
+                }
+            }
         }
+
 
         /// <summary>
         /// Spawns a bot (only works on master client).
         /// </summary>
-        public void SpawnBot(int bot)
+        public PlayerController SpawnBot(int bot, int ownerId, bool isMine)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            //if (!PhotonNetwork.IsMasterClient) return;
+            //if (!Connector.instance.isMasterClient) return null;
 
             Transform spawnPoint = maps[chosenMap].playerSpawnPoints[UnityEngine.Random.Range(0, maps[chosenMap].playerSpawnPoints.Count)];
             // Instantiate the bot. Bots are assigned with random hats (second value of the instantiation data):
-            PlayerController botP = PhotonNetwork.InstantiateSceneObject(playerPrefab, spawnPoint.position, Quaternion.identity, 0, new object[] { bot }).GetComponent<PlayerController>();
+            //  DCC todo spawn a bot
+            //PlayerController botP = PhotonNetwork.InstantiateSceneObject(playerPrefab, spawnPoint.position, Quaternion.identity, 0, new object[] { bot }).GetComponent<PlayerController>();
+            if (Connector.instance.CurrentRoom != null)
+            {
+                GameObject tempBot = InstantiatePlayer(playerPrefab, spawnPoint.position, Quaternion.identity, true, ownerId, bot, isMine, new object[] { 0, DataCarrier.chosenHat });
+                PlayerController createdBot = tempBot.GetComponent<PlayerController>();
+                return createdBot;
+            }
+            else {
+                return null;
+            }
+        }
+
+        //  DCC todo need to specify which hat is given to the character
+        public GameObject InstantiatePlayer(string prefabId, Vector3 position, Quaternion rotation, bool isBot, int ownerId, int botId, bool isMine, object[] data)
+        {
+            GameObject res = null;
+            bool cached = this.ResourceCache.TryGetValue(prefabId, out res);
+            if (!cached)
+            {
+                res = Resources.Load<GameObject>(prefabId);
+                if (res == null)
+                    Debug.LogError("DefaultPool failed to load " + prefabId + ", did you add it to a Resources folder?");
+                else
+                    this.ResourceCache.Add(prefabId, res);
+            }
+
+            if (res.activeSelf)
+                res.SetActive(false);
+
+            GameObject instance = GameObject.Instantiate(res, position, rotation) as GameObject;
+            //CosmeticsManager cosmetics = instance.GetComponent<CosmeticsManager>() as CosmeticsManager;
+            //cosmetics.chosenHat = 0;
+            PubNubPlayerProps properties = instance.GetComponent<PubNubPlayerProps>() as PubNubPlayerProps;
+            if (properties == null)
+            {
+                Debug.LogError("Player must have a PubNubPlayer associated with the Prefab");
+            }
+            else
+            {
+                properties.isBot = isBot;
+                properties.ownerId = ownerId;
+                properties.IsMine = isMine;
+                properties.botId = botId;
+                properties.preview = false;
+                //properties.itemIndex = itemIndex;
+                //properties.spawnPointIndex = spawnPointIndex;
+                //properties.index = index;
+            }
+            instance.SetActive(true);
+            return instance;
         }
 
         public void SomeoneDied(int dying, int killer)
         {
+            spawnComplete = true;
+
             // Add scores (master client only)
-            if (PhotonNetwork.IsMasterClient)
+            if (Connector.instance.isMasterClient /*PhotonNetwork.IsMasterClient*/)
             {
                 // Kill score to killer:
                 if (killer != dying) AddScore(GetPlayerInstance(killer), true, false, 0);
@@ -408,20 +625,37 @@ namespace Visyde
             return null;
         }
 
+        public void RemovePlayerController(int PlayerID)
+        {
+            for (int i = 0; i < playerControllers.Count; i++)
+            {
+                if (playerControllers[i].playerInstance.playerID == PlayerID)
+                {
+                    playerControllers.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
         /// <summary>
         /// Checks how many players are still in the game. If there's only 1 left, the game will end.
         /// </summary>
+        /*
+         * DCC: Changed the logic so when one player leaves the game ends
         public void CheckPlayersLeft()
         {
             if (GetPlayerList().Length <= 1 && PhotonNetwork.CurrentRoom.MaxPlayers > 1)
             {
                 print("GAME OVER!");
-                ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+                //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+                Dictionary<string, object> h = new Dictionary<string, object>();
                 double skip = 0;
                 h["gameStartTime"] = skip;
-                PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+                //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+                pubNubUtilities.PubNubSendRoomProperties(pubnub, h);
             }
         }
+        */
 
         // Player leaderboard sorting:
         IComparer SortPlayers()
@@ -448,6 +682,7 @@ namespace Visyde
                     return players[i];
                 }
             }
+            
             // Look in bots:
             if (hasBots)
             {
@@ -459,6 +694,7 @@ namespace Visyde
                     }
                 }
             }
+            Debug.Log("Msg: Unable to find player instance for id " + playerID);
 
             return null;
         }
@@ -513,17 +749,20 @@ namespace Visyde
 
             if (hasBots)
             {
-                // If it's the first time generating, player instances should be created first: 
+                // If it's the first time generating, player instances should be created first:
                 if (bots.Length == 0)
                 {
-                    p = new PlayerInstance[bNames.Length];
+                    //p = new PlayerInstance[bNames.Length];
+                    p = new PlayerInstance[Connector.instance.CurrentRoom.botCount];
                     for (int i = 0; i < p.Length; i++)
                     {
                         // Create a cosmetics instance:
                         Cosmetics cosmetics = new Cosmetics(bHats[i]);
 
                         // Create this bot's player instance (parameters: player ID, bot's name, not ours, is bot, chosen character, no cosmetic item, kills, deaths, otherScore):
-                        p[i] = new PlayerInstance(i + PhotonNetwork.CurrentRoom.MaxPlayers, bNames[i], false, true, bChars[i], cosmetics, Mathf.RoundToInt(bScores[i].x), Mathf.RoundToInt(bScores[i].y), Mathf.RoundToInt(bScores[i].z), null);
+                        //p[i] = new PlayerInstance(i + PhotonNetwork.CurrentRoom.MaxPlayers, bNames[i], false, true, bChars[i], cosmetics, Mathf.RoundToInt(bScores[i].x), Mathf.RoundToInt(bScores[i].y), Mathf.RoundToInt(bScores[i].z), null);
+                        //p[i] = new PlayerInstance(i + Connector.instance.CurrentRoom.MaxPlayers, bNames[i], false, true, bChars[i], cosmetics, Mathf.RoundToInt(bScores[i].x), Mathf.RoundToInt(bScores[i].y), Mathf.RoundToInt(bScores[i].z), null);
+                        p[i] = new PlayerInstance(i + Connector.instance.CurrentRoom.MaxPlayers, bNames[i], false, true, bChars[i], cosmetics, bScoresKills[i], bScoresDeaths[i], bScoresOther[i], null);
                     }
                 }
                 // ...otherwise, we can just set the stats directly:
@@ -531,7 +770,8 @@ namespace Visyde
                 {
                     for (int i = 0; i < p.Length; i++)
                     {
-                        p[i].SetStats(Mathf.RoundToInt(bScores[i].x), Mathf.RoundToInt(bScores[i].y), Mathf.RoundToInt(bScores[i].z), false);
+                        //p[i].SetStats(Mathf.RoundToInt(bScores[i].x), Mathf.RoundToInt(bScores[i].y), Mathf.RoundToInt(bScores[i].z), false);
+                        p[i].SetStats(bScoresKills[i], bScoresDeaths[i], bScoresOther[i], false);
                     }
                 }
             }
@@ -547,22 +787,31 @@ namespace Visyde
             // If it's the first time generating, player instances should be created first:
             if (players.Length == 0 || fresh)
             {
-                p = new PlayerInstance[punPlayersAll.Length];
+                //p = new PlayerInstance[punPlayersAll.Length];
+                p = new PlayerInstance[playersAll.Count];
 
                 for (int i = 0; i < p.Length; i++)
                 {
                     // Create a cosmetics instance:
-                    int[] c = (int[])punPlayersAll[i].CustomProperties["cosmetics"];
+                    //int[] c = (int[])punPlayersAll[i].CustomProperties["cosmetics"];
+                    int[] c = (int[])playersAll[i].Cosmetics;
                     Cosmetics cosmetics = new Cosmetics(c[0]);
 
                     // Then create the player instance:
-                    p[i] = new PlayerInstance(punPlayersAll[i].ActorNumber, punPlayersAll[i].NickName, punPlayersAll[i].IsLocal, false, 
-                        (int)punPlayersAll[i].CustomProperties["character"], 
+                    /*p[i] = new PlayerInstance(punPlayersAll[i].ActorNumber, punPlayersAll[i].NickName, punPlayersAll[i].IsLocal, false,
+                        (int)punPlayersAll[i].CustomProperties["character"],
                         cosmetics,
                         (int)punPlayersAll[i].CustomProperties["kills"],
                         (int)punPlayersAll[i].CustomProperties["deaths"],
                         (int)punPlayersAll[i].CustomProperties["otherScore"],
-                        punPlayersAll[i]);
+                        punPlayersAll[i]);*/
+                    p[i] = new PlayerInstance(playersAll[i].ID, playersAll[i].NickName, playersAll[i].IsLocal, false,
+                        playersAll[i].Character,
+                        cosmetics,
+                        (int)playersAll[i].Kills,
+                        (int)playersAll[i].Deaths,
+                        (int)playersAll[i].OtherScore,
+                        playersAll[i]);
                 }
             }
             // ...otherwise, we can just set the stats directly:
@@ -570,9 +819,11 @@ namespace Visyde
             {
                 for (int i = 0; i < p.Length; i++)
                 {
-                    if (i < punPlayersAll.Length - 1)
+                    //if (i < punPlayersAll.Length - 1)
+                    if (i < playersAll.Count - 1)
                     {
-                        p[i].SetStats((int)punPlayersAll[i].CustomProperties["kills"], (int)punPlayersAll[i].CustomProperties["deaths"], (int)punPlayersAll[i].CustomProperties["otherScore"], true);
+                        //p[i].SetStats((int)punPlayersAll[i].CustomProperties["kills"], (int)punPlayersAll[i].CustomProperties["deaths"], (int)punPlayersAll[i].CustomProperties["otherScore"], true);
+                        p[i].SetStats(playersAll[i].Kills, playersAll[i].Deaths, playersAll[i].OtherScore, true);
                     }
                 }
             }
@@ -582,10 +833,12 @@ namespace Visyde
         /// <summary>
         /// Set player instance stats. This is only for human players.
         /// </summary>
-        public void SetPlayerInstance(Player forPlayer)
+        public void SetPlayerInstance(int playerId /*PubNubPlayer forPlayer*/, int kills, int deaths, int otherScore)
         {
-            PlayerInstance p = GetPlayerInstance(forPlayer.NickName);
-            p.SetStats((int)forPlayer.CustomProperties["kills"], (int)forPlayer.CustomProperties["deaths"], (int)forPlayer.CustomProperties["otherScore"], false);
+            //PlayerInstance p = GetPlayerInstance(forPlayer.NickName);
+            PlayerInstance p = GetPlayerInstance(playerId);
+            //p.SetStats((int)forPlayer.CustomProperties["kills"], (int)forPlayer.CustomProperties["deaths"], (int)forPlayer.CustomProperties["otherScore"], false);
+            p.SetStats(kills, deaths, otherScore, false);
         }
 
         /// <summary>
@@ -599,56 +852,114 @@ namespace Visyde
         // Upload an updated bot score list to the room properties:
         public void UpdateBotStats()
         {
-            ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+            //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+            Dictionary<string, object> h = new Dictionary<string, object>();
 
             // Get each bot's scores and store them as a Vector3:
-            bScores = new Vector3[bots.Length];
+            //bScores = new Vector3[bots.Length];
+            //bScoresKills = new int[4];
+            //bScoresDeaths = new int[4];
+            //bScoresOther = new int[4];
             for (int i = 0; i < bots.Length; i++)
             {
-                bScores[i] = new Vector3((int)bots[i].kills, (int)bots[i].deaths, (int)bots[i].otherScore);
+                //bScores[i] = new Vector3((int)bots[i].kills, (int)bots[i].deaths, (int)bots[i].otherScore);
+                bScoresKills[i] = bots[i].kills;
+                bScoresDeaths[i] = bots[i].deaths;
+                bScoresOther[i] = bots[i].otherScore;
             }
 
-            h.Add("botScores", bScores);
-            PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+            //h.Add("botScores", bScores);
+            h.Add("botScoresKills", bScoresKills);
+            h.Add("botScoresDeaths", bScoresDeaths);
+            h.Add("botScoresOther", bScoresOther);
+            //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, h);
         }
 
         // Others:
         public void DoEmote(int id){
             if (ourPlayer && !ourPlayer.isDead){
                 if (pubnub != null)
-                    new PubNubUtilities().SendEmoji(pubnub, id, ourPlayer.playerInstance.playerID);
+                    pubNubUtilities.SendEmoji(pubnub, id, ourPlayer.playerInstance.playerID);
             }
         }
 
         // Calling this will make us disconnect from the current game/room:
         public void QuitMatch()
         {
-            PhotonNetwork.LeaveRoom();
+            //  DCC todo
+            //PhotonNetwork.LeaveRoom();
+            //DataCarrier.message = "You Quit the Game";
+            SceneManager.LoadScene("MainMenu");
+            Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+            Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+            if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+            {
+                Connector.instance.LeaveRoom();
+            }
         }
 
 #region Timer Sync
         void StartGameTimer()
         {
-            ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
-            h["gameStartTime"] = PhotonNetwork.Time;
-            PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+            //  DCC todo
+            //pnSendGameState();
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, "gameStartTime", epochTime() /*Time.timeAsDouble*/);
+
+            //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+            //h["gameStartTime"] = PhotonNetwork.Time;
+            //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
         }
         void StartGamePrepare()
         {
-            ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
-            h["gameStartsIn"] = PhotonNetwork.Time + preparationTime;
-            PhotonNetwork.CurrentRoom.SetCustomProperties(h);
+            Debug.Log("Init: Calling StartGamePrepare");
+            //  DCC todo only call this if we are the master?
+            //pnSendGameState("gameStartsIn", (Time.timeAsDouble + preparationTime));
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, "gameStartsIn", (/*Time.timeAsDouble*/ epochTime() + preparationTime));
+            //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
+            //h["gameStartsIn"] = PhotonNetwork.Time + preparationTime;
+            //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
         }
 #endregion
 
 #region Photon calls
+        /*
         public override void OnLeftRoom()
         {
             DataCarrier.message = "";
             DataCarrier.LoadScene("MainMenu");
         }
+        */
+
+        /*
+        public void pnSendGameState(string property, double value)
+        {
+            if (property.Equals("gameStartsIn"))
+            {
+                Dictionary<string, object> payload = new Dictionary<string, object>();
+                payload["gameStartsIn"] = value;
+
+            }
+            else if (property.Equals("gameStartTime"))
+            {
+                startTime = value;
+                CheckTime();
+            }
+        }
+        public void pnSendGameState(string property, bool value)
+        {
+            if (property.Equals("started"))
+            {
+                gameStarted = value;
+            }
+        }
+        */
+
+        /*
         public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
         {
+            //  DCC update game (room) state via PubNub
+            Debug.Log("Game Manager: Room properties update");
             if (propertiesThatChanged.ContainsKey("started")){
                 gameStarted = (bool)PhotonNetwork.CurrentRoom.CustomProperties["started"];
             }
@@ -701,13 +1012,15 @@ namespace Visyde
             }
         }
         public override void OnPlayerEnteredRoom(Player newPlayer){
-            punPlayersAll = PhotonNetwork.PlayerList;
+            //punPlayersAll = PhotonNetwork.PlayerList;
+            playersAll = Connector.instance.CurrentRoom.PlayerList;
 
             players = GeneratePlayerInstances(false);
         }
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            punPlayersAll = PhotonNetwork.PlayerList;
+            //punPlayersAll = PhotonNetwork.PlayerList;
+            playersAll = Connector.instance.CurrentRoom.PlayerList;
 
             players = GeneratePlayerInstances(true);
 
@@ -729,7 +1042,22 @@ namespace Visyde
             DataCarrier.message = "You've been disconnected from the game!";
             DataCarrier.LoadScene("MainMenu");
         }
-#endregion
+        */
+
+        public void OnDisconnected(bool bWasOwner, string playerName)
+        {
+            if (bWasOwner)
+            {
+                DataCarrier.message = "The owner of the game (" + playerName + ") disconnected";
+            }
+            else
+            {
+                DataCarrier.message = "" + playerName + " left the game, please start another game";
+            }
+            SceneManager.LoadScene("MainMenu");
+        }
+
+        #endregion
 
         void OnDrawGizmos()
         {
@@ -740,7 +1068,212 @@ namespace Visyde
                 Gizmos.DrawCube(new Vector3(0, deadZoneOffset - 50, 0), new Vector3(1000, 100, 0));
             }
         }
+
+        private int epochTime()
+        {
+            //  Returns seconds since 2020
+            System.DateTime epochStart = new System.DateTime(2020, 1, 1, 0, 0, 0, System.DateTimeKind.Utc);
+            int cur_time = (int)(System.DateTime.UtcNow - epochStart).TotalSeconds;
+            return cur_time;
+        }
+
+        public bool isBot(int playerId)
+        {
+            return playerId >= players.Length;
+        }
+
+        //  DCC todo extend this to the other properties and tidy it
+        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        {
+            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            if (mea.MessageResult != null && mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
+            {
+                //  Messages to update the current room state
+                if (mea.MessageResult.Payload is Dictionary<string, object>)
+                {
+                    Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
+                    if (payload.ContainsKey("started"))
+                    {
+                        Debug.Log("Init: Starting game in slave");
+                        gameStarted = (bool)payload["started"];
+                    }
+                    if (payload.ContainsKey("gameStartsIn"))
+                    {
+                        Debug.Log("Recevied Game Starts In");
+                        gameStartsIn = System.Convert.ToSingle(payload["gameStartsIn"]);
+                        startingCountdownStarted = true;
+                    }
+                    if (payload.ContainsKey("gameStartTime"))
+                    {
+                        
+                        startTime = System.Convert.ToSingle(payload["gameStartTime"]);
+                        CheckTime();
+                        
+                    }
+                    if (payload.ContainsKey("rankings"))
+                    {
+                        playerRankings = (string[])payload["rankings"];
+                        isDraw = (bool)payload["draw"];
+                    }
+                    /*
+                    if (payload.ContainsKey("botNames"))
+                    {
+                        bNames = (string[])payload["botNames"];
+                        bots = GenerateBotPlayerInstances();
+                        //  DCC todo Instantiate bots in this room if we are not the master
+                    }
+                    if (payload.ContainsKey("botScores"))
+                    {
+                        bScores = (Vector3[])payload["botScores"];
+                        bots = GenerateBotPlayerInstances();
+
+                    }*/
+                    if (payload.ContainsKey("botScoresKills"))
+                    {
+                        //bScores = (Vector3[])payload["botScores"];
+                        long[] rxBotScoresKills = (long[])payload["botScoresKills"];
+                        //bScoresKills = new int[rxBotScoresKills.Length];
+                        for (int i = 0; i < rxBotScoresKills.Length; i++)
+                        {
+                            bScoresKills[i] = System.Convert.ToInt32(rxBotScoresKills[i]);
+                        }
+                        long[] rxBotScoresDeaths = (long[])payload["botScoresDeaths"];
+                        //bScoresDeaths = new int[rxBotScoresDeaths.Length];
+                        for (int i = 0; i < (rxBotScoresDeaths).Length; i++)
+                        {
+                            bScoresDeaths[i] = System.Convert.ToInt32(rxBotScoresDeaths[i]);
+                        }
+                        long[] rxBotScoresOther = (long[])payload["botScoresOther"];
+                        //bScoresOther = new int[rxBotScoresOther.Length];
+                        for (int i = 0; i < (rxBotScoresOther).Length; i++)
+                        {
+                            bScoresOther[i] = System.Convert.ToInt32(rxBotScoresOther[i]);
+                        }
+                        //bScoresKills = Array.ConvertAll<long, int>((long[])payload["botScoresKills"], Convert.ToInt32);
+                        //bScoresDeaths = Array.ConvertAll<long, int>((long[])payload["botScoresDeaths"], Convert.ToInt32);
+                        //bScoresOther = Array.ConvertAll<long, int>((long[])payload["botScoresOther"], Convert.ToInt32);
+                        bots = GenerateBotPlayerInstances();
+                    }
+                    if (payload.ContainsKey("botCharacters"))
+                    {
+                        //  DCC todo this cast is not valid??
+                        //bChars = Array.ConvertAll<long, int>((long[])payload["botCharacters"], Convert.ToInt32);
+                        //bots = GenerateBotPlayerInstances();
+                    }
+                    if (payload.ContainsKey("playerStats"))
+                    {
+                        int kills = 0;
+                        int deaths = 0;
+                        int otherScore = 0;
+                        if (payload.ContainsKey("kills")) kills = System.Convert.ToInt32(payload["kills"]);
+                        if (payload.ContainsKey("deaths")) deaths = System.Convert.ToInt32(payload["deaths"]);
+                        if (payload.ContainsKey("otherScore")) otherScore = System.Convert.ToInt32(payload["otherScore"]);
+                        int playerId = -1;
+                        if (payload.ContainsKey("playerId"))
+                        {
+                            playerId = System.Convert.ToInt32(payload["playerId"]);
+                        }
+                        else if (payload.ContainsKey("userId"))
+                        {
+                            string userId = (string)payload["userId"];
+                            for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+                            {
+                                if (userId != null && userId.Equals(Connector.instance.CurrentRoom.PlayerList[i].UserId))
+                                {
+                                    playerId = Connector.instance.CurrentRoom.PlayerList[i].ID;
+                                }
+                            }
+                        }
+                        if (payload.ContainsKey("score"))
+                        {
+                            //  DCC 123
+                            for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+                            {
+                                if (playerId != -1 && Connector.instance.CurrentRoom.PlayerList[i].ID == playerId)
+                                {
+                                    Debug.Log("Init: Setting Score for " + Connector.instance.CurrentRoom.PlayerList[i].NickName);
+                                    Connector.instance.CurrentRoom.PlayerList[i].SetScore(System.Convert.ToInt32(payload["score"]));
+                                }
+                            }
+                        }
+                        SetPlayerInstance(playerId, kills, deaths, otherScore);
+                        ui.UpdateBoards();
+                    }
+                    if (payload.ContainsKey("respawn"))
+                    {
+                        int playerId = System.Convert.ToInt32(payload["respawn"]);
+                        if (playerId != Connector.instance.LocalPlayer.ID)
+                        {
+                            //  Respawn the remote player asking to be respawned
+                            Spawn(playerId, false);
+                        }
+                    }
+                    if (payload.ContainsKey("playerLeft"))
+                    {
+                        if (!isGameOver)
+                        {
+                            int playerId = System.Convert.ToInt32(payload["playerLeft"]);
+                            string playerUserId = (string)payload["playerUserId"];
+                            int wasOwner = System.Convert.ToInt32(payload["wasGameOwner"]);
+                            string playerName = (string)payload["playerName"];
+                            bool bWasOwner = (wasOwner == 1);
+                            //  DCC todo this code is duplicated elsewhere, I can be more efficient here
+                            Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                            Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                            if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                            {
+                                Connector.instance.LeaveRoom();
+                            }
+                            //Connector.instance.UserIsOffline(playerUserId);
+                            Debug.Log("Calling OnDisconnected from PlayerLeft");
+                            OnDisconnected(bWasOwner, playerName);
+                        }
+                    }
+                }
+            }
+            else if (mea.PresenceEventResult != null)
+            {
+                //  Detect when a remote player has unintentionally left the game, through presence timeout (e.g. connection lost)
+                if (mea.PresenceEventResult.Event.Equals("leave") || mea.PresenceEventResult.Event.Equals("timeout"))
+                {
+                    //  The specified user has left, remove any room they created from the rooms array
+                    if (!isGameOver)
+                    {
+                        Debug.Log("Game: Presence: User has Left");
+                        bool bWasOwner = false;
+                        string playerName = "Unknown";
+                        for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+                        {
+                            if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(mea.PresenceEventResult.UUID))
+                            {
+                                //  Found our player in the player list
+                                bWasOwner = Connector.instance.CurrentRoom.PlayerList[i].IsMasterClient;
+                                playerName = Connector.instance.CurrentRoom.PlayerList[i].NickName;
+                            }
+                        }
+                        //Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                        Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                        if (bWasOwner)
+                        {
+                            //  Clean up after the owner
+                            Connector.instance.PubNubRemoveRoom(mea.PresenceEventResult.UUID, true);
+                        }
+                        //Connector.instance.LeaveRoom();
+                        //Connector.instance.UserIsOffline(playerUserId);
+                        Debug.Log("Calling OnDisconnected from presence event");
+                        OnDisconnected(bWasOwner, playerName);
+                    }
+                }
+                else if (mea.PresenceEventResult.Event.Equals("join"))
+                {
+                    //  The specified user has joined.  If they have created a room then add it to our room list
+                    //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
+                    Debug.Log("Game: Presence: User has Joined");
+                }
+            }
+        }
     }
+
 
     // Player sorter helper:
     public class PlayerSorter : IComparer

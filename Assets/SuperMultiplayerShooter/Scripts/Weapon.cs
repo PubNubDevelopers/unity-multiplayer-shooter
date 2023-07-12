@@ -65,7 +65,8 @@ namespace Visyde
             // Only do stuff when the game isn't over yet and in-game menu is hidden:
             if (!GameManager.instance.isGameOver && !GameManager.instance.ui.isMenuShown)
             {
-                if (owner.photonView.IsMine)
+                //if (owner.photonView.IsMine)
+                if (owner.pubNubPlayerProps.IsMine)
                 {
                     // Rate of fire:
                     if (curFR < 1)

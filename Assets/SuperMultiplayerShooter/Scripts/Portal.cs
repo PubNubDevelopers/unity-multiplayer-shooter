@@ -50,7 +50,7 @@ namespace Visyde
 
                 PlayerController player = col.GetComponent<PlayerController>();
 
-                if (!player.photonView.IsMine) return;
+                if (!player.pubNubPlayerProps.IsMine) return;
 
                 // Prevent arriving players from triggering the "portal enter" action and only allow those that aren't in the "arriving" list:
                 if (!arriving.Contains(player.playerInstance.playerID))

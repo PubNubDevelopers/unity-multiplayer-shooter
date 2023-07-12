@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-using Photon.Chat;
-using Photon.Pun;
+//using Photon.Chat;
+//using Photon.Pun;
 using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
@@ -164,6 +164,7 @@ namespace Visyde
         void OnJoinedRoom()
         {
             //TODO: Will be changed to the current room after replacing Photon Room with PubNub lobby
+            //  DCC todo
             _lobbyPublish += PhotonNetwork.CurrentRoom.Name; //Guarenteed to be unique, set by server.
             _lobbySubscribe += PhotonNetwork.CurrentRoom.Name;
             loadingIndicator.SetActive(false);

@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;
-using Photon.Realtime;
+//using Photon.Pun;
+//using Photon.Realtime;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -192,7 +193,11 @@ namespace Visyde
                                         // Do vfx and damage if not:
                                         else
                                         {
-                                            if (thisIsMine) p.ApplyDamage(owner.playerID, weaponId, true);
+                                            if (thisIsMine)
+                                            {
+                                                p.ApplyDamage(owner.playerID, weaponId, true);
+                                            }
+
                                             // VFX
                                             pooler.Spawn(bodyHitVFX, hit.point);
                                         }
@@ -286,7 +291,7 @@ namespace Visyde
             pooler = objectPooler;
 
             // other settings:
-            thisIsMine = owner.isMine || (owner.isBot && PhotonNetwork.IsMasterClient);
+            thisIsMine = owner.isMine || (owner.isBot && PubNubUtilities.IsMasterClient /*PhotonNetwork.IsMasterClient*/);
             curDestroyDelay = destroyDelay;
             destroyNow = false;
             shot = false;

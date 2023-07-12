@@ -56,8 +56,12 @@ namespace Visyde
 
             // data from network (by master client):
 
-            itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[powerUpIndex];
-            if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[spawnPointIndex].onlySpawnThisHere;
+            try
+            {
+                itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[powerUpIndex];
+                if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[spawnPointIndex].onlySpawnThisHere;
+            }
+            catch (System.Exception ex) { Debug.Log(ex.Message); }
 
             // Visual:
             itemGraphic.sprite = itemHandled.icon;

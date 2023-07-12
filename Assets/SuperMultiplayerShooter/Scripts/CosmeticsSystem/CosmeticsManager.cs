@@ -43,6 +43,7 @@ namespace Visyde
             // If has hat:
             if (chosenHat >= 0)
             {
+                PlayerController player = GetComponent<PlayerController>();
                 GameObject item = Instantiate(ItemDatabase.instance.hats[chosenHat].prefab, player.character.hatPoint);
                 ResetItemPosition(item.transform);
                 spawnedItems.Add(item);
@@ -53,6 +54,14 @@ namespace Visyde
             item.localEulerAngles = Vector3.zero;
             item.localPosition = Vector3.zero;
             item.localScale = Vector3.one;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < spawnedItems.Count; i++)
+            {
+                Destroy(spawnedItems[i]);
+            }
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using Photon.Realtime;
+﻿using System.Collections.Generic;
+//using Photon.Realtime;
+using PubNubUnityShowcase;
+using UnityEngine;
 
 namespace Visyde
 {
@@ -15,7 +18,8 @@ namespace Visyde
         public int playerID;                            // unique player ID (bots have their own player ID's different from the host's/MasterClient's)
         public string playerName;
         public int character;
-        public Player punPlayer { get; protected set; }
+        //  DCC todo rename to player
+        public PubNubPlayer player { get; protected set; }
 
         // Cosmetics:
         public Cosmetics cosmeticItems;
@@ -28,21 +32,21 @@ namespace Visyde
         public int deaths;
         public int otherScore;                          
 
-        public PlayerInstance(int id, string name, bool isMine, bool bot, int character, Cosmetics cosmeticItems, Player thePlayer){
+        public PlayerInstance(int id, string name, bool isMine, bool bot, int character, Cosmetics cosmeticItems, PubNubPlayer thePlayer){
             playerID = id;
             playerName = name;
             isBot = bot;
-            punPlayer = thePlayer;
+            player = thePlayer;
             this.isMine = isMine;
             this.character = character;
             this.cosmeticItems = cosmeticItems;
         }
-        public PlayerInstance(int id, string name, bool isMine, bool bot, int character, Cosmetics cosmeticItems, int kills, int deaths, int otherScore, Player thePlayer)
+        public PlayerInstance(int id, string name, bool isMine, bool bot, int character, Cosmetics cosmeticItems, int kills, int deaths, int otherScore, PubNubPlayer thePlayer)
         {
             playerID = id;
             playerName = name;
             isBot = bot;
-            punPlayer = thePlayer;
+            player = thePlayer;
             this.isMine = isMine;
             this.character = character;
             this.cosmeticItems = cosmeticItems;
@@ -74,7 +78,8 @@ namespace Visyde
         }
 
         public void UploadStats(){
-            if (!Photon.Pun.PhotonNetwork.IsMasterClient) return;
+            //if (!Photon.Pun.PhotonNetwork.IsMasterClient) return;
+            if (!Connector.instance.isMasterClient) return;
 
             // For bots:
             if (isBot){
@@ -82,11 +87,20 @@ namespace Visyde
             }
             // For human players (update thee Photon Player directly as it will automatically sync across the network):
             else{
+                /*
                 ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
                 if (kills != 0) h.Add("kills", kills);
                 if (deaths != 0) h.Add("deaths", deaths);
                 if (otherScore != 0) h.Add("otherScore", otherScore);
                 punPlayer.SetCustomProperties(h);
+                */
+                Dictionary<string, object> h = new Dictionary<string, object>();
+                h.Add("playerStats", "stats");
+                h.Add("playerId", playerID);
+                if (kills != 0) h.Add("kills", kills);
+                if (deaths != 0) h.Add("deaths", deaths);
+                if (otherScore != 0) h.Add("otherScore", otherScore);
+                new PubNubUtilities().PubNubSendRoomProperties(GameManager.instance.pubnub, h);
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using Photon.Pun;
-using Photon.Realtime;
+//using Photon.Pun;
+//using Photon.Realtime;
 using PubnubApi;
 using PubnubApi.Unity;
 using Newtonsoft.Json;
@@ -164,9 +164,9 @@ public class MyClass
                     otherScore[i] = playersSorted[i].otherScore;
                     if (notPublished){
 
-                         if (playersSorted[i].playerName == PhotonNetwork.NickName){
+                         if (playersSorted[i].playerName == Connector.pnNickName){
                                     MyClass mc = new MyClass();
-                                    mc.username = PhotonNetwork.NickName;
+                                    mc.username = Connector.pnNickName;
                                     mc.score = playersSorted[i].kills.ToString();
                                     string json = JsonUtility.ToJson(mc);
                             PublishMessage(json, _leaderboardChannelPub);
@@ -365,7 +365,7 @@ public class MyClass
                     if (playersSorted.Length > i)
                     {
                         leaderboardItems[i].playerName.text = playersSorted[i].playerName;
-                        leaderboardItems[i].playerName.color = leaderboardItems[i].playerName.text == PhotonNetwork.NickName ? Color.cyan : Color.white;
+                        leaderboardItems[i].playerName.color = leaderboardItems[i].playerName.text == Connector.pnNickName ? Color.cyan : Color.white;
                         leaderboardItems[i].score.text = ((kills[i]/*  - deaths[i] */) + otherScore[i]).ToString();
                     }
                     else

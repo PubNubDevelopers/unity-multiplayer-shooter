@@ -29014,7 +29014,7 @@ MonoBehaviour:
   respawnTime: 5
   invulnerabilityDuration: 2
   preparationTime: 1
-  gameLength: 2000
+  gameLength: 120
   showEnemyHealth: 1
   damagePopups: 1
   multiKillMessages:
@@ -29045,6 +29045,9 @@ MonoBehaviour:
   bots: []
   players: []
   playerControllers: []
+  startingCountdownStarted: 0
+  doneGameStart: 0
+  spawnComplete: 0
 --- !u!4 &1596447577
 Transform:
   m_ObjectHideFlags: 0
