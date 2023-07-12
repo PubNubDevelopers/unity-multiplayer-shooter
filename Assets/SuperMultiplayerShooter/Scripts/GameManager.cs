@@ -5,7 +5,8 @@ using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
 using Photon.Pun.UtilityScripts;
-using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using PubNubUnityShowcase;
 
 namespace Visyde
@@ -21,7 +22,7 @@ namespace Visyde
         public static GameManager instance;
 
         //  PubNub
-        public PubNub pubnub = null;
+        public Pubnub pubnub = null;
 
         public string playerPrefab;                     // Name of player prefab. The prefab must be in a "Resources" folder.
 
@@ -155,7 +156,7 @@ namespace Visyde
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             //  Initialize PubNub and subscribe to the appropriate channels
-            pubnub = PubNubManager.Instance.InitializePubNub();
+            pubnub = PNManager.pubnubInstance;
             List<string> channels = new List<string>();
             channels.Add(PubNubUtilities.itemChannel);
             //  Every player will send their updates on a unique channel, so subscribe to those
@@ -178,9 +179,10 @@ namespace Visyde
                     channels.Add(PubNubUtilities.playerCursorChannelPrefix + bot.playerID);
                 }
             }
-            pubnub.Subscribe()
-            .Channels(channels)
-            .Execute();
+            //Subscribe to the list of Channels
+            pubnub.Subscribe<string>()
+               .Channels(channels)
+               .Execute();
         }
 
         // Use this for initialization
