@@ -41,8 +41,11 @@ namespace PubnubApi.Unity {
 		}
 
 		protected virtual void OnDestroy() {
-			pubnub.UnsubscribeAll<string>();
-		}
+            //With the current version of the SDK, there is an occassional object reference error
+            //when the scene is changed. This is not affecting gameplay, but will be handled by the SDK
+            //team in the future.
+            pubnub?.UnsubscribeAll<string>();
+        }
 
 		public static implicit operator Pubnub(PNManagerBehaviour pn) {
 			return pn.pubnub;

@@ -316,6 +316,29 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Returns the user's nickname. If it is not cached, it will obtain this information.
+        /// </summary>
+        /// <returns></returns>
+        private string GetUserNickname()
+        {
+            string nickname = "";
+            if(PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
+                && !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name))
+            {
+                nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+            }
+
+            else
+            {
+                //Obtain the user metadata. IF the nickname cannot be found, set to be the first 6 characters of the UserId.
+                GetUserMetadata(pubnub.GetCurrentUserId());
+                nickname = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name) ? PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name : pubnub.GetCurrentUserId();
+            }
+
+            return nickname;
+        }
+
+        /// <summary>
         /// Get the User Metadata given the UserId.
         /// </summary>
         /// <param name="Uuid">UserId of the Player</param>
