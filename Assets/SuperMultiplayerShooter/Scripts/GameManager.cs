@@ -156,7 +156,7 @@ namespace Visyde
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             //  Initialize PubNub and subscribe to the appropriate channels
-            pubnub = PNManager.pubnubInstance;
+            pubnub = PNManager.pubnubInstance.InitializePubNub();
             List<string> channels = new List<string>();
             channels.Add(PubNubUtilities.itemChannel);
             //  Every player will send their updates on a unique channel, so subscribe to those

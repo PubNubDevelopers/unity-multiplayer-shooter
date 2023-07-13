@@ -45,7 +45,7 @@ namespace Visyde
         void Start()
         {
             //Initializes the PubNub Connection.
-            pubnub = PNManager.pubnubInstance;
+            pubnub = PNManager.pubnubInstance.InitializePubNub();
 
             //Add Listeners
             pubnub.AddListener(listener);
