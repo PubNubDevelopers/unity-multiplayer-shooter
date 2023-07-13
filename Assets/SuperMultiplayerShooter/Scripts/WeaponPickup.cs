@@ -112,7 +112,7 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per weapon
-            if (result.Message != null)
+            if (result.Message != null && result.Channel.Equals(PubNubUtilities.itemChannel))
             {
                 long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                 if (payload != null)

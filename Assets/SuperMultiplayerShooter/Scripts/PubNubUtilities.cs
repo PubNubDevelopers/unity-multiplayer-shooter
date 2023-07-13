@@ -41,6 +41,8 @@ namespace PubNubUnityShowcase
         static public string playerCursorChannelPrefix  = "player_cursor_";       //  cursor
         static public string itemChannel = "item_update";
         static public string roomStatusChannel = "currentRoomStatus";             //  E.g. game starting or scores update
+        static public string gameLobbyRoomsWildcardRoot = "rooms.";
+        static public string gameLobbyChannel = "game";
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.
@@ -398,19 +400,24 @@ namespace PubNubUnityShowcase
             return instance;
         }
 
-        public void PubNubSendRoomProperties(PubNub pubnub, Dictionary<string, object> payload)
+        public async void PubNubSendRoomProperties(Pubnub pubnub, Dictionary<string, object> payload)
         {
             Debug.Log("Sending Room Properties");
-            pubnub.Publish().Message(payload).Channel(PubNubUtilities.roomStatusChannel).Async((result, status) =>
-            {
-                if (status.Error)
-                {
-                    Debug.Log("Error sending PubNub Message (Room Status)");
-                }
-            });
+            await pubnub.Publish()
+                .Channel(PubNubUtilities.roomStatusChannel)
+                .Message(payload)
+                .ExecuteAsync();
+
+//            pubnub.Publish().Message(payload).Channel(PubNubUtilities.roomStatusChannel).Async((result, status) =>
+//            {
+//                if (status.Error)
+//                {
+//                    Debug.Log("Error sending PubNub Message (Room Status)");
+//                }
+//            });
         }
 
-        public void PubNubSendRoomProperties(PubNub pubnub, string property, object value)
+        public void PubNubSendRoomProperties(Pubnub pubnub, string property, object value)
         {
             Dictionary<string, object> payload = new Dictionary<string, object>();
             payload[property] = value;

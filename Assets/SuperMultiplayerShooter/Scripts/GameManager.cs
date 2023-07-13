@@ -10,6 +10,7 @@ using PubnubApi.Unity;
 using PubNubUnityShowcase;
 using System;
 using UnityEngine.Windows;
+using Newtonsoft.Json;
 
 namespace Visyde
 {
@@ -26,6 +27,7 @@ namespace Visyde
         //  PubNub Properties
         public Pubnub pubnub = null;
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
         private bool overallAllPlayersReady = false;
         //  End PubNub properties
@@ -225,6 +227,9 @@ namespace Visyde
                     channels.Add(PubNubUtilities.playerCursorChannelPrefix + bot.playerID);
                 }
             }
+            pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
+            listener.onPresence += OnPnPresence;
             //Subscribe to the list of Channels
             pubnub.Subscribe<string>()
                .Channels(channels)
@@ -261,8 +266,12 @@ namespace Visyde
 
         void OnDestroy()
         {
-            pubnub.UnsubscribeAll();
-            pubnub.SubscribeCallback -= SubscribeCallbackHandler;
+            Debug.Log("Game Manager OnDestroy");
+            //  DCC todo Only want to unsubscribe from Game specific channels
+            //  DCC todo THIS DOES GET CALLED WHEN THE GAME ENDS SO WE DO WANT TO UNSUBSCRIBE
+            //pubnub.SubscribeCallback -= SubscribeCallbackHandler;
+            listener.onMessage -= OnPnMessage;
+            listener.onPresence -= OnPnPresence;
         }
 
         void CheckIfAllPlayersReady()
@@ -309,7 +318,6 @@ namespace Visyde
                 // Start the game when preparation countdown is finished:
                 if (startingCountdownStarted)
                 {
-                    Debug.Log("Starting Countdown Started is true");
                     if (elapsedTime >= (gameStartsIn - startTime) && !gameStarted && !doneGameStart)
                     {
                         // GAME HAS STARTED!
@@ -334,7 +342,6 @@ namespace Visyde
                         {
                             doneGameStart = true;
                             gameStarted = true;
-                            Debug.Log("Init: Overall All Players were not readyyyy");
                         }
 
                     }
@@ -459,7 +466,7 @@ namespace Visyde
                 //  started the game for us
                 //  DCC 123
                 //gameStarted = true;
-                Debug.Log("Setting starting countdown started to true");
+                //Debug.Log("Setting starting countdown started to true");
                 startingCountdownStarted = true;
                 startTime = epochTime();
                 gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
@@ -471,7 +478,7 @@ namespace Visyde
                 p.Add("score", 0);
                 p.Add("userId", Connector.instance.LocalPlayer.UserId);
 
-                Debug.Log("Init: Sending message to master to say I am ready");
+                // Debug.Log("Init: Sending message to master to say I am ready");
                 pubNubUtilities.PubNubSendRoomProperties(pubnub, p);
                 Connector.instance.LocalPlayer.SetScore(0);
             }
@@ -1083,15 +1090,19 @@ namespace Visyde
         }
 
         //  DCC todo extend this to the other properties and tidy it
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        //private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
-            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
-            if (mea.MessageResult != null && mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
+            //SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            //if (mea.MessageResult != null && mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
+            if (result != null && result.Channel.Equals(PubNubUtilities.roomStatusChannel))
             {
                 //  Messages to update the current room state
-                if (mea.MessageResult.Payload is Dictionary<string, object>)
+                Dictionary<string, object> payload = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());
+                //if (mea.MessageResult.Payload is Dictionary<string, object>)
+                if (payload != null)
                 {
-                    Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
+                    //Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
                     if (payload.ContainsKey("started"))
                     {
                         Debug.Log("Init: Starting game in slave");
@@ -1112,7 +1123,8 @@ namespace Visyde
                     }
                     if (payload.ContainsKey("rankings"))
                     {
-                        playerRankings = (string[])payload["rankings"];
+                        playerRankings = (payload["rankings"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
+                        //playerRankings = (string[])payload["rankings"];
                         isDraw = (bool)payload["draw"];
                     }
                     /*
@@ -1131,19 +1143,22 @@ namespace Visyde
                     if (payload.ContainsKey("botScoresKills"))
                     {
                         //bScores = (Vector3[])payload["botScores"];
-                        long[] rxBotScoresKills = (long[])payload["botScoresKills"];
+                        //long[] rxBotScoresKills = (long[])payload["botScoresKills"];
+                        long[] rxBotScoresKills = (payload["botScoresKills"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                         //bScoresKills = new int[rxBotScoresKills.Length];
                         for (int i = 0; i < rxBotScoresKills.Length; i++)
                         {
                             bScoresKills[i] = System.Convert.ToInt32(rxBotScoresKills[i]);
                         }
-                        long[] rxBotScoresDeaths = (long[])payload["botScoresDeaths"];
+                        //long[] rxBotScoresDeaths = (long[])payload["botScoresDeaths"];
+                        long[] rxBotScoresDeaths = (payload["botScoresDeaths"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                         //bScoresDeaths = new int[rxBotScoresDeaths.Length];
                         for (int i = 0; i < (rxBotScoresDeaths).Length; i++)
                         {
                             bScoresDeaths[i] = System.Convert.ToInt32(rxBotScoresDeaths[i]);
                         }
-                        long[] rxBotScoresOther = (long[])payload["botScoresOther"];
+                        //long[] rxBotScoresOther = (long[])payload["botScoresOther"];
+                        long[] rxBotScoresOther = (payload["botScoresOther"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                         //bScoresOther = new int[rxBotScoresOther.Length];
                         for (int i = 0; i < (rxBotScoresOther).Length; i++)
                         {
@@ -1218,23 +1233,34 @@ namespace Visyde
                             string playerName = (string)payload["playerName"];
                             bool bWasOwner = (wasOwner == 1);
                             //  DCC todo this code is duplicated elsewhere, I can be more efficient here
-                            Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
-                            Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
-                            if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                            try
                             {
-                                Connector.instance.LeaveRoom();
+                                Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                                Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                                if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                                {
+                                    Connector.instance.LeaveRoom();
+                                }
+                                //Connector.instance.UserIsOffline(playerUserId);
+                                Debug.Log("Calling OnDisconnected from PlayerLeft");
+                                OnDisconnected(bWasOwner, playerName);
                             }
-                            //Connector.instance.UserIsOffline(playerUserId);
-                            Debug.Log("Calling OnDisconnected from PlayerLeft");
-                            OnDisconnected(bWasOwner, playerName);
+                            catch (System.Exception) { }
                         }
                     }
                 }
             }
-            else if (mea.PresenceEventResult != null)
+        }
+
+        private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
+        {
+            //else if (mea.PresenceEventResult != null)
+            //{
+            //  Detect when a remote player has unintentionally left the game, through presence timeout (e.g. connection lost)
+            //if (mea.PresenceEventResult.Event.Equals("leave") || mea.PresenceEventResult.Event.Equals("timeout"))
+            if (result.Channel.Equals(PubNubUtilities.itemChannel))
             {
-                //  Detect when a remote player has unintentionally left the game, through presence timeout (e.g. connection lost)
-                if (mea.PresenceEventResult.Event.Equals("leave") || mea.PresenceEventResult.Event.Equals("timeout"))
+                if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
                 {
                     //  The specified user has left, remove any room they created from the rooms array
                     if (!isGameOver)
@@ -1244,7 +1270,8 @@ namespace Visyde
                         string playerName = "Unknown";
                         for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
                         {
-                            if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(mea.PresenceEventResult.UUID))
+                            //if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(mea.PresenceEventResult.UUID))
+                            if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(result.Uuid))
                             {
                                 //  Found our player in the player list
                                 bWasOwner = Connector.instance.CurrentRoom.PlayerList[i].IsMasterClient;
@@ -1256,7 +1283,8 @@ namespace Visyde
                         if (bWasOwner)
                         {
                             //  Clean up after the owner
-                            Connector.instance.PubNubRemoveRoom(mea.PresenceEventResult.UUID, true);
+                            //Connector.instance.PubNubRemoveRoom(mea.PresenceEventResult.UUID, true);
+                            Connector.instance.PubNubRemoveRoom(result.Uuid, true);
                         }
                         //Connector.instance.LeaveRoom();
                         //Connector.instance.UserIsOffline(playerUserId);
@@ -1264,14 +1292,17 @@ namespace Visyde
                         OnDisconnected(bWasOwner, playerName);
                     }
                 }
-                else if (mea.PresenceEventResult.Event.Equals("join"))
+                //else if (mea.PresenceEventResult.Event.Equals("join"))
+                else if (result.Event.Equals("join"))
                 {
                     //  The specified user has joined.  If they have created a room then add it to our room list
                     //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
                     Debug.Log("Game: Presence: User has Joined");
                 }
+                //}
             }
         }
+
     }
 
 

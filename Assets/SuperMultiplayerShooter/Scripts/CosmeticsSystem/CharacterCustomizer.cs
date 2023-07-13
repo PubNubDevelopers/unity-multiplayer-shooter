@@ -19,7 +19,8 @@ namespace Visyde
         public Transform playerPreviewHandler;
         public Transform slotHandler;
         private readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
-        private string playerPrefab = "Player";                     
+        private string playerPrefab = "Player";   
+        GameObject instance = null;                  
 
 
         List<InventorySlot> curSlots = new List<InventorySlot>();   // the current instatiated slots
@@ -49,7 +50,8 @@ namespace Visyde
 
             // Create a preview of the player:
             Debug.Log("Character Preview Open");
-            if (preview) Destroy(preview.gameObject);
+            //if (preview) Destroy(preview.gameObject);
+            if (playerPrefabController) Destroy(playerPrefabController.gameObject);
 
             GameObject res = null;
             bool cached = this.ResourceCache.TryGetValue(playerPrefab, out res);
@@ -65,7 +67,7 @@ namespace Visyde
             if (res.activeSelf)
                 res.SetActive(false);
 
-            GameObject instance = GameObject.Instantiate(res) as GameObject;
+            instance = GameObject.Instantiate(res) as GameObject;
             //if (instance.activeSelf)
             //    instance.SetActive(false);
             PubNubPlayerProps properties = instance.GetComponent<PubNubPlayerProps>() as PubNubPlayerProps;

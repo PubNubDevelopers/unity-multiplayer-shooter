@@ -161,18 +161,20 @@ namespace Visyde
         /// <param name="result"></param>
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
-            if (result.Message != null)
+            if (result.Message != null &&
+                (result.Channel.Equals(PubNubUtilities.itemChannel) ||
+                result.Channel.StartsWith(PubNubUtilities.playerActionsChannelPrefix) ||
+                result.Channel.StartsWith(PubNubUtilities.playerPositionChannelPrefix)))
             {
-                object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
-                bool containsDoubles = payloadCheck.OfType<double>().Any();
-                //  Messages
-                if (!containsDoubles)
+                try
                 {
-                    long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
-                    //long[] payload = (long[])result.Message;
-                    if (payload[1] == MessageConstants.idMsgReceivePowerUp)
+                    object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
+                    bool containsDoubles = payloadCheck.OfType<double>().Any();
+                    //  Messages
+                    if (!containsDoubles)
                     {
-                        long[] payload = (long[])mea.MessageResult.Payload;
+                        long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
+                        //long[] payload = (long[])mea.MessageResult.Payload;
                         if (payload[1] == MessageConstants.idMsgReceivePowerUp)
                         {
                             //  Receive Power up state
@@ -230,25 +232,30 @@ namespace Visyde
                                 health = -1;
                             }
                         }
+
                     }
-                }
-                else
-                {
-                    double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
-                    if (payload != null)
+                    else
                     {
-                        if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
+                        double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
+                        if (payload != null)
                         {
-                            //  Trigger Dead Zone
-                            int playerId = System.Convert.ToInt32(payload[0]);
-                            float positionX = (float)payload[2];
-                            float positionY = (float)payload[3];
-                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
                             {
-                                TriggerDeadZone(new Vector2(positionX, positionY));
+                                //  Trigger Dead Zone
+                                int playerId = System.Convert.ToInt32(payload[0]);
+                                float positionX = (float)payload[2];
+                                float positionY = (float)payload[3];
+                                if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                                {
+                                    TriggerDeadZone(new Vector2(positionX, positionY));
+                                }
                             }
                         }
                     }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.Log("Issue parsing PubNub messages: " + ex.Message);
                 }
             }
         }
@@ -260,137 +267,142 @@ namespace Visyde
         /// <param name="result"></param>
         private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
         {
-            if (result.Message != null)
+            if (result.Message != null &&
+                (result.Channel.StartsWith(PubNubUtilities.playerActionsChannelPrefix)) ||
+                (result.Channel.StartsWith(PubNubUtilities.playerPositionChannelPrefix)) ||
+                (result.Channel.StartsWith(PubNubUtilities.playerCursorChannelPrefix)))
             {
-                object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
-                bool containsDoubles = payloadCheck.OfType<double>().Any();
-                //  Signals
-                if (!containsDoubles)
+                try
                 {
-                    long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
-                    if (payload[1] == MessageConstants.idMsgEmoji)
+                    object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
+                    bool containsDoubles = payloadCheck.OfType<double>().Any();
+                    //  Signals
+                    if (!containsDoubles)
                     {
-                        long[] payload = (long[])mea.SignalEventResult.Payload;
+                        long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                         if (payload[1] == MessageConstants.idMsgEmoji)
                         {
-                            Emote(emote);
+                            //  Emote
+                            int playerId = System.Convert.ToInt32(payload[0]);
+                            int emote = System.Convert.ToInt32(payload[2]);
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            {
+                                Emote(emote);
+                            }
                         }
-                    }
-                    else if (payload[1] == MessageConstants.idMsgMelee)
-                    {
-                        //  Melee Attack
-                        int playerId = System.Convert.ToInt32(payload[0]);
-                        if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                        else if (payload[1] == MessageConstants.idMsgMelee)
                         {
                             //  Melee Attack
                             int playerId = System.Convert.ToInt32(payload[0]);
-                            if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
                             {
-                                Debug.Log("Received Melee Attack Message");
                                 MeleeAttack();
                             }
                         }
                     }
-                }
-                else
-                {
-                    double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
-                    if (payload != null)
+                    else
                     {
-                        int command = System.Convert.ToInt32(payload[1]);
-                        if (command == MessageConstants.idMsgPosition)
+                        double[] payload = JsonConvert.DeserializeObject<double[]>(result.Message.ToString());
+                        if (payload != null)
                         {
-                            //  Movement message 1
-                            int playerId = System.Convert.ToInt32(payload[0]);
-                            float positionX = (float)payload[2];
-                            float positionY = (float)payload[3];
-                            float velocityX = (float)payload[4];
-                            float velocityY = (float)payload[5];
-                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            int command = System.Convert.ToInt32(payload[1]);
+                            if (command == MessageConstants.idMsgPosition)
                             {
-                                long serverSentTimeToken = result.Timetoken;
-                                if (serverSentTimeToken <= mostRecentTimeToken)
+                                //  Movement message 1
+                                int playerId = System.Convert.ToInt32(payload[0]);
+                                float positionX = (float)payload[2];
+                                float positionY = (float)payload[3];
+                                float velocityX = (float)payload[4];
+                                float velocityY = (float)payload[5];
+                                if (playerId == playerInstance.playerID && !playerInstance.isMine)
                                 {
-                                    //  I rarely see this happen during testing, but
-                                    //  discard any packets received out of order
-                                    return;
-                                }
+                                    long serverSentTimeToken = result.Timetoken;
+                                    if (serverSentTimeToken <= mostRecentTimeToken)
+                                    {
+                                        //  I rarely see this happen during testing, but
+                                        //  discard any packets received out of order
+                                        return;
+                                    }
 
-                                //if (networkPos != null)
+                                    //if (networkPos != null)
                                     networkPos.Set(positionX, positionY);
-                                //else
-                                //    networkPos = new Vector2();
+                                    //else
+                                    //    networkPos = new Vector2();
 
-                                //if (movementController.velocity != null)
+                                    //if (movementController.velocity != null)
                                     movementController.velocity.Set(velocityX, velocityY);
-                                //else
-                                //    movementController.velocity = new Vector2();
+                                    //else
+                                    //    movementController.velocity = new Vector2();
 
-                                //  If is still moving, do predict next location based on current velocity and lag:
-                                if (Helper.GetDistance(lastPos, networkPos) > 0.2f)
-                                {
-                                    networkPos += (movementController.velocity);
+                                    //  If is still moving, do predict next location based on current velocity and lag:
+                                    if (Helper.GetDistance(lastPos, networkPos) > 0.2f)
+                                    {
+                                        networkPos += (movementController.velocity);
+                                    }
+
+
+                                    lastPos = networkPos;
+
+
+                                    // If network position is just too far, force to update local position.
+                                    //  Also force an update if this is our first movement update
+                                    if (mostRecentTimeToken == 0 || Helper.GetDistance(networkPos, transform.position) > 0.4f)
+                                    {
+                                        movementController.position = networkPos;
+                                    }
+                                    mostRecentTimeToken = serverSentTimeToken;
+
+
                                 }
-
-
-                                lastPos = networkPos;
-
-
-                                // If network position is just too far, force to update local position.
-                                //  Also force an update if this is our first movement update
-                                if (mostRecentTimeToken == 0 || Helper.GetDistance(networkPos, transform.position) > 0.4f)
-                                {
-                                    movementController.position = networkPos;
-                                }
-                                mostRecentTimeToken = serverSentTimeToken;
-
-
                             }
-                        }
-                        else if (command == MessageConstants.idMsgCursor)
-                        {
-                            //  Cursor movement
-                            int playerId = System.Convert.ToInt32(payload[0]);
-                            float mousePosX = (float)payload[2];
-                            float mousePosY = (float)payload[3];
-                            float movingFalling = (float)payload[4];
-                            float xInputLocal = (float)payload[5];
-                            if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                            else if (command == MessageConstants.idMsgCursor)
                             {
-                                nMousePos.Set(mousePosX, mousePosY, 0.0f);
-                                if (movingFalling > 9.9f)
-                                {
-                                    isFalling = true;
-                                    movingFalling -= 10;
-                                }
-                                else
-                                    isFalling = false;
-
-                                if (movingFalling > 0.9f)
-                                {
-                                    moving = true;
-                                }
-                                else
-                                    moving = false;
-
-                                xInput = xInputLocal;
-                            }
-                        }
-                        else if (command == MessageConstants.idMsgShoot)
-                        {
-                            //  Shoot message
-                            int playerId = System.Convert.ToInt32(payload[0]);
-                            if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
-                            {
+                                //  Cursor movement
+                                int playerId = System.Convert.ToInt32(payload[0]);
                                 float mousePosX = (float)payload[2];
                                 float mousePosY = (float)payload[3];
-                                float mousePosZ = (float)payload[4];
-                                Vector3 curMousePos = new Vector3(mousePosX, mousePosY, mousePosZ);
-                                Shoot(curMousePos);
+                                float movingFalling = (float)payload[4];
+                                float xInputLocal = (float)payload[5];
+                                if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                                {
+                                    nMousePos.Set(mousePosX, mousePosY, 0.0f);
+                                    if (movingFalling > 9.9f)
+                                    {
+                                        isFalling = true;
+                                        movingFalling -= 10;
+                                    }
+                                    else
+                                        isFalling = false;
+
+                                    if (movingFalling > 0.9f)
+                                    {
+                                        moving = true;
+                                    }
+                                    else
+                                        moving = false;
+
+                                    xInput = xInputLocal;
+                                }
+                            }
+                            else if (command == MessageConstants.idMsgShoot)
+                            {
+                                //  Shoot message
+                                int playerId = System.Convert.ToInt32(payload[0]);
+                                if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                                {
+                                    float mousePosX = (float)payload[2];
+                                    float mousePosY = (float)payload[3];
+                                    float mousePosZ = (float)payload[4];
+                                    Vector3 curMousePos = new Vector3(mousePosX, mousePosY, mousePosZ);
+                                    Shoot(curMousePos);
+                                }
                             }
                         }
-
                     }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.Log("Issue parsing PubNub messages: " + ex.Message);
                 }
             }
         }

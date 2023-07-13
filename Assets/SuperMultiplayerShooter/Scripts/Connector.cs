@@ -5,10 +5,17 @@ using UnityEngine.Events;
 //using Photon.Pun;
 //using Photon.Realtime;
 //using Photon.Pun.UtilityScripts;
-using PubNubAPI;
+//using PubNubAPI;
+using PubnubApi;
+using PubnubApi.Unity;
 using UnityEngine.SceneManagement;
 using PubNubUnityShowcase;
 using Unity.VisualScripting.Antlr3.Runtime.Misc;
+using Newtonsoft.Json;
+using System.Linq;
+using System.Xml;
+using Photon.Pun;
+
 
 namespace Visyde
 {
@@ -166,7 +173,8 @@ namespace Visyde
         {
             //  This logic populates the attributes of a player prior to it being spawned (they are set / sent by the room master)
             //  DCC todo This is untested
-            if (!IsMasterClient)
+            //  DCC todo I added true || here because I wanted to send a slave the character and hat for the master 
+            if (true || !IsMasterClient)
             {
                 Debug.Log("Init: Recieved SetProperties call NOT in Master");
 
@@ -185,10 +193,21 @@ namespace Visyde
                 if (props.ContainsKey("character"))
                 {
                     Character = System.Convert.ToInt32(props["character"]);
+                    Debug.Log("Set Character for user " + UserId + "to " + Character);
                 }
                 if (props.ContainsKey("cosmetics"))
                 {
-                    Cosmetics = System.Array.ConvertAll<long, int>((long[])props["cosmetics"], System.Convert.ToInt32);
+                    //Cosmetics = System.Array.ConvertAll<long, int>((long[])props["cosmetics"], System.Convert.ToInt32);
+                    long[] cosmeticsPayload = (props["cosmetics"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
+                    Cosmetics = System.Array.ConvertAll<long, int>(cosmeticsPayload, System.Convert.ToInt32);
+
+                    Debug.Log("Received Cosmetics Array: " + Cosmetics);
+                    //long[] cosmeticsPayload = (long[])props["cosmetics"];
+                    //Cosmetics = new int[cosmeticsPayload.Length];
+                    //for (int i = 0; i < cosmeticsPayload.Length; i++)
+                    //{
+                    //    Cosmetics[i] = System.Convert.ToInt32(cosmeticsPayload[i]);
+                    //}
                 }
                 if (props.ContainsKey("score"))
                 {
@@ -301,8 +320,9 @@ namespace Visyde
         public int totalPlayerCount { get; protected set; }
         //public List<RoomInfo> rooms { get; protected set; }
         //  PubNub properties
-        private PubNub pubnub = null;
+        private Pubnub pubnub = null;
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
+        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         private static string userId = null;
         public bool atLeastOnePlayerReady = false;
         public PubNubRoomInfo CurrentRoom = null;
@@ -313,8 +333,11 @@ namespace Visyde
             get
             {
                 //  DCC todo Name is available from PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.PresenceEventResult.UUID].Name;
-                //return PhotonNetwork.NickName;
-                string name = PubNubManager.Instance.CachedPlayers[userId].Name;
+                //  DCC todo use Oliver's method he will provide
+                return PhotonNetwork.NickName;
+                /*
+                //string name = PubNubManager.Instance.CachedPlayers[userId].Name;
+                string name = Connector.instance.TEMP_GetUserNickname();
                 if (name != null && name.Equals(""))
                 {
                     //  DCC TODO - need to see if I can use some of Oliver's code here rather than write my own again.
@@ -324,6 +347,7 @@ namespace Visyde
                 {
                     return name;
                 }
+                */
             }
         }
         public PubNubPlayer LocalPlayer { get; set; }
@@ -365,15 +389,24 @@ namespace Visyde
         private void OnDestroy()
         {
             //  DCC todo is there a way in the new Unity SDK to execute an unsubscribe synchronously?  Maybe need to run the logic in onApplicationQuit() instead
-            
-             //This never gets called because we are already in the process of shutting down
-            pubnub.Unsubscribe().Channels(new List<string>() { "game", "rooms.*" }).Async((result, status) =>
-            {
-                if (status.Error)
-                {
-                    Debug.Log("Error unsubscribing: " + status.ErrorData.Info);
-                }
-            });
+
+            Debug.Log("OnDestroy::Unsubscribe");
+
+            //This never gets called because we are already in the process of shutting down
+            listener.onMessage -= OnPnMessage;
+            listener.onPresence -= OnPnPresence;
+            pubnub.Unsubscribe<string>()
+                .Channels(new string[] { PubNubUtilities.gameLobbyChannel, PubNubUtilities.gameLobbyRoomsWildcardRoot + "*" })
+                .Execute();
+            Debug.Log("OnDestroy::Unsubscribe::Done");
+
+            //pubnub.Unsubscribe().Channels(new List<string>() { "game", "rooms.*" }).Async((result, status) =>
+            //{
+            //    if (status.Error)
+            //    {
+            //        Debug.Log("Error unsubscribing: " + status.ErrorData.Info);
+            //    }
+            //});
         }
 
         void Start()
@@ -394,9 +427,17 @@ namespace Visyde
             loadNow = false;
             userId = PlayerPrefs.GetString("uuid");
             pubNubRooms = new List<PubNubRoomInfo>();
-            pubnub = PubNubManager.Instance.InitializePubNub();
-            pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
-            pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            //pubnub = PubNubManager.Instance.InitializePubNub();
+            pubnub = PNManager.pubnubInstance;
+            pubnub.Subscribe<string>()
+                .Channels(new List<string>() { PubNubUtilities.gameLobbyChannel, "rooms.*", PubNubUtilities.roomStatusChannel })
+                .WithPresence()
+                .Execute();
+            //pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
+            //pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            pubnub.AddListener(listener);
+            listener.onMessage += OnPnMessage;
+            listener.onPresence += OnPnPresence;
             PubNubGetRooms();
             //  End PubNub initialization
         }
@@ -442,9 +483,11 @@ namespace Visyde
                         CurrentRoom.SortPlayerListAndAssignIds();
                         //  DCC todo?  Notify other participants that the game is open?
                         //PhotonNetwork.LoadLevel(gameSceneName);
+                        SynchronizePlayerCharacteristics();
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
                         Dictionary<string, object> loadProps = new Dictionary<string, object>();
                         loadProps.Add("gameSceneLoaded", gameSceneName);
+                        loadProps.Add("currentRoomName", CurrentRoom.Name);
                         loadProps.Add("botCount", curBots.Length);
                         string[] bn = new string[curBots.Length];
                         int[] bc = new int[curBots.Length];
@@ -467,6 +510,27 @@ namespace Visyde
                 }
             }
         }
+
+        private void SynchronizePlayerCharacteristics()
+        {
+            //  Called by master.  Notify all other human players of eachother's characteristics
+            for (int i = 0; i < CurrentRoom.PlayerList.Count; i++)
+            {
+                Dictionary<string, object> playerProps = new Dictionary<string, object>();
+                //if (!CurrentRoom.PlayerList[i].IsMasterClient)
+                //{
+                    playerProps.Add("playerStats", "stats");
+                    playerProps.Add("userId", CurrentRoom.PlayerList[i].UserId);
+                    playerProps.Add("character", CurrentRoom.PlayerList[i].Character);
+                    int[] cosmetics = new int[1];   // You can have as many items as you want, but in our case we only need 1 and that's for the hat
+                    cosmetics[0] = CurrentRoom.PlayerList[i].Cosmetics[0];
+                    playerProps.Add("cosmetics", cosmetics);
+                    Debug.Log("Sending Player Characteristics for User Id " + CurrentRoom.PlayerList[i].UserId);
+                    pubNubUtilities.PubNubSendRoomProperties(pubnub, playerProps);
+                //}
+            }
+        }
+
 
         // Matchmaking:
         public void FindMatch()
@@ -519,7 +583,7 @@ namespace Visyde
             //  DCC todo delete this
             //PhotonNetwork.JoinRoom(room.Name);
         }
-        public void CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots)
+        public async void CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots)
         {
 
             if (pubnub != null)
@@ -535,14 +599,24 @@ namespace Visyde
                 metaData["map"] = selectedMap;
                 //metaData["playerCount"] = 1;
                 metaData["customAllowBots"] = allowBots ? 1 : 0;
-                string channelName = "game";
-                pubnub.SetPresenceState().Channels(new List<string>() { channelName }).UUID(userId).State(metaData).Async((result, status) =>
+                string channelName = PubNubUtilities.gameLobbyChannel;
+                PNResult<PNSetStateResult> setPresenceStateResponse = await pubnub.SetPresenceState()
+                    .Channels(new string[] { channelName })
+                    .Uuid(userId)
+                    .State(metaData)
+                    .ExecuteAsync();
+                if (setPresenceStateResponse.Status.Error)
                 {
-                    if (status.Error)
-                    {
-                        Debug.Log("Error setting PubNub Presence State (CreateCustomGame): " + status.ErrorData.Info);
-                    }
-                });
+                    Debug.Log("Error setting PubNub Presence State (CreateCustomGame): " + setPresenceStateResponse.Status.ErrorData.Information);
+                }
+
+                //pubnub.SetPresenceState().Channels(new List<string>() { channelName }).UUID(userId).State(metaData).Async((result, status) =>
+                //{
+                //    if (status.Error)
+                //    {
+                //        Debug.Log("Error setting PubNub Presence State (CreateCustomGame): " + status.ErrorData.Info);
+                //    }
+                //});
                 PubNubRoomInfo roomInfo = new PubNubRoomInfo(userId, pnNickName, selectedMap, maxPlayers, allowBots);
                 CurrentRoom = roomInfo;
                 PubNubAddRoom(roomInfo);
@@ -780,7 +854,7 @@ namespace Visyde
             {
                 onPlayerJoin(player);
             }
-            catch (System.Exception ex) { }
+            catch (System.Exception) { }
         }
         public /* override */ void OnPlayerLeftRoom(string uuid /*PubNubPlayer player*/)
         {
@@ -832,7 +906,7 @@ namespace Visyde
             try
             {
                 onPlayerLeave(player);
-            } catch (System.Exception ex) { }
+            } catch (System.Exception) { }
         }
 
         /*
@@ -913,6 +987,7 @@ namespace Visyde
         */
         public /*override*/ void OnJoinedRoom()
         {
+            Debug.Log("temp: OnJoinedRoom");
             inRoom = true;
             //  DCC todo update channel metadata?
 
@@ -990,43 +1065,81 @@ namespace Visyde
             }
 
             // Events:
-            try { onLeaveRoom(); } catch (System.Exception ex) { }
+            try { onLeaveRoom(); } catch (System.Exception) { }
         }
 
-        private void PubNubGetRooms()
+        private async void PubNubGetRooms()
         {
             //  Determine who is present based on who is subscribed to the lobby chat channel
-            pubnub.HereNow().Channels(new List<string>() { "game" }).IncludeUUIDs(true).Async((result, status) =>
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[]
+                {
+                    PubNubUtilities.gameLobbyChannel
+                })
+                .IncludeUUIDs(true)
+                .ExecuteAsync();
+            PNHereNowResult hereNowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+
+            if(status.Error)
             {
-                if (status.Error)
+                Debug.Log("Error calling HereNow: " + status.ErrorData.Information);
+            }
+            else
+            {
+
+                Debug.Log("HereNow: Result.Channels length is " + hereNowResult.Channels.Count);
+                foreach(KeyValuePair<string, PNHereNowChannelData> kvp in hereNowResult.Channels)
                 {
-                    Debug.Log("Error calling HereNow: " + status.ErrorData.Info);
-                }
-                else
-                {
-                    Debug.Log("HereNow: Result.Channels length is " + result.Channels.Count);
-                    foreach (KeyValuePair<string, PNHereNowChannelData> kvp in result.Channels)
+                    PNHereNowChannelData hereNowChannelData = kvp.Value as PNHereNowChannelData;
+                    if (kvp.Value != null)
                     {
-                        PNHereNowChannelData hereNowChannelData = kvp.Value as PNHereNowChannelData;
-                        if (kvp.Value != null)
+                        Debug.Log("HereNow: Found HereNow channel data for channel " + hereNowChannelData.ChannelName + " with occupancy " + hereNowChannelData.Occupancy);
+                        List<PNHereNowOccupantData> hereNowOccupantData = hereNowChannelData.Occupants as List<PNHereNowOccupantData>;
+                        if (hereNowOccupantData != null)
                         {
-                            Debug.Log("HereNow: Found HereNow channel data for channel " + hereNowChannelData.ChannelName + " with occupancy " + hereNowChannelData.Occupancy);
-                            List<PNHereNowOccupantData> hereNowOccupantData = hereNowChannelData.Occupants as List<PNHereNowOccupantData>;
-                            if (hereNowOccupantData != null)
+                            foreach (PNHereNowOccupantData pnHereNowOccupantData in hereNowOccupantData)
                             {
-                                foreach(PNHereNowOccupantData pnHereNowOccupantData in hereNowOccupantData)
-                                {
-                                    Debug.Log("HereNow: Calling User is Online for User ID " + pnHereNowOccupantData.UUID + " with state " + pnHereNowOccupantData.State);
-                                    UserIsOnlineOrStateChange(pnHereNowOccupantData.UUID);
-                                }
+                                Debug.Log("HereNow: Calling User is Online for User ID " + pnHereNowOccupantData.Uuid + " with state " + pnHereNowOccupantData.State);
+                                UserIsOnlineOrStateChange(pnHereNowOccupantData.Uuid);
                             }
                         }
                     }
                 }
-            });
+            }
+
+
+            //pubnub.HereNow().Channels(new List<string>() { "game" }).IncludeUUIDs(true).Async((result, status) =>
+            //{
+            //    if (status.Error)
+            //    {
+            //        Debug.Log("Error calling HereNow: " + status.ErrorData.Info);
+            //    }
+            //    else
+            //    {
+            //        Debug.Log("HereNow: Result.Channels length is " + result.Channels.Count);
+            //        foreach (KeyValuePair<string, PNHereNowChannelData> kvp in result.Channels)
+            //        {
+            //            PNHereNowChannelData hereNowChannelData = kvp.Value as PNHereNowChannelData;
+            //            if (kvp.Value != null)
+            //            {
+            //                Debug.Log("HereNow: Found HereNow channel data for channel " + hereNowChannelData.ChannelName + " with occupancy " + hereNowChannelData.Occupancy);
+            //                List<PNHereNowOccupantData> hereNowOccupantData = hereNowChannelData.Occupants as List<PNHereNowOccupantData>;
+            //                if (hereNowOccupantData != null)
+            //                {
+            //                    foreach(PNHereNowOccupantData pnHereNowOccupantData in hereNowOccupantData)
+            //                    {
+            //                        Debug.Log("HereNow: Calling User is Online for User ID " + pnHereNowOccupantData.UUID + " with state " + pnHereNowOccupantData.State);
+            //                        UserIsOnlineOrStateChange(pnHereNowOccupantData.UUID);
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //});
         }
 
-        private void UserIsOnlineOrStateChange(string uuid)
+        private async void UserIsOnlineOrStateChange(string uuid)
         {
             //  A user has come online.  If they have an active room which they have created
             //  then add it to our rooms list
@@ -1037,7 +1150,97 @@ namespace Visyde
             }
 
             //string channelName = "rooms." + uuid;
-            string channelName = "game";
+            string channelName = PubNubUtilities.gameLobbyChannel;
+            PNResult<PNGetStateResult> getStateResponse = await pubnub.GetPresenceState()
+                .Channels(new string[] { channelName })
+                .Uuid(uuid)
+                .ExecuteAsync();
+            if (getStateResponse.Status.Error)
+            {
+                Debug.Log("Error retrieving PubNub Presence State (UserIsOnlineOrStateChange): " + getStateResponse.Status.ErrorData.Information);
+            }
+            else
+            {
+                Debug.Log("temp: Response from getState " + getStateResponse.Status.StatusCode);
+                //  There is a previously created room associated with this user
+                Dictionary<string, object> userState = getStateResponse.Result.StateByUUID;
+                //if (!userState.ContainsKey("visible"))
+                //    userState = (Dictionary<string, object>)userState[channelName];
+                //int visible = System.Convert.ToInt32(userState["visible"]);
+
+                //for (int i = 0; i < userState.Keys.Count; i++)
+                //{
+                //    Debug.Log(userState.ElementAt(i));
+                //    //  DCC To Do read in the created rooms
+                //}
+                foreach (KeyValuePair<string, object> entry in userState)
+                {
+                    //Debug.Log("Presence State: " + entry.Key + ", " + entry.Value.ToString());
+                }
+                if (userState.Count > 0)
+                {
+                    Debug.Log("temp: Userstate count is " + userState.Count);
+                    if (userState.ContainsKey("visible") && System.Convert.ToInt32(userState["visible"]) == 0)
+                    {
+                        Debug.Log("temp: Visible was set to 0, leaving room");
+                        //  User has created a room, then left, so we should no longer show that room
+                        PubNubRemoveRoom(uuid, false);
+                        //  If they were the owner of the room, we should leave it.
+                        //  If they were not the owner, we should just remove them
+                        if (CurrentRoom != null && CurrentRoom.OwnerId == uuid)
+                        {
+                            LeaveRoom();
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("temp: Adding room, retrieving properties");
+                        string name = (string)userState["name"];
+                        int map = System.Convert.ToInt32(userState["map"]);
+                        //int playerCount = System.Convert.ToInt32(userState["playerCount"]);
+                        int maxPlayers = System.Convert.ToInt32(userState["maxPlayers"]);
+                        bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
+                        PubNubRoomInfo roomInfo = new PubNubRoomInfo(uuid, name, selectedMap, maxPlayers, allowBots);
+                        PubNubPlayer owner = new PubNubPlayer(uuid, name, false, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
+                        roomInfo.PlayerList.Add(owner);
+                        PubNubAddRoom(roomInfo);
+                    }
+                }
+                else
+                {
+                    Debug.Log("temp: User State did not contain any data");
+                }
+
+
+
+                /*
+                if (visible == 0)
+                {
+                    //  User has created a room, then left, so we should no longer show that room
+                    PubNubRemoveRoom(uuid, false);
+                    //  If they were the owner of the room, we should leave it.
+                    //  If they were not the owner, we should just remove them
+                    if (CurrentRoom.OwnerId == uuid)
+                    {
+                        LeaveRoom();
+                    }
+                }
+                else
+                {
+                    string name = (string)userState["name"];
+                    int map = System.Convert.ToInt32(userState["map"]);
+                    //int playerCount = System.Convert.ToInt32(userState["playerCount"]);
+                    int maxPlayers = System.Convert.ToInt32(userState["maxPlayers"]);
+                    bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
+                    PubNubRoomInfo roomInfo = new PubNubRoomInfo(uuid, name, selectedMap, maxPlayers, allowBots);
+                    PubNubPlayer owner = new PubNubPlayer(uuid, name, false, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
+                    roomInfo.PlayerList.Add(owner);
+                    PubNubAddRoom(roomInfo);
+                }
+                */
+            }
+
+            /*
             pubnub.GetPresenceState().Channels(new List<string>() { channelName }).UUID(uuid).Async((result, status) =>
             {
                 if (status.Error)
@@ -1080,11 +1283,14 @@ namespace Visyde
                     Debug.Log("Could not find Presence State information: " + uuid);
                 }
             });
+            */
 
         }
 
         public void UserIsOffline(string uuid)
         {
+            //  DCC xxy
+            return; //  Issue with subsequent calls to .Subscribe causing a temporary leave / join couple
             OnPlayerLeftRoom(uuid);
             //  Remove the room, if it exists
             PubNubRemoveRoom(uuid, false);
@@ -1092,7 +1298,6 @@ namespace Visyde
             {
                 LeaveRoom();
             }
-            //  DCC also todo - call Disconnected if the master left.
         }
 
         private void PubNubAddRoom(PubNubRoomInfo roomInfo)
@@ -1112,24 +1317,36 @@ namespace Visyde
                 if (pubNubRooms != null)
                 {
                     pubNubRooms.Add(roomInfo);
-                    try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception ex) { }
+                    try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception) { }
                 }
             }
         }
         
-        public void PubNubRemoveRoom(string uuid, bool notifyOthers)
+        public async void PubNubRemoveRoom(string uuid, bool notifyOthers)
         {
             if (notifyOthers)
             {
                 Dictionary<string, object> metaData = new Dictionary<string, object>();
                 metaData["visible"] = 0;
-                pubnub.SetPresenceState().Channels(new List<string>() { "game" }).UUID(userId).State(metaData).Async((result, status) =>
+                //List<string> channels = new List<string>() { "game" };
+                string[] channels = new string[] { "game" };
+                PNResult<PNSetStateResult> setPresenceResponse = await pubnub.SetPresenceState()
+                    .Channels(channels)
+                    .Uuid(userId)
+                    .State(metaData)
+                    .ExecuteAsync();
+                if (setPresenceResponse.Status.Error)
                 {
-                    if (status.Error)
-                    {
-                        Debug.Log("Error setting PubNub Presence State (PubNubRemoveRoom): " + status.ErrorData.Info);
-                    }
-                });
+                    Debug.Log("Error setting PubNub Presence State (PubNubRemoveRoom): " + setPresenceResponse.Status.ErrorData.Information);
+                }
+
+                //pubnub.SetPresenceState().Channels(channels).Uuid(userId).State(metaData).Async((result, status) =>
+                //{
+                //    if (status.Error)
+                //    {
+                //        Debug.Log("Error setting PubNub Presence State (PubNubRemoveRoom): " + status.ErrorData.Info);
+                //    }
+                //});
             }
 
             for (int i = 0; i < pubNubRooms.Count; i++)
@@ -1139,30 +1356,47 @@ namespace Visyde
                     if (pubNubRooms != null)
                     {
                         pubNubRooms.RemoveAt(i);
-                        try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception ex) { }
+                        try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception) { }
                         break;
                     }
                 }
             }
         }
 
-        private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        //private void SubscribeCallbackHandler(object sender, System.EventArgs e)
+        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
-            SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
+            //Debug.Log("temp: Received message on " + result.Channel + ", message is " + result.Message);
+            //SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
 
-            if (mea.MessageResult != null)
+            if (result.Message != null)
             {
+                //Debug.Log("temp: Message was not null");
                 //  Messages (Publish)
-                if (mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
+                //if (mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
+                if (result.Channel.Equals(PubNubUtilities.roomStatusChannel))
                 {
-                    if (mea.MessageResult.Payload is Dictionary<string, object>)
+                    if (CurrentRoom == null)
+                    {
+                        Debug.Log("Not in an active game");
+                        return;
+                    }
+
+                    Dictionary<string, object> payload = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());
+
+                    //if (mea.MessageResult.Payload is Dictionary<string, object>)
+                    if (payload is Dictionary<string, object>)
                     {
                         Debug.Log("Init: Recieved message in Connector Subscribe handler");
-                        Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
+                        //Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
+                        //Dictionary<string, object> payload = (Dictionary<string, object>)payloadCheck;
                         if (payload.ContainsKey("gameSceneLoaded"))
                         {
                             Debug.Log("Init: Received Game Scheme Loaded");
-                            //  DCC todo figure out how to cause the game scene to load and pull in these attributes from the Connector
+                            Debug.Log("Current Room Name: " + CurrentRoom.Name + ", loading room is named " + payload["currentRoomName"]);
+
+                            if (!CurrentRoom.Name.Equals(payload["currentRoomName"])) return;   //  Check the game being loaded is intended for us
+                            
                             if (!isMasterClient)
                             {
                                 //  Received details about the bots in the game from the master instance
@@ -1170,9 +1404,12 @@ namespace Visyde
                                 CurrentRoom.botCount = botCount;
                                 if (botCount > 0)
                                 {
-                                    string[] rxBotNames = (string[])payload["botNames"];
-                                    long[] rxBotCharacters = (long[])payload["botCharacters"];
-                                    long[] rxBotHats = (long[])payload["botHats"];
+                                    //string[] rxBotNames = (string[])payload["botNames"];
+                                    string[] rxBotNames = (payload["botNames"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
+                                    //long[] rxBotCharacters = (long[])payload["botCharacters"];
+                                    long[] rxBotCharacters = (payload["botCharacters"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
+                                    //long[] rxBotHats = (long[])payload["botHats"];
+                                    long[] rxBotHats = (payload["botHats"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                                     for (int i = 0; i < botCount; i++)
                                     {
                                         CurrentRoom.bNames[i] = rxBotNames[i];
@@ -1221,7 +1458,7 @@ namespace Visyde
                             {
                                 if (userId != null && userId.Equals(CurrentRoom.PlayerList[i].UserId))
                                 {
-                                    Debug.Log("Found Room.  Calling set properties");
+                                    Debug.Log("Found Room.  Calling set properties for user ID " + userId);
                                     CurrentRoom.PlayerList[i].SetProperties(payload);
                                 }
                                 else if (playerId != -1 && playerId == CurrentRoom.PlayerList[i].ID)
@@ -1233,9 +1470,18 @@ namespace Visyde
                         }
                     }
                 }
-                else if (mea.MessageResult.Payload is string[])
+                else if (result.Channel.StartsWith(PubNubUtilities.gameLobbyRoomsWildcardRoot))
                 {
-                    string[] payload = (string[])mea.MessageResult.Payload;
+                    //  Not the Room status Channel
+                    object[] payloadCheck = JsonConvert.DeserializeObject<object[]>(result.Message.ToString());
+                    //(mea.MessageResult.Payload is string[])
+                    bool isStringArray = payloadCheck.OfType<string>().Any();
+                    if (!isStringArray)
+                    {
+                        Debug.LogWarning("Unexpected Message type recieved on " + result.Channel);
+                    }
+                    //string[] payload = (string[])mea.MessageResult.Payload;
+                    string[] payload = JsonConvert.DeserializeObject<string[]>(result.Message.ToString());
                     string requestorId = payload[1];
                     if (requestorId == userId)
                     {
@@ -1259,29 +1505,46 @@ namespace Visyde
                     }
                 }
             }
-            else if (mea.PresenceEventResult != null)
+        }
+
+        private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
+        {
+            if (result.Channel.Equals(PubNubUtilities.gameLobbyChannel))
             {
-                if (mea.PresenceEventResult.Event.Equals("leave") || mea.PresenceEventResult.Event.Equals("timeout"))
+                //else if (mea.PresenceEventResult != null)
+                //{
+                //if (mea.PresenceEventResult.Event.Equals("leave") || mea.PresenceEventResult.Event.Equals("timeout"))
+                if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
                 {
+                    Debug.Log("Presence: " + result.Event + " for channel " + result.Channel  + " for user " + result.Uuid);
                     //  The specified user has left, remove any room they created from the rooms array
-                    UserIsOffline(mea.PresenceEventResult.UUID);
+                    //UserIsOffline(mea.PresenceEventResult.UUID);
+                    UserIsOffline(result.Uuid);
                 }
-                else if (mea.PresenceEventResult.Event.Equals("join"))
+                //else if (mea.PresenceEventResult.Event.Equals("join"))
+                else if (result.Event.Equals("join"))
                 {
+                    Debug.Log("Presence: Join for channel " + result.Channel + " for user " + result.Uuid);
                     //  The specified user has joined.  If they have created a room then add it to our room list
-                    UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
+                    //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
+                    UserIsOnlineOrStateChange(result.Uuid);
                 }
-                else if (mea.PresenceEventResult.Event.Equals("state-change"))
+                //else if (mea.PresenceEventResult.Event.Equals("state-change"))
+                else if (result.Event.Equals("state-change"))
                 {
+                    Debug.Log("Presence: State Change for channel " + result.Channel + " for user " + result.Uuid);
                     //  The specified user has created or deleted a room
-                    UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
+                    //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
+                    UserIsOnlineOrStateChange(result.Uuid);
                 }
+                //}
             }
+
         }
 
 
 
-        private void PNJoinCustomRoom(PubNub pubnub, string channel, string myUserId, string myNickname)
+        private async void PNJoinCustomRoom(Pubnub pubnub, string channel, string myUserId, string myNickname)
         {
             string[] joinCustomRoomMsg = new string[5];
             joinCustomRoomMsg[0] = "JOIN_CUSTOM_ROOM";
@@ -1289,29 +1552,95 @@ namespace Visyde
             joinCustomRoomMsg[2] = myNickname;
             joinCustomRoomMsg[3] = "" + DataCarrier.chosenCharacter;
             joinCustomRoomMsg[4] = "" + DataCarrier.chosenHat;
-            pubnub.Publish().Message(joinCustomRoomMsg).Channel(channel).Async((result, status) =>
+            PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                .Channel(channel)
+                .Message(joinCustomRoomMsg)
+                .ExecuteAsync();
+            if (publishResponse.Status.Error)
             {
-                if (status.Error)
-                {
-                    Debug.Log("Error sending PubNub Message (Join Custom Room " + channel + ")");
-                }
-            });
+                Debug.Log("Error sending PubNub Message (Join Custom Room " + channel + "): " + publishResponse.Status.ErrorData.Information);
+            }
+            //pubnub.Publish().Message(joinCustomRoomMsg).Channel(channel).Async((result, status) =>
+            //{
+            //    if (status.Error)
+            //    {
+            //        Debug.Log("Error sending PubNub Message (Join Custom Room " + channel + ")");
+            //    }
+            //});
         }
 
-        private void PNLeaveCustomRoom(PubNub pubnub, string channel, string myUserId)
+        private async void PNLeaveCustomRoom(Pubnub pubnub, string channel, string myUserId)
         {
             string[] leaveCustomRoomMsg = new string[2];
             leaveCustomRoomMsg[0] = "LEAVE_CUSTOM_ROOM";
             leaveCustomRoomMsg[1] = myUserId;
             Debug.Log("Publishing leave request on " + channel);
-            pubnub.Publish().Message(leaveCustomRoomMsg).Channel(channel).Async((result, status) =>
+            PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                .Channel(channel)
+                .Message(leaveCustomRoomMsg)
+                .ExecuteAsync();
+            if (publishResponse.Status.Error)
             {
-                if (status.Error)
-                {
-                    Debug.Log("Error sending PubNub Message (Leave Custom Room " + channel + ")");
-                }
-            });
+                Debug.Log("Error sending PubNub Message (Leave Custom Room " + channel + "): " + publishResponse.Status.ErrorData.Information);
+            }
+
+            //pubnub.Publish().Message(leaveCustomRoomMsg).Channel(channel).Async((result, status) =>
+            //{
+            //    if (status.Error)
+            //    {
+            //        Debug.Log("Error sending PubNub Message (Leave Custom Room " + channel + ")");
+            //    }
+            //});
         }
+
+        /*
+        private string TEMP_GetUserNickname()
+        {
+            string nickname = "";
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
+                && !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name))
+            {
+                nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+            }
+
+            else
+            {
+                //Obtain the user metadata. IF the nickname cannot be found, set to be the first 6 characters of the UserId.
+                TEMP_GetUserMetadata(pubnub.GetCurrentUserId());
+                nickname = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name) ? PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name : pubnub.GetCurrentUserId();
+            }
+
+            return nickname;
+        }
+
+        private async void TEMP_GetUserMetadata(string Uuid)
+        {
+            //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
+            // Get Metadata for a specific UUID
+            PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
+                .Uuid(Uuid)
+                .ExecuteAsync();
+            PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
+            PNStatus status = getUuidMetadataResponse.Status;
+            if (!status.Error && getUuidMetadataResult != null)
+            {
+                UserMetadata meta = new UserMetadata
+                {
+                    Uuid = getUuidMetadataResult.Uuid,
+                    Name = getUuidMetadataResult.Name,
+                    Email = getUuidMetadataResult.Email,
+                    ExternalId = getUuidMetadataResult.ExternalId,
+                    ProfileUrl = getUuidMetadataResult.ProfileUrl,
+                    Custom = getUuidMetadataResult.Custom,
+                    Updated = getUuidMetadataResult.Updated
+                };
+                if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
+                {
+                    PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+                }
+            }
+        }
+        */
 
     }
 }

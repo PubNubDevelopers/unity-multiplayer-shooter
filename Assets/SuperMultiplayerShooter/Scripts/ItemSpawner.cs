@@ -96,7 +96,7 @@ namespace Visyde
         {
             //  There is one subscribe handler per character
             try {
-                if (result.Message != null)
+                if (result.Message != null && result.Channel.Equals(PubNubUtilities.itemChannel))
                 {
                     long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                     if (payload != null)
@@ -120,7 +120,7 @@ namespace Visyde
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning("Issue parsing PubNub messages: " + ex.Message);
+                Debug.Log("Issue parsing PubNub messages: " + ex.Message);
             }
         }
 
