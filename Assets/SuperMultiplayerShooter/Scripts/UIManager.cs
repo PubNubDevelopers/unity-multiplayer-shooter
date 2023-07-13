@@ -129,7 +129,7 @@ public class MyClass
             gameOverPanel.SetActive(false);
             hurtOverlay.color = Color.clear;
             //Initializes the PubNub Connection.
-            pubnub = PNManager.pubnubInstance;
+            pubnub = PNManager.pubnubInstance.InitializePubNub();
 
             // Show mobile controls if needed:
             mobileControlsPanel.SetActive(gm.useMobileControls);

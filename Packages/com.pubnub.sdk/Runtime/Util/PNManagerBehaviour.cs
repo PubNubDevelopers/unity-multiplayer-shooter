@@ -28,12 +28,16 @@ namespace PubnubApi.Unity {
 				Debug.LogError("PNConfigAsset is missing", this);
 				return null;
 			}
-			
+
+			/*
+			 * Commenting out due to having issues with using a singular PubNub instance in Unity SDK v7.
+			 * In cases where users are subscribing to different channels, leave and join events are generated
+			 * that is affecting functionality.
 			if (pubnub is not null) {
 				Debug.LogError("PubNub has already been initialized");
 				return pubnub;
 			}
-			
+			*/
 			pnConfiguration.UserId = userId;
 			pubnub = new Pubnub(pnConfiguration);
 			pubnub.AddListener(listener);

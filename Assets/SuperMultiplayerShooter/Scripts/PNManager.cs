@@ -14,22 +14,20 @@ public class PNManager : PNManagerBehaviour
     //Cached players from connection.
     private static Dictionary<string, UserMetadata> cachedPlayers = new Dictionary<string, UserMetadata>();
 
-    private async void Awake()
+    //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
+    //helper methods.
+    private void Awake()
     {
-        if (pubnubInstance == null)
-        {
-            // Initialize will create a PubNub instance, pass the configuration object, and prepare the listener. 
-            InitializePubNub();
-            pubnubInstance = this;
-            DontDestroyOnLoad(gameObject);
-        }
+        pubnubInstance = this;
+        DontDestroyOnLoad(gameObject);
     }
+
 
     /// <summary>
     /// Returns the PNConfiguration to reinitialize the PubNub object in different scenes.
     /// </summary>
     /// <returns></returns>
-    private Pubnub InitializePubNub()
+    public Pubnub InitializePubNub()
     {
         if (string.IsNullOrWhiteSpace(pnConfiguration.PublishKey) || string.IsNullOrWhiteSpace(pnConfiguration.SubscribeKey))
         {
@@ -62,5 +60,60 @@ public class PNManager : PNManagerBehaviour
     {
         get { return cachedPlayers; }
         set { cachedPlayers = value; }
+    }
+
+    /// <summary>
+    /// Returns the user's nickname. If it is not cached, it will obtain this information.
+    /// </summary>
+    /// <returns></returns>
+    public string GetUserNickname()
+    {
+        string nickname = "";
+        if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
+            && !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name))
+        {
+            nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+        }
+
+        else
+        {
+            //Obtain the user metadata. IF the nickname cannot be found, set to be the first 6 characters of the UserId.
+            GetUserMetadata(pubnub.GetCurrentUserId());
+            nickname = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name) ? PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name : pubnub.GetCurrentUserId();
+        }
+
+        return nickname;
+    }
+
+    /// <summary>
+    /// Get the User Metadata given the UserId.
+    /// </summary>
+    /// <param name="Uuid">UserId of the Player</param>
+    public async void GetUserMetadata(string Uuid)
+    {
+        //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
+        // Get Metadata for a specific UUID
+        PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
+            .Uuid(Uuid)
+            .ExecuteAsync();
+        PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
+        PNStatus status = getUuidMetadataResponse.Status;
+        if (!status.Error && getUuidMetadataResult != null)
+        {
+            UserMetadata meta = new UserMetadata
+            {
+                Uuid = getUuidMetadataResult.Uuid,
+                Name = getUuidMetadataResult.Name,
+                Email = getUuidMetadataResult.Email,
+                ExternalId = getUuidMetadataResult.ExternalId,
+                ProfileUrl = getUuidMetadataResult.ProfileUrl,
+                Custom = getUuidMetadataResult.Custom,
+                Updated = getUuidMetadataResult.Updated
+            };
+            if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
+            {
+                PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+            }
+        }
     }
 }
