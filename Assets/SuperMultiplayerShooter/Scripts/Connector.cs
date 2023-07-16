@@ -24,7 +24,7 @@ namespace Visyde
     /// - manages the initial connection and matchmaking
     /// </summary>
     ///
-
+    
     public class PubNubRoomInfo
     {
         public static int MAX_BOTS = 4;
@@ -573,7 +573,7 @@ namespace Visyde
             else
             {
                 //  Send a message to the host that we want to join their game
-                PNJoinCustomRoom(pubnub, "rooms." + room.OwnerId, userId, pnNickName);
+                PNJoinCustomRoom(pubnub, "rooms." + room.OwnerId, userId, pnNickName, room.OwnerId);
                 //  Join the game on our local instance
                 PubNubPlayer self = new PubNubPlayer(userId, pnNickName, true, false, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
                 self.SetScore(0);
@@ -1064,7 +1064,7 @@ namespace Visyde
             //  Send a message to the host that we want to leave their game
             if (userId != CurrentRoom.OwnerId)
             {
-                PNLeaveCustomRoom(pubnub, "rooms." + CurrentRoom.OwnerId, userId);
+                PNLeaveCustomRoom(pubnub, "rooms." + CurrentRoom.OwnerId, userId, CurrentRoom.OwnerId);
                 OnPlayerLeftRoom(userId);
             }
 
@@ -1388,16 +1388,13 @@ namespace Visyde
                 //Debug.Log("temp: Message was not null");
                 //  Messages (Publish)
                 //if (mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
-                if (result.Channel.StartsWith(PubNubUtilities.lobbyChatWildcardRoot))
+                //  Notify chat
+                try
                 {
-                    //  Notify chat
-                    try
-                    {
-                        onLobbyChatMessage(result);
-                    }
-                    catch (System.Exception) { }
+                    onLobbyChatMessage(result);
                 }
-                else if (result.Channel.Equals(PubNubUtilities.roomStatusChannel))
+                catch (System.Exception) { }
+                if (result.Channel.Equals(PubNubUtilities.roomStatusChannel))
                 {
                     if (CurrentRoom == null)
                     {
@@ -1515,16 +1512,50 @@ namespace Visyde
                         string requestorNickname = payload[2];
                         int requestedCharacter = System.Int32.Parse(payload[3]);
                         int requestedHat = System.Int32.Parse(payload[4]);
+                        string roomOwnerId = payload[5];
                         Debug.Log("Received Remote join request from " + requestorId);
                         PubNubPlayer remotePlayer = new PubNubPlayer(requestorId, requestorNickname, false, false, requestedCharacter, requestedHat);
-                        if (CurrentRoom != null && CurrentRoom.PlayerList != null)
-                            CurrentRoom.PlayerList.Add(remotePlayer);
+                        //  Consider whether the player entered the current room
+                        
+                        //if (CurrentRoom != null && CurrentRoom.PlayerList != null)
+                        //    CurrentRoom.PlayerList.Add(remotePlayer);
+                        //  Consider the case where we are not in the room
+                        foreach (PubNubRoomInfo room in pubNubRooms)
+                        {
+                            if (room.OwnerId.Equals(roomOwnerId))
+                            {
+                                room.PlayerList.Add(remotePlayer);
+                                break;
+                            }
+                        }
                         OnPlayerEnteredRoom(remotePlayer);
+                        onRoomListChange(pubNubRooms.Count);
                     }
                     else if (payload[0].Equals("LEAVE_CUSTOM_ROOM"))
                     {
                         Debug.Log("Received Remote leave request from " + requestorId);
+                        string roomOwnerId = payload[2];
                         OnPlayerLeftRoom(requestorId);
+                        for (int i = 0; i < pubNubRooms.Count; i++)
+                        {
+                            if (pubNubRooms[i].OwnerId.Equals(roomOwnerId))
+                            {
+                                for (int j = 0; j < pubNubRooms[i].PlayerList.Count; j++)
+                                {
+                                    Debug.Log("Player Count: " + pubNubRooms[i].PlayerList.Count);
+                                    if (pubNubRooms[i].PlayerList[j].UserId.Equals(requestorId))
+                                    {
+                                        pubNubRooms[i].PlayerList.RemoveAt(j);
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        Debug.Log("Comparing " + pubNubRooms[i].PlayerList[j].UserId + " with " + requestorId + " but did not match");
+                                    }
+                                }
+                            }
+                        }
+                        onRoomListChange(pubNubRooms.Count);
                     }
                 }
             }
@@ -1565,14 +1596,15 @@ namespace Visyde
 
         }
 
-        private async void PNJoinCustomRoom(Pubnub pubnub, string channel, string myUserId, string myNickname)
+        private async void PNJoinCustomRoom(Pubnub pubnub, string channel, string myUserId, string myNickname, string ownerId)
         {
-            string[] joinCustomRoomMsg = new string[5];
+            string[] joinCustomRoomMsg = new string[6];
             joinCustomRoomMsg[0] = "JOIN_CUSTOM_ROOM";
             joinCustomRoomMsg[1] = myUserId;
             joinCustomRoomMsg[2] = myNickname;
             joinCustomRoomMsg[3] = "" + DataCarrier.chosenCharacter;
             joinCustomRoomMsg[4] = "" + DataCarrier.chosenHat;
+            joinCustomRoomMsg[5] = ownerId; //  The owner of the room we want to join
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                 .Channel(channel)
                 .Message(joinCustomRoomMsg)
@@ -1590,11 +1622,12 @@ namespace Visyde
             //});
         }
 
-        private async void PNLeaveCustomRoom(Pubnub pubnub, string channel, string myUserId)
+        private async void PNLeaveCustomRoom(Pubnub pubnub, string channel, string myUserId, string ownerId)
         {
-            string[] leaveCustomRoomMsg = new string[2];
+            string[] leaveCustomRoomMsg = new string[3];
             leaveCustomRoomMsg[0] = "LEAVE_CUSTOM_ROOM";
             leaveCustomRoomMsg[1] = myUserId;
+            leaveCustomRoomMsg[2] = ownerId;
             Debug.Log("Publishing leave request on " + channel);
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                 .Channel(channel)

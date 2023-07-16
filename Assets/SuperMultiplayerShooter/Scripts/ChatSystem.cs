@@ -38,14 +38,15 @@ namespace Visyde
         private string targetLanguage = "en"; //Changes based on when users select a different value in the drop-down list.
 
         //PubNub
-        private Pubnub pubnub;
+        //private Pubnub pubnub;
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
             //Initializes the PubNub Connection.
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
+            //pubnub = PNManager.pubnubInstance.InitializePubNub();
+            //pubnub = Connector.instance.GetPubNubObject();
 
             //Add Listeners
             //pubnub.AddListener(listener);
@@ -95,10 +96,12 @@ namespace Visyde
         /// <param name="result"></param>
         private void OnPnMessage(/*Pubnub pn, */PNMessageResult<object> result)
         {
+            Debug.Log("OnPnMessage");
             //if (result != null && result.Channel.Equals(_lobbySubscribe))
             if (result != null && result.Channel.StartsWith(PubNubUtilities.lobbyChatWildcardRoot))
             {
                 string message = ParseMessage(result.Message);
+                Debug.Log("Message: " + message);
                 GetUsername(result, message);
             }
         }
@@ -114,7 +117,7 @@ namespace Visyde
                 filter.text = inputField.text;
                 filter.source = "en";
                 filter.target = targetLanguage;
-                PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
                     .Channel(_lobbyPublish)
                     .Message(filter)
                     .ExecuteAsync();
@@ -168,7 +171,7 @@ namespace Visyde
         {
             //TODO: Will be changed to the current room after replacing Photon Room with PubNub lobby
             //  DCC todo
-            _lobbyPublish = PubNubUtilities.lobbyChatWildcardRoot + Connector.instance.CurrentRoom.Name;
+            _lobbyPublish = PubNubUtilities.lobbyChatWildcardRoot + Connector.instance.CurrentRoom.OwnerId;
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
 
@@ -192,16 +195,19 @@ namespace Visyde
             if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Publisher))
             {
                 username = PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name;
+                Debug.Log("Username2: " + username);
             }
 
             //Check in case the username is null. Set to back-up of UUID just in case.
             if (string.IsNullOrWhiteSpace(username))
             {
                 username = result.Publisher;
+                Debug.Log("Username: " + username);
             }
 
             //Display the chat pulled.
-            DisplayChat(message, username, pubnub.GetCurrentUserId().Equals(result.Publisher), false, false);
+            Debug.Log("Display Chat");
+            DisplayChat(message, username, Connector.instance.GetPubNubObject().GetCurrentUserId().Equals(result.Publisher), false, false);
         }
 
         /// <summary>
