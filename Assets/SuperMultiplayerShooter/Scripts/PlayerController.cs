@@ -127,7 +127,14 @@ namespace Visyde
         public bool isPlayerOurs
         {
             get {
-                return !playerInstance.isBot && playerInstance.isMine;
+                if (playerInstance != null)
+                {
+                    return !playerInstance.isBot && playerInstance.isMine;
+                }
+                else
+                {
+                    return false;
+                }
             }
         }
 

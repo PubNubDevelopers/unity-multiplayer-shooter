@@ -127,7 +127,9 @@ namespace Visyde
 
         // Used for time syncronization:
         [System.NonSerialized] public double startTime, elapsedTime, remainingTime, gameStartsIn;
-        public bool startingCountdownStarted, doneGameStart;
+        //  DCC uuu
+        private bool startingCountdownStarted = false;  //  Trigger for Waiting for Players
+        private bool doneGameStart = false;
 
         // For respawning:
         double deathTime;
@@ -260,6 +262,7 @@ namespace Visyde
             // Start checking if all players are ready:
             if (Connector.instance.isMasterClient)
             {
+                Connector.instance.CurrentRoom.PlayerList[Connector.instance.GetMasterId()].IsReady = true;
                 InvokeRepeating("CheckIfAllPlayersReady", 1, 0.5f);
             }
         }
@@ -285,28 +288,43 @@ namespace Visyde
                     bool allPlayersReady = true;
 
                     //for (int i = 0; i < punPlayersAll.Length; i++)
-                    for (int i = 0; i < playersAll.Count; i++)
+                    //for (int i = 0; i < playersAll.Count; i++)
+                    for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
                     {
+                        if (!Connector.instance.CurrentRoom.PlayerList[i].IsReady)
+                        {
+                            allPlayersReady = false;
+                            Debug.Log("Player " + Connector.instance.CurrentRoom.PlayerList[i].NickName + " is not ready");
+                            break;
+                        }
                         // If a player hasn't yet finished loading, don't start:
                         //if (punPlayersAll[i].GetScore() == -1)
-                        if (playersAll[i].GetScore() == -1)
-                        {
-                            Debug.Log("Setting all Players ready to false because " + playersAll[i].NickName);
-                            allPlayersReady = false;
-                        }
+                        //if (playersAll[i].GetScore() == -1)
+                        //{
+                        //    Debug.Log("Setting all Players ready to false because " + playersAll[i].NickName);
+                        //    allPlayersReady = false;
+                        //}
                     }
+                    Debug.Log("All players Ready? " + allPlayersReady);
+                    if (allPlayersReady)
+                    {
+                        //  All players are now ready, tell them to start
+                        StartGamePrepare();
+                    }
+
                     // Start the preparation countdown when all players are done loading:
                     //  DCC 123
-                    if ((true || allPlayersReady) && Connector.instance.isMasterClient)//PhotonNetwork.IsMasterClient)
-                    {
-                        Debug.Log("Init: All players are ready");
-                        StartGamePrepare();
-                        this.overallAllPlayersReady = true;
-                    }
-                    else
-                    {
-                        Debug.Log("Init: All players are NOT ready");
-                    }
+                    //if ((allPlayersReady) && Connector.instance.isMasterClient)//PhotonNetwork.IsMasterClient)
+                    //{
+                    //    Debug.Log("Init: All players are ready");
+                    //    //  DCC uuu
+                    //    //  StartGamePrepare();
+                    //    this.overallAllPlayersReady = true;
+                    //}
+                    //else
+                    //{
+                    //    Debug.Log("Init: All players are NOT ready");
+                    //}
                 }
             }
         }
@@ -314,6 +332,7 @@ namespace Visyde
         // Update is called once per frame
         void Update()
         {
+            Debug.Log("Starting Countdown Started: " + startingCountdownStarted);
             if (!isGameOver)
             {
                 // Start the game when preparation countdown is finished:
@@ -324,7 +343,8 @@ namespace Visyde
                         // GAME HAS STARTED!
                         //if (PhotonNetwork.IsMasterClient)
                         //  DCC 123
-                        if (Connector.instance.isMasterClient && (true || overallAllPlayersReady))
+                        //  DCC uuu
+                        if (Connector.instance.isMasterClient)
                         {
                             doneGameStart = true;
                             gameStarted = true;
@@ -332,11 +352,12 @@ namespace Visyde
                             //pnSendGameState("started", true);
                             //  DCC todo.  If the non-master users are not listening for this, we can probably make a direct call?
                             //  DCC 123 commented this
-                            pubNubUtilities.PubNubSendRoomProperties(pubnub, "started", true);
+                            //  DCC uuu
+                            //pubNubUtilities.PubNubSendRoomProperties(pubnub, "started", true);
                             //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
                             //h["started"] = true;
                             //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
-                            StartGameTimer();
+                            //StartGameTimer();
                             CancelInvoke("CheckIfAllPlayersReady");
                         }
                         else
@@ -468,7 +489,8 @@ namespace Visyde
                 //  DCC 123
                 //gameStarted = true;
                 //Debug.Log("Setting starting countdown started to true");
-                startingCountdownStarted = true;
+                //  DCC uuu
+                //startingCountdownStarted = true;
                 startTime = epochTime();
                 gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
 
@@ -481,7 +503,14 @@ namespace Visyde
 
                 // Debug.Log("Init: Sending message to master to say I am ready");
                 pubNubUtilities.PubNubSendRoomProperties(pubnub, p);
+                //  DCC todo I should be able to get rid of the whole SetScore property since I have moved to a different way of detecting if the player is ready
                 Connector.instance.LocalPlayer.SetScore(0);
+
+                Debug.Log("Notifying master that I am ready");
+                //  Notify the master instance that we are ready
+                Dictionary<string, object> props = new Dictionary<string, object>();
+                props.Add("playerReady", Connector.instance.LocalPlayer.UserId);
+                pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
             }
             else
             {
@@ -494,7 +523,9 @@ namespace Visyde
 
                 // Set our score to 0 on start (this is not the player's actual score, this is only used to determine if we're ready or not, 0 = ready, -1 = not):
                 //  DCC todo check this works
-                Connector.instance.LocalPlayer.SetScore(0);
+                //Connector.instance.LocalPlayer.SetScore(0);
+
+                
             }
 
 
@@ -561,7 +592,7 @@ namespace Visyde
 
             if (res.activeSelf)
                 res.SetActive(false);
-
+            
             GameObject instance = GameObject.Instantiate(res, position, rotation) as GameObject;
             //CosmeticsManager cosmetics = instance.GetComponent<CosmeticsManager>() as CosmeticsManager;
             //cosmetics.chosenHat = 0;
@@ -911,22 +942,28 @@ namespace Visyde
         }
 
 #region Timer Sync
+        /*
         void StartGameTimer()
         {
             //  DCC todo
             //pnSendGameState();
-            pubNubUtilities.PubNubSendRoomProperties(pubnub, "gameStartTime", epochTime() /*Time.timeAsDouble*/);
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, "gameStartTime", epochTime() );
 
             //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
-            //h["gameStartTime"] = PhotonNetwork.Time;
+            //h["gameStastarrtTime"] = PhotonNetwork.Time;
             //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
         }
+    */
         void StartGamePrepare()
         {
             Debug.Log("Init: Calling StartGamePrepare");
             //  DCC todo only call this if we are the master?
             //pnSendGameState("gameStartsIn", (Time.timeAsDouble + preparationTime));
-            pubNubUtilities.PubNubSendRoomProperties(pubnub, "gameStartsIn", (/*Time.timeAsDouble*/ epochTime() + preparationTime));
+            Dictionary<string, object> props = new Dictionary<string, object>();
+            props.Add("gameStartTime", epochTime());
+            props.Add("gameStartsIn", (epochTime() + preparationTime));
+            props.Add("started", true);
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
             //ExitGames.Client.Photon.Hashtable h = new ExitGames.Client.Photon.Hashtable();
             //h["gameStartsIn"] = PhotonNetwork.Time + preparationTime;
             //PhotonNetwork.CurrentRoom.SetCustomProperties(h);
@@ -1107,6 +1144,29 @@ namespace Visyde
                 if (payload != null)
                 {
                     //Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
+                    if (payload.ContainsKey("playerReady"))
+                    {
+                        string playerReadyUserId = (string)payload["playerReady"];
+                        Debug.Log("Got a message that Player with " + playerReadyUserId);
+                        if (Connector.instance.CurrentRoom != null)
+                        {
+                            Debug.Log("Current Room is not null");
+                            for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+                            {
+                                Debug.Log("Considering " + Connector.instance.CurrentRoom.PlayerList[i].UserId);
+                                if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(playerReadyUserId))
+                                {
+                                    Debug.Log("Setting ready to true for nickname " + Connector.instance.CurrentRoom.PlayerList[i].NickName);
+                                    Connector.instance.CurrentRoom.PlayerList[i].IsReady = true;
+                                }
+                                else
+                                {
+                                    Debug.Log("Not our Player REady User ID");
+                                }
+
+                            }
+                            }
+                    }
                     if (payload.ContainsKey("started"))
                     {
                         Debug.Log("Init: Starting game in slave");

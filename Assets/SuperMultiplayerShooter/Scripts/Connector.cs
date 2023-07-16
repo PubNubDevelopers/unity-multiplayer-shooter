@@ -16,7 +16,6 @@ using System.Linq;
 using System.Xml;
 using Photon.Pun;
 
-
 namespace Visyde
 {
     /// <summary>
@@ -150,6 +149,7 @@ namespace Visyde
             this.Cosmetics = new int[2];
             this.Cosmetics[0] = chosenHat;
             this.Character = character;
+            this.IsReady = false;
         }
         public string UserId;
         public string NickName;
@@ -160,6 +160,7 @@ namespace Visyde
         {
             this.score = score;
         }
+        public bool IsReady {  get; set; }
         public int GetScore() { return this.score; }
         public int[] Cosmetics;
         //  DCC todo make these variables either private or (if not appropriate) Read only
