@@ -289,8 +289,10 @@ namespace Visyde
 
                     //for (int i = 0; i < punPlayersAll.Length; i++)
                     //for (int i = 0; i < playersAll.Count; i++)
+                    Debug.Log("There are this many people in the game: " + Connector.instance.CurrentRoom.PlayerList.Count);
                     for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
                     {
+                        Debug.Log("Player " + Connector.instance.CurrentRoom.PlayerList[i].NickName + " is ready? " + Connector.instance.CurrentRoom.PlayerList[i].IsReady);
                         if (!Connector.instance.CurrentRoom.PlayerList[i].IsReady)
                         {
                             allPlayersReady = false;

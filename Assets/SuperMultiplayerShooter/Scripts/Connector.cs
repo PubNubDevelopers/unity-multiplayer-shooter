@@ -391,9 +391,13 @@ namespace Visyde
             //This never gets called because we are already in the process of shutting down
             listener.onMessage -= OnPnMessage;
             listener.onPresence -= OnPnPresence;
-            pubnub.Unsubscribe<string>()
+            try
+            {
+                pubnub.Unsubscribe<string>()
                 .Channels(new string[] { PubNubUtilities.gameLobbyChannel, PubNubUtilities.gameLobbyRoomsWildcardRoot + "*" })
                 .Execute();
+            }
+            catch (System.Exception) { }
             Debug.Log("OnDestroy::Unsubscribe::Done");
 
             //pubnub.Unsubscribe().Channels(new List<string>() { "game", "rooms.*" }).Async((result, status) =>
