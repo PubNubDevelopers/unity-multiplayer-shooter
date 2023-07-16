@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-//using Photon.Chat;
+using Photon.Chat;
 //using Photon.Pun;
 using PubnubApi;
 using PubnubApi.Unity;
@@ -33,7 +33,7 @@ namespace Visyde
 
         // Internals:
         VerticalLayoutGroup vlg;
-        private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
+        //private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
         private string _lobbyPublish = "chat.translate."; //Publish channel will include
         private string targetLanguage = "en"; //Changes based on when users select a different value in the drop-down list.
 
@@ -48,8 +48,8 @@ namespace Visyde
             pubnub = PNManager.pubnubInstance.InitializePubNub();
 
             //Add Listeners
-            pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
+            //pubnub.AddListener(listener);
+            //listener.onMessage += OnPnMessage;
 
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
             languageOptions.onValueChanged.AddListener(delegate {
@@ -61,11 +61,13 @@ namespace Visyde
         {
             Connector.instance.onJoinRoom += OnJoinedRoom;
             Connector.instance.onLeaveRoom += OnLeftRoom;
+            Connector.instance.onLobbyChatMessage += OnPnMessage;
         }
         void OnDisable()
         {
             Connector.instance.onJoinRoom -= OnJoinedRoom;
             Connector.instance.onLeaveRoom -= OnLeftRoom;
+            Connector.instance.onLobbyChatMessage -= OnPnMessage;
         }
 
         // Update is called once per frame
@@ -83,7 +85,7 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            listener.onMessage -= OnPnMessage;
+            //listener.onMessage -= OnPnMessage;
         }
 
         /// <summary>
@@ -91,9 +93,10 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(/*Pubnub pn, */PNMessageResult<object> result)
         {
-            if (result != null && result.Channel.Equals(_lobbySubscribe))
+            //if (result != null && result.Channel.Equals(_lobbySubscribe))
+            if (result != null && result.Channel.StartsWith(PubNubUtilities.lobbyChatWildcardRoot))
             {
                 string message = ParseMessage(result.Message);
                 GetUsername(result, message);
@@ -165,19 +168,18 @@ namespace Visyde
         {
             //TODO: Will be changed to the current room after replacing Photon Room with PubNub lobby
             //  DCC todo
-            _lobbyPublish += PhotonNetwork.CurrentRoom.Name; //Guarenteed to be unique, set by server.
-            _lobbySubscribe += PhotonNetwork.CurrentRoom.Name;
+            _lobbyPublish = PubNubUtilities.lobbyChatWildcardRoot + Connector.instance.CurrentRoom.Name;
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
 
             //Subscribe to the list of Channels
             //PubNub subscribe
-            pubnub.Subscribe<string>()
-               .Channels(new string[]
-               {
-                   _lobbySubscribe
-               })
-               .Execute();
+            //pubnub.Subscribe<string>()
+            //   .Channels(new string[]
+            //   {
+            //       _lobbySubscribe
+            //   })
+            //   .Execute();
         }
 
         /// <summary>

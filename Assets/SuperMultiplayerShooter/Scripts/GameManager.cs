@@ -270,6 +270,7 @@ namespace Visyde
             //  DCC todo Only want to unsubscribe from Game specific channels
             //  DCC todo THIS DOES GET CALLED WHEN THE GAME ENDS SO WE DO WANT TO UNSUBSCRIBE
             //pubnub.SubscribeCallback -= SubscribeCallbackHandler;
+            pubnub.UnsubscribeAll();
             listener.onMessage -= OnPnMessage;
             listener.onPresence -= OnPnPresence;
         }
@@ -845,7 +846,10 @@ namespace Visyde
             //PlayerInstance p = GetPlayerInstance(forPlayer.NickName);
             PlayerInstance p = GetPlayerInstance(playerId);
             //p.SetStats((int)forPlayer.CustomProperties["kills"], (int)forPlayer.CustomProperties["deaths"], (int)forPlayer.CustomProperties["otherScore"], false);
-            p.SetStats(kills, deaths, otherScore, false);
+            if (p != null)
+            {
+                p.SetStats(kills, deaths, otherScore, false);
+            }
         }
 
         /// <summary>

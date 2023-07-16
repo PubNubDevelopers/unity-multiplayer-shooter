@@ -328,28 +328,21 @@ namespace Visyde
         public PubNubRoomInfo CurrentRoom = null;
         public bool inRoom = false;
         public List<PubNubRoomInfo> pubNubRooms { get; protected set; }
-        public static string pnNickName
+        public static string pnNickName = "Uninitialized";
+        /*
         {
             get
             {
                 //  DCC todo Name is available from PubNubManager.Instance.CachedPlayers[subscribeEventEventArgs.PresenceEventResult.UUID].Name;
                 //  DCC todo use Oliver's method he will provide
-                return PhotonNetwork.NickName;
-                /*
-                //string name = PubNubManager.Instance.CachedPlayers[userId].Name;
-                string name = Connector.instance.TEMP_GetUserNickname();
-                if (name != null && name.Equals(""))
-                {
-                    //  DCC TODO - need to see if I can use some of Oliver's code here rather than write my own again.
-                    return "No Name";
-                }
-                else
-                {
-                    return name;
-                }
-                */
+                //return pnManager.GetUserNickname();
+                Debug.Log("NICKNAME: " + PNManager.pubnubInstance.GetUserNickname());
+                //return PhotonNetwork.NickName;
+                return PNManager.pubnubInstance.GetUserNickname();
             }
         }
+    */
+        public Pubnub GetPubNubObject() { return pubnub; }
         public PubNubPlayer LocalPlayer { get; set; }
         //  End PubNub properties
 
@@ -365,6 +358,8 @@ namespace Visyde
         public delegate void PlayerEvent(PubNubPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
+        public delegate void PNMessageEvent(PNMessageResult<object> message);
+        public PNMessageEvent onLobbyChatMessage;
 
         // Internal variables:
         Bot[] curBots;
@@ -409,7 +404,7 @@ namespace Visyde
             //});
         }
 
-        void Start()
+        async void Start()
         {
             //  DCC Photon Initialization
             /*
@@ -424,20 +419,27 @@ namespace Visyde
             //  DCC End Photon initialization
 
             //  PubNub initialization
+            pnNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             userId = PlayerPrefs.GetString("uuid");
             pubNubRooms = new List<PubNubRoomInfo>();
             //pubnub = PubNubManager.Instance.InitializePubNub();
-            pubnub = PNManager.pubnubInstance;
-            pubnub.Subscribe<string>()
-                .Channels(new List<string>() { PubNubUtilities.gameLobbyChannel, "rooms.*", PubNubUtilities.roomStatusChannel })
-                .WithPresence()
-                .Execute();
-            //pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
-            //pubnub.SubscribeCallback += SubscribeCallbackHandler;
+            Debug.Log("temp: Initializing PubNub");
+            pubnub = PNManager.pubnubInstance.InitializePubNub();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onPresence += OnPnPresence;
+            pubnub.Subscribe<string>()
+                .Channels(new List<string>() { 
+                    PubNubUtilities.lobbyChatWildcardRoot + "*",
+                    PubNubUtilities.gameLobbyChannel, 
+                    PubNubUtilities.gameLobbyChannel + "-pnpres",
+                    PubNubUtilities.gameLobbyRoomsWildcardRoot + "*", 
+                    PubNubUtilities.roomStatusChannel })
+                //.WithPresence()
+                .Execute();
+            //pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
+            //pubnub.SubscribeCallback += SubscribeCallbackHandler;
             PubNubGetRooms();
             //  End PubNub initialization
         }
@@ -600,6 +602,7 @@ namespace Visyde
                 //metaData["playerCount"] = 1;
                 metaData["customAllowBots"] = allowBots ? 1 : 0;
                 string channelName = PubNubUtilities.gameLobbyChannel;
+                Debug.Log("temp: Creating game with name " + pnNickName);
                 PNResult<PNSetStateResult> setPresenceStateResponse = await pubnub.SetPresenceState()
                     .Channels(new string[] { channelName })
                     .Uuid(userId)
@@ -807,6 +810,7 @@ namespace Visyde
 
         void UpdatePlayerCount()
         {
+            if (CurrentRoom == null) return;
             // Get the "Real" player count:
             //int players = PhotonNetwork.CurrentRoom.PlayerCount;
             int players = CurrentRoom.PlayerCount;
@@ -1087,7 +1091,6 @@ namespace Visyde
             }
             else
             {
-
                 Debug.Log("HereNow: Result.Channels length is " + hereNowResult.Channels.Count);
                 foreach(KeyValuePair<string, PNHereNowChannelData> kvp in hereNowResult.Channels)
                 {
@@ -1143,6 +1146,7 @@ namespace Visyde
         {
             //  A user has come online.  If they have an active room which they have created
             //  then add it to our rooms list
+            Debug.Log("temp: User is online or state change " + uuid);
             if (uuid == userId)
             {
                 //  This is our own online state change
@@ -1151,6 +1155,15 @@ namespace Visyde
 
             //string channelName = "rooms." + uuid;
             string channelName = PubNubUtilities.gameLobbyChannel;
+
+            //  DCC xxz
+            //pubnub.GetPresenceState()
+            //    .Channels(new string[] { channelName })
+            //    .Uuid(uuid)
+            //    .Execute(new PNGetStateResultExt((result, status) => {
+            //        Debug.Log("temp: Synchronous response from GetState");
+            //    }));
+                    
             PNResult<PNGetStateResult> getStateResponse = await pubnub.GetPresenceState()
                 .Channels(new string[] { channelName })
                 .Uuid(uuid)
@@ -1289,13 +1302,13 @@ namespace Visyde
 
         public void UserIsOffline(string uuid)
         {
-            //  DCC xxy
-            return; //  Issue with subsequent calls to .Subscribe causing a temporary leave / join couple
+            Debug.Log("temp: User went offline" + uuid);
             OnPlayerLeftRoom(uuid);
             //  Remove the room, if it exists
             PubNubRemoveRoom(uuid, false);
             if (CurrentRoom != null && CurrentRoom.OwnerId == uuid)
             {
+                Debug.Log("temp: User " + uuid + " is leaving the room");
                 LeaveRoom();
             }
         }
@@ -1326,10 +1339,11 @@ namespace Visyde
         {
             if (notifyOthers)
             {
+                Debug.Log("Removing Room (setting visibility to 0) " + uuid);
                 Dictionary<string, object> metaData = new Dictionary<string, object>();
                 metaData["visible"] = 0;
                 //List<string> channels = new List<string>() { "game" };
-                string[] channels = new string[] { "game" };
+                string[] channels = new string[] { PubNubUtilities.gameLobbyChannel };
                 PNResult<PNSetStateResult> setPresenceResponse = await pubnub.SetPresenceState()
                     .Channels(channels)
                     .Uuid(userId)
@@ -1374,7 +1388,16 @@ namespace Visyde
                 //Debug.Log("temp: Message was not null");
                 //  Messages (Publish)
                 //if (mea.MessageResult.Subscription.Equals(PubNubUtilities.roomStatusChannel))
-                if (result.Channel.Equals(PubNubUtilities.roomStatusChannel))
+                if (result.Channel.StartsWith(PubNubUtilities.lobbyChatWildcardRoot))
+                {
+                    //  Notify chat
+                    try
+                    {
+                        onLobbyChatMessage(result);
+                    }
+                    catch (System.Exception) { }
+                }
+                else if (result.Channel.Equals(PubNubUtilities.roomStatusChannel))
                 {
                     if (CurrentRoom == null)
                     {
@@ -1542,8 +1565,6 @@ namespace Visyde
 
         }
 
-
-
         private async void PNJoinCustomRoom(Pubnub pubnub, string channel, string myUserId, string myNickname)
         {
             string[] joinCustomRoomMsg = new string[5];
@@ -1592,55 +1613,6 @@ namespace Visyde
             //    }
             //});
         }
-
-        /*
-        private string TEMP_GetUserNickname()
-        {
-            string nickname = "";
-            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
-                && !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name))
-            {
-                nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-            }
-
-            else
-            {
-                //Obtain the user metadata. IF the nickname cannot be found, set to be the first 6 characters of the UserId.
-                TEMP_GetUserMetadata(pubnub.GetCurrentUserId());
-                nickname = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name) ? PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name : pubnub.GetCurrentUserId();
-            }
-
-            return nickname;
-        }
-
-        private async void TEMP_GetUserMetadata(string Uuid)
-        {
-            //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
-            // Get Metadata for a specific UUID
-            PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
-                .Uuid(Uuid)
-                .ExecuteAsync();
-            PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
-            PNStatus status = getUuidMetadataResponse.Status;
-            if (!status.Error && getUuidMetadataResult != null)
-            {
-                UserMetadata meta = new UserMetadata
-                {
-                    Uuid = getUuidMetadataResult.Uuid,
-                    Name = getUuidMetadataResult.Name,
-                    Email = getUuidMetadataResult.Email,
-                    ExternalId = getUuidMetadataResult.ExternalId,
-                    ProfileUrl = getUuidMetadataResult.ProfileUrl,
-                    Custom = getUuidMetadataResult.Custom,
-                    Updated = getUuidMetadataResult.Updated
-                };
-                if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
-                {
-                    PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
-                }
-            }
-        }
-        */
 
     }
 }

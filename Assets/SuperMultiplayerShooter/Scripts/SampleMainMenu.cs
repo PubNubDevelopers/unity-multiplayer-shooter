@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-//using Photon.Pun;
+using Photon.Pun;
 //using Photon.Realtime;
 using PubnubApi;
 using PubnubApi.Unity;
@@ -354,7 +354,11 @@ namespace Visyde
                         Updated = pnUUIDMetadataResult.Updated
                     };
 
-                    PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
+                    try
+                    {
+                        PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
+                    }
+                    catch (System.Exception) { }
                 }
             }
 
@@ -364,7 +368,7 @@ namespace Visyde
                 playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
                 //Nickname is used throughout the system to define the player
                 //TODO: Remove once Photon Engine is removed for finding and supporting multiplayer sync.
-                PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+                //PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
             }
             //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
             else

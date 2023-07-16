@@ -43,6 +43,7 @@ namespace PubNubUnityShowcase
         static public string roomStatusChannel = "currentRoomStatus";             //  E.g. game starting or scores update
         static public string gameLobbyRoomsWildcardRoot = "rooms.";
         static public string gameLobbyChannel = "game";
+        static public string lobbyChatWildcardRoot = "chat.translate.";
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.
