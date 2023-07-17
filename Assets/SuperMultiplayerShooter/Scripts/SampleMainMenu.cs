@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using Photon.Pun;
+//using Photon.Pun;
 //using Photon.Realtime;
 using PubnubApi;
 using PubnubApi.Unity;
 using Newtonsoft.Json;
 using System;
-using ExitGames.Client.Photon.StructWrapping;
+//using ExitGames.Client.Photon.StructWrapping;
 using UnityEngine.Networking;
 
 namespace Visyde

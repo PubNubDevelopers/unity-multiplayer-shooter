@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-using Photon.Chat;
+//using Photon.Chat;
 //using Photon.Pun;
 using PubnubApi;
 using PubnubApi.Unity;
@@ -256,10 +256,11 @@ namespace Visyde
 
         //TODO: Photon functions. Will be removed as more functionality is integrated.
         void OnLeftRoom() { }
-        public void OnChatStateChange(ChatState state) { }
+        //public void OnChatStateChange(ChatState state) { }
         public void OnStatusUpdate(string user, int status, bool gotMessage, object message) { }
         public void OnPrivateMessage(string sender, object message, string channelName) { }
         public void OnUserUnsubscribed(string channel, string user) { }
+        /*
         public void DebugReturn(ExitGames.Client.Photon.DebugLevel level, string message)
         {
             if (level == ExitGames.Client.Photon.DebugLevel.ERROR)
@@ -275,5 +276,6 @@ namespace Visyde
                 UnityEngine.Debug.Log(message);
             }
         }
+        */
     }
 }
