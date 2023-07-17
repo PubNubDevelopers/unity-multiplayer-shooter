@@ -2633,7 +2633,6 @@ MonoBehaviour:
   - Lea
   - Dave
   characterSelector: {fileID: 232236244}
-  atLeastOnePlayerReady: 0
   inRoom: 0
 --- !u!114 &232236246
 MonoBehaviour:
@@ -11507,6 +11506,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
+      propertyPath: m_Interactable
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
+        type: 3}
       propertyPath: m_Colors.m_NormalColor.b
       value: 0
       objectReference: {fileID: 0}
@@ -14915,7 +14919,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1752590676
 RectTransform:
   m_ObjectHideFlags: 0

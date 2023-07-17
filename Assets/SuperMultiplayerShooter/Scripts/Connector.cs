@@ -187,7 +187,7 @@ namespace Visyde
             //  DCC todo I added true || here because I wanted to send a slave the character and hat for the master 
             if (true || !IsMasterClient)
             {
-                Debug.Log("Init: Recieved SetProperties call NOT in Master");
+                Debug.Log("Init: Recieved SetProperties call NOT in Master...");
 
                 if (props.ContainsKey("kills"))
                 {
@@ -335,6 +335,7 @@ namespace Visyde
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         private static string userId = null;
+        private SampleMainMenu mainMenu;
         //public bool atLeastOnePlayerReady = false;
         public PubNubRoomInfo CurrentRoom = null;
         public bool inRoom = false;
@@ -455,7 +456,10 @@ namespace Visyde
                 .Execute();
             //pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
             //pubnub.SubscribeCallback += SubscribeCallbackHandler;
-            PubNubGetRooms();
+            await PubNubGetRooms();
+            Debug.Log("LOADED 2");
+            mainMenu = GetComponent<SampleMainMenu>();
+            mainMenu.customMatchBTN.interactable = true;
             //InvokeRepeating("SynchronizeLobbyState", 3, 3.0f);
             //  End PubNub initialization
         }
@@ -1147,7 +1151,7 @@ namespace Visyde
             //try { onLeaveRoom(); } catch (System.Exception) { }
         }
 
-        private async void PubNubGetRooms()
+        private async Task<bool> PubNubGetRooms()
         {
             //  Determine who is present based on who is subscribed to the lobby chat channel
             PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
@@ -1184,7 +1188,8 @@ namespace Visyde
                         }
                     }
                 }
-                PopulateRoomMembers();
+                await PopulateRoomMembers();
+                Debug.Log("LOADED");
             }
 
 
@@ -1216,9 +1221,11 @@ namespace Visyde
             //        }
             //    }
             //});
+            return true;
+
         }
 
-        private async void PopulateRoomMembers()
+        private async Task<bool> PopulateRoomMembers()
         {
             //  Send a message to each room and the owner will reply with the current room occupants
             foreach (PubNubRoomInfo room in pubNubRooms)
@@ -1239,6 +1246,7 @@ namespace Visyde
                     Debug.Log("Error sending PubNub Message (Populate Room Members): " + publishResponse.Status.ErrorData.Information);
                 }
             }
+            return true;
         }
         /*
         private async void PubNubLoadRoomHistory()
@@ -1599,7 +1607,7 @@ namespace Visyde
         {
             //Debug.Log("temp: Received message on " + result.Channel + ", message is " + result.Message);
             //SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
-
+            Debug.Log("LOADED 3");
             if (result.Message != null)
             {
                 //Debug.Log("temp: Message was not null");

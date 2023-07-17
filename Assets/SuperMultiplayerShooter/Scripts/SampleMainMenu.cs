@@ -152,7 +152,6 @@ namespace Visyde
             // Debug.Log($"Message received: {result.Message}");
 
             // Enable the button once we have established connection to PubNub, todo it is better to use a status listener here. 
-            customMatchBTN.interactable = true;
             // Leaderboard Updates
             if (result.Channel.Equals(_leaderboardChannelSub))
             {
