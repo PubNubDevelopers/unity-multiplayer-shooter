@@ -608,7 +608,9 @@ namespace Visyde
                 //  DCC uuu
                 PNJoinCustomRoom(pubnub, "rooms." + room.OwnerId, userId, pnNickName, room.OwnerId);
                 //PNJoinCustomRoom2(room.OwnerId, userId, pnNickName, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
-                
+
+                //  DCC uuu
+                return;
                 //  Join the game on our local instance
                 PubNubPlayer self = new PubNubPlayer(userId, pnNickName, true, false, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
                 self.SetScore(0);
@@ -685,10 +687,12 @@ namespace Visyde
                 //        Debug.Log("Error setting PubNub Presence State (CreateCustomGame): " + status.ErrorData.Info);
                 //    }
                 //});
-                PubNubRoomInfo roomInfo = new PubNubRoomInfo(userId, pnNickName, selectedMap, maxPlayers, allowBots);
-                CurrentRoom = roomInfo;
-                PubNubAddRoom(roomInfo);
-                JoinCustomGame(roomInfo);
+                
+                //  DCC uuu
+                //PubNubRoomInfo roomInfo = new PubNubRoomInfo(userId, pnNickName, selectedMap, maxPlayers, allowBots);
+                //CurrentRoom = roomInfo;
+                //PubNubAddRoom(roomInfo);
+                //JoinCustomGame(roomInfo);
             }
            
             /*
@@ -1117,26 +1121,30 @@ namespace Visyde
             OnLeftRoom();
         }
 
-        public /*override*/ void OnLeftRoom(){
+        public async /*override*/ void OnLeftRoom(){
             tryingToJoinCustom = false;
             isLoadingGameScene = false;
 
             //  DCC todo should we unsubscribe from the 'game' channel here?
 
             //  Remove any room we might have previously created
-            PubNubRemoveRoom(userId, true);
+            //  DCC uuu
+            //  await PubNubRemoveRoom(userId, true);
 
             //  Send a message to the host that we want to leave their game
-            if (userId != CurrentRoom.OwnerId)
+            //  DCC uuu
+            if (true || userId != CurrentRoom.OwnerId)
             {
                 //  DCC uuu
                 PNLeaveCustomRoom(pubnub, "rooms." + CurrentRoom.OwnerId, userId, CurrentRoom.OwnerId);
                 //PNLeaveCustomRoom2(CurrentRoom.OwnerId, userId);
-                OnPlayerLeftRoom(userId);
+                //  DCC uuu
+                //OnPlayerLeftRoom(userId);
             }
 
             // Events:
-            try { onLeaveRoom(); } catch (System.Exception) { }
+            //  DCC uuu
+            //try { onLeaveRoom(); } catch (System.Exception) { }
         }
 
         private async void PubNubGetRooms()
@@ -1290,7 +1298,7 @@ namespace Visyde
                     {
                         Debug.Log("temp: Visible was set to 0, leaving room");
                         //  User has created a room, then left, so we should no longer show that room
-                        PubNubRemoveRoom(uuid, false);
+                        await PubNubRemoveRoom(uuid, false);
                         //  If they were the owner of the room, we should leave it.
                         //  If they were not the owner, we should just remove them
                         if (CurrentRoom != null && CurrentRoom.OwnerId == uuid)
@@ -1308,8 +1316,25 @@ namespace Visyde
                         bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
                         PubNubRoomInfo roomInfo = new PubNubRoomInfo(uuid, name, selectedMap, maxPlayers, allowBots);
                         PubNubPlayer owner = new PubNubPlayer(uuid, name, false, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
-                        roomInfo.PlayerList.Add(owner);
+
+                        Debug.Log("Name is " + name);
+                        Debug.Log("My nickname is " + pnNickName);
+                        if (name.Equals(pnNickName))
+                        {
+                            //  DCC should I use the UUID of the owner here rather than the room name?
+                            CurrentRoom = roomInfo;
+                            //PubNubAddRoom(roomInfo);
+                            JoinCustomGame(roomInfo);
+                        }
+                        else
+                        {
+                            roomInfo.PlayerList.Add(owner);
+                        }
+
                         PubNubAddRoom(roomInfo);
+
+                        //PubNubRoomInfo roomInfo = new PubNubRoomInfo(userId, pnNickName, selectedMap, maxPlayers, allowBots);
+
                     }
                     /*
                     //  Now add the members to the room
@@ -1491,12 +1516,12 @@ namespace Visyde
 
         }
 
-        public void UserIsOffline(string uuid)
+        public async void UserIsOffline(string uuid)
         {
             Debug.Log("temp: User went offline" + uuid);
             OnPlayerLeftRoom(uuid);
             //  Remove the room, if it exists
-            PubNubRemoveRoom(uuid, false);
+            await PubNubRemoveRoom(uuid, false);
             if (CurrentRoom != null && CurrentRoom.OwnerId == uuid)
             {
                 Debug.Log("temp: User " + uuid + " is leaving the room");
@@ -1526,7 +1551,7 @@ namespace Visyde
             }
         }
         
-        public async void PubNubRemoveRoom(string uuid, bool notifyOthers)
+        public async Task<bool> PubNubRemoveRoom(string uuid, bool notifyOthers)
         {
             if (notifyOthers)
             {
@@ -1566,6 +1591,7 @@ namespace Visyde
                     }
                 }
             }
+            return true;
         }
 
         //private void SubscribeCallbackHandler(object sender, System.EventArgs e)
@@ -1694,10 +1720,11 @@ namespace Visyde
                     //string[] payload = (string[])mea.MessageResult.Payload;
                     string[] payload = JsonConvert.DeserializeObject<string[]>(result.Message.ToString());
                     string requestorId = payload[1];
-                    if (requestorId == userId)
-                    {
-                        return; //  Ignore messages we sent ourself
-                    }
+                    //  DCC uuu
+                    //if (requestorId == userId)
+                    //{
+                    //    return; //  Ignore messages we sent ourself
+                    //}
                     if (payload[0].Equals("JOIN_CUSTOM_ROOM"))
                     {
                         //  DCC uuu
@@ -1707,9 +1734,17 @@ namespace Visyde
                         int requestedHat = System.Int32.Parse(payload[4]);
                         string roomOwnerId = payload[5];
                         Debug.Log("Received Remote join request from " + requestorId);
-                        PubNubPlayer remotePlayer = new PubNubPlayer(requestorId, requestorNickname, false, false, requestedCharacter, requestedHat);
+                        PubNubPlayer remotePlayer = new PubNubPlayer(requestorId, requestorNickname, (requestorId == userId), false, requestedCharacter, requestedHat);
                         //  Consider whether the player entered the current room
-                        
+
+                        if (requestorId == userId)
+                        {
+                            Debug.Log("Requestor ID equals UserId");
+                            LocalPlayer = remotePlayer;
+                            //CurrentRoom.PlayerList.Add(remotePlayer);
+                            OnJoinedRoom();
+                        }
+
                         //if (CurrentRoom != null && CurrentRoom.PlayerList != null)
                         //    CurrentRoom.PlayerList.Add(remotePlayer);
                         //  Consider the case where we are not in the room
@@ -1717,6 +1752,7 @@ namespace Visyde
                         {
                             if (room.OwnerId.Equals(roomOwnerId))
                             {
+                                Debug.Log("Adding player to room");
                                 room.PlayerList.Add(remotePlayer);
                                 break;
                             }
@@ -1730,27 +1766,43 @@ namespace Visyde
                         //return;
                         Debug.Log("Received Remote leave request from " + requestorId);
                         string roomOwnerId = payload[2];
-                        OnPlayerLeftRoom(requestorId);
-                        for (int i = 0; i < pubNubRooms.Count; i++)
+
+                        //  DCC uuu
+                        if (requestorId == roomOwnerId)
                         {
-                            if (pubNubRooms[i].OwnerId.Equals(roomOwnerId))
+                            Debug.Log("Room owner removing their own room");
+                            PubNubRemoveRoom(roomOwnerId, true);
+                        }
+                        else
+                        {
+                            OnPlayerLeftRoom(requestorId);
+                            for (int i = 0; i < pubNubRooms.Count; i++)
                             {
-                                for (int j = 0; j < pubNubRooms[i].PlayerList.Count; j++)
+                                if (pubNubRooms[i].OwnerId.Equals(roomOwnerId))
                                 {
-                                    Debug.Log("Player Count: " + pubNubRooms[i].PlayerList.Count);
-                                    if (pubNubRooms[i].PlayerList[j].UserId.Equals(requestorId))
+                                    for (int j = 0; j < pubNubRooms[i].PlayerList.Count; j++)
                                     {
-                                        pubNubRooms[i].PlayerList.RemoveAt(j);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        Debug.Log("Comparing " + pubNubRooms[i].PlayerList[j].UserId + " with " + requestorId + " but did not match");
+                                        Debug.Log("Player Count: " + pubNubRooms[i].PlayerList.Count);
+                                        if (pubNubRooms[i].PlayerList[j].UserId.Equals(requestorId))
+                                        {
+                                            pubNubRooms[i].PlayerList.RemoveAt(j);
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            Debug.Log("Comparing " + pubNubRooms[i].PlayerList[j].UserId + " with " + requestorId + " but did not match");
+                                        }
                                     }
                                 }
                             }
+
                         }
+
                         onRoomListChange(pubNubRooms.Count);
+                        if (requestorId == roomOwnerId)
+                        {
+                            try { onLeaveRoom(); } catch (System.Exception) { }
+                        }
                     }
                     else if (payload[0].Equals("GET_ROOM_MEMBERS"))
                     {
@@ -1818,7 +1870,7 @@ namespace Visyde
             }
         }
 
-        private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
+        private async void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
         {
             if (result.Channel.Equals(PubNubUtilities.gameLobbyChannel))
             {
@@ -1838,7 +1890,7 @@ namespace Visyde
                     Debug.Log("Presence: Join for channel " + result.Channel + " for user " + result.Uuid);
                     //  The specified user has joined.  If they have created a room then add it to our room list
                     //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
-                    UserIsOnlineOrStateChange(result.Uuid);
+                    await UserIsOnlineOrStateChange(result.Uuid);
                 }
                 //else if (mea.PresenceEventResult.Event.Equals("state-change"))
                 else if (result.Event.Equals("state-change"))
@@ -1846,7 +1898,7 @@ namespace Visyde
                     Debug.Log("Presence: State Change for channel " + result.Channel + " for user " + result.Uuid);
                     //  The specified user has created or deleted a room
                     //UserIsOnlineOrStateChange(mea.PresenceEventResult.UUID);
-                    UserIsOnlineOrStateChange(result.Uuid);
+                    await UserIsOnlineOrStateChange(result.Uuid);
                 }
                 //}
             }

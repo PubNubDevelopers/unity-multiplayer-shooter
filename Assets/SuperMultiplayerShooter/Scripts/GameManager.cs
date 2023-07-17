@@ -29,7 +29,7 @@ namespace Visyde
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
-        private bool overallAllPlayersReady = false;
+        //private bool overallAllPlayersReady = false;
         //  End PubNub properties
 
         public string playerPrefab;                     // Name of player prefab. The prefab must be in a "Resources" folder.

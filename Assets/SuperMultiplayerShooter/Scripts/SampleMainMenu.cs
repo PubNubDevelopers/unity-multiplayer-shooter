@@ -199,7 +199,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnPresence(Pubnub pn, PNPresenceEventResult result)
+        private async void OnPnPresence(Pubnub pn, PNPresenceEventResult result)
         {
             // Debug.Log(result.Event);
             if (result.Channel.Equals(_publicChannel))
@@ -209,7 +209,7 @@ namespace Visyde
                 //When user joins, check their UUID in cached players to determine if they are a new player.                 
                 if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Uuid))
                 {
-                    PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
+                    await PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
                 }
             }
 
