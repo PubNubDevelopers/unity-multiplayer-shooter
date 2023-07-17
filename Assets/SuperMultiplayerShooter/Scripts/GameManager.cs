@@ -508,11 +508,18 @@ namespace Visyde
                 //  DCC todo I should be able to get rid of the whole SetScore property since I have moved to a different way of detecting if the player is ready
                 Connector.instance.LocalPlayer.SetScore(0);
 
-                Debug.Log("Notifying master that I am ready");
-                //  Notify the master instance that we are ready
-                Dictionary<string, object> props = new Dictionary<string, object>();
-                props.Add("playerReady", Connector.instance.LocalPlayer.UserId);
-                pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
+
+                Invoke("ReportReady", 1.0f);
+
+                //Dictionary<string, object> metaData = new Dictionary<string, object>();
+                //metaData["isReady"] = true;
+                //string[] channels = new string[] { PubNubUtilities.gameLobbyChannel };
+                //pubnub.SetPresenceState()
+                //    .Channels(channels)
+                //    .Uuid(Connector.instance.LocalPlayer.UserId)
+                //    .State(metaData)
+                //    .ExecuteAsync();
+      
             }
             else
             {
@@ -634,6 +641,15 @@ namespace Visyde
 
             // Display kill feed.
             ui.SomeoneKilledSomeone(GetPlayerInstance(dying), GetPlayerInstance(killer));
+        }
+
+        private void ReportReady()
+        {
+            Debug.Log("Notifying master that I am ready");
+            //  Notify the master instance that we are ready
+            Dictionary<string, object> props = new Dictionary<string, object>();
+            props.Add("playerReady", Connector.instance.LocalPlayer.UserId);
+            pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
         }
 
         /// <summary>
@@ -1146,29 +1162,6 @@ namespace Visyde
                 if (payload != null)
                 {
                     //Dictionary<string, object> payload = (Dictionary<string, object>)mea.MessageResult.Payload;
-                    if (payload.ContainsKey("playerReady"))
-                    {
-                        string playerReadyUserId = (string)payload["playerReady"];
-                        Debug.Log("Got a message that Player with " + playerReadyUserId);
-                        if (Connector.instance.CurrentRoom != null)
-                        {
-                            Debug.Log("Current Room is not null");
-                            for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
-                            {
-                                Debug.Log("Considering " + Connector.instance.CurrentRoom.PlayerList[i].UserId);
-                                if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(playerReadyUserId))
-                                {
-                                    Debug.Log("Setting ready to true for nickname " + Connector.instance.CurrentRoom.PlayerList[i].NickName);
-                                    Connector.instance.CurrentRoom.PlayerList[i].IsReady = true;
-                                }
-                                else
-                                {
-                                    Debug.Log("Not our Player REady User ID");
-                                }
-
-                            }
-                            }
-                    }
                     if (payload.ContainsKey("started"))
                     {
                         Debug.Log("Init: Starting game in slave");
@@ -1314,9 +1307,29 @@ namespace Visyde
                             catch (System.Exception) { }
                         }
                     }
+                    if (payload.ContainsKey("playerReady"))
+                    {
+                        string playerReadyUserId = (string)payload["playerReady"];
+                        Debug.Log("Got a message that Player with gm " + playerReadyUserId);
+                        for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
+                        {
+                            Debug.Log("Considering " + Connector.instance.CurrentRoom.PlayerList[i].UserId);
+                            if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(playerReadyUserId))
+                            {
+                                Debug.Log("Setting ready to true for nickname " + Connector.instance.CurrentRoom.PlayerList[i].NickName);
+                                Connector.instance.CurrentRoom.PlayerList[i].IsReady = true;
+                            }
+                            else
+                            {
+                                Debug.Log("Not our Player REady User ID");
+                            }
+                        }
+                    }
+
                 }
             }
         }
+
 
         private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
         {
