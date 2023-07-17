@@ -493,8 +493,8 @@ namespace Visyde
                 //Debug.Log("Setting starting countdown started to true");
                 //  DCC uuu
                 //startingCountdownStarted = true;
-                startTime = epochTime();
-                gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
+                //startTime = epochTime();
+                //gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
 
                 //  Notify the master we are ready by setting our Score to 0
                 //  DCC todo I don't think this is necessary since I assume that the game is ready to start straight away
@@ -527,8 +527,8 @@ namespace Visyde
                 //  DCC 123
                 //startingCountdownStarted = true;
                 //  DCC 123
-                startTime = epochTime();
-                gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
+                //startTime = epochTime();
+                //gameStartsIn = (/*Time.timeAsDouble*/ epochTime() + preparationTime);
 
                 // Set our score to 0 on start (this is not the player's actual score, this is only used to determine if we're ready or not, 0 = ready, -1 = not):
                 //  DCC todo check this works

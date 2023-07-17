@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using System.Xml;
 using Photon.Pun;
+using System.Threading.Tasks;
 
 namespace Visyde
 {
@@ -133,6 +134,15 @@ namespace Visyde
                     Connector.instance.LocalPlayer.ID = i;
                 }
             }
+        }
+
+        public bool ContainsPlayer(string UserId)
+        {
+            for (int i = 0;i < PlayerList.Count;i++)
+            {
+                if (PlayerList[i].UserId == UserId) return true;
+            }
+            return false;
         }
     }
 
@@ -446,6 +456,7 @@ namespace Visyde
             //pubnub.Subscribe().Channels(new List<string>() { "game", "rooms.*", PubNubUtilities.roomStatusChannel }).WithPresence().Execute();
             //pubnub.SubscribeCallback += SubscribeCallbackHandler;
             PubNubGetRooms();
+            //InvokeRepeating("SynchronizeLobbyState", 3, 3.0f);
             //  End PubNub initialization
         }
 
@@ -464,6 +475,22 @@ namespace Visyde
         }
         */
         // DCC End Photon Initialization
+
+        /*
+        void SynchronizeLobbyState()
+        {
+            //  DCC todo only want this active in the lobby
+            //Debug.Log("Synchronize");
+            //if (isInCustomGame) return;
+
+            for (int i = 0; i < pubNubRooms.Count; i++)
+            {
+                //Debug.Log("Updating uuid " + pubNubRooms[i].OwnerId);
+                //UserIsOnlineOrStateChange(pubNubRooms[i].OwnerId);
+                PubNubGetRooms();
+            }
+        }
+        */
 
         // Update is called once per frame
         void Update()
@@ -578,7 +605,10 @@ namespace Visyde
             else
             {
                 //  Send a message to the host that we want to join their game
+                //  DCC uuu
                 PNJoinCustomRoom(pubnub, "rooms." + room.OwnerId, userId, pnNickName, room.OwnerId);
+                //PNJoinCustomRoom2(room.OwnerId, userId, pnNickName, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
+                
                 //  Join the game on our local instance
                 PubNubPlayer self = new PubNubPlayer(userId, pnNickName, true, false, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
                 self.SetScore(0);
@@ -590,6 +620,36 @@ namespace Visyde
             //  DCC todo delete this
             //PhotonNetwork.JoinRoom(room.Name);
         }
+
+        /*
+        public async void PNJoinCustomRoom2(string roomOwnerId, string requestorId, string nickname, int chosenCharacter, int chosenHat)
+        {
+            Dictionary<string, object> characterProps = new Dictionary<string, object>();
+            characterProps["requestType"] = "join";
+            characterProps["roomOwnerId"] = roomOwnerId;
+            characterProps["requestorId"] = requestorId;
+            characterProps["nickname"] = nickname;
+            characterProps["chosenCharacter"] = "" + chosenCharacter;
+            characterProps["chosenHat"]  = "" + chosenHat;
+            //characterProps["ignore"] = false;
+            Dictionary<string, object> metaData = new Dictionary<string, object>();
+            metaData["request_" + requestorId] = characterProps;
+            //Dictionary<string, object> ignore = new Dictionary<string, object>();
+            //ignore["ignore"] = true;
+            //metaData["request_leave_" + requestorId] = ignore;
+            string[] channels = new string[] { PubNubUtilities.gameLobbyChannel };
+            PNResult<PNSetStateResult> setPresenceResponse = await pubnub.SetPresenceState()
+                .Channels(channels)
+                .Uuid(roomOwnerId)
+                .State(metaData)
+                .ExecuteAsync();
+            if (setPresenceResponse.Status.Error)
+            {
+                Debug.Log("Error setting PubNub Presence State (PNJoinCustomRoom2): " + setPresenceResponse.Status.ErrorData.Information);
+            }
+        }
+        */
+
         public async void CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots)
         {
 
@@ -1069,7 +1129,9 @@ namespace Visyde
             //  Send a message to the host that we want to leave their game
             if (userId != CurrentRoom.OwnerId)
             {
+                //  DCC uuu
                 PNLeaveCustomRoom(pubnub, "rooms." + CurrentRoom.OwnerId, userId, CurrentRoom.OwnerId);
+                //PNLeaveCustomRoom2(CurrentRoom.OwnerId, userId);
                 OnPlayerLeftRoom(userId);
             }
 
@@ -1109,11 +1171,12 @@ namespace Visyde
                             foreach (PNHereNowOccupantData pnHereNowOccupantData in hereNowOccupantData)
                             {
                                 Debug.Log("HereNow: Calling User is Online for User ID " + pnHereNowOccupantData.Uuid + " with state " + pnHereNowOccupantData.State);
-                                UserIsOnlineOrStateChange(pnHereNowOccupantData.Uuid);
+                                await UserIsOnlineOrStateChange(pnHereNowOccupantData.Uuid);
                             }
                         }
                     }
                 }
+                PopulateRoomMembers();
             }
 
 
@@ -1147,7 +1210,36 @@ namespace Visyde
             //});
         }
 
-        private async void UserIsOnlineOrStateChange(string uuid)
+        private async void PopulateRoomMembers()
+        {
+            //  Send a message to each room and the owner will reply with the current room occupants
+            foreach (PubNubRoomInfo room in pubNubRooms)
+            {
+                //  Room owner ID is room.OwnerId
+                string[] getRoomInfo = new string[3];
+                getRoomInfo[0] = "GET_ROOM_MEMBERS";
+                getRoomInfo[1] = userId;
+                getRoomInfo[2] = room.OwnerId; //  The owner of the room we want to get the information about
+                string channel = "rooms." + room.OwnerId;
+                Debug.Log("Requesting information about " + room.OwnerId);
+                PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                                .Channel(channel)
+                                .Message(getRoomInfo)
+                                .ExecuteAsync();
+                if (publishResponse.Status.Error)
+                {
+                    Debug.Log("Error sending PubNub Message (Populate Room Members): " + publishResponse.Status.ErrorData.Information);
+                }
+            }
+        }
+        /*
+        private async void PubNubLoadRoomHistory()
+        {
+            pubnub.FetchHistory()
+                .Channels
+        }
+        */
+        private async Task<bool> UserIsOnlineOrStateChange(string uuid)
         {
             //  A user has come online.  If they have an active room which they have created
             //  then add it to our rooms list
@@ -1191,10 +1283,6 @@ namespace Visyde
                 //    Debug.Log(userState.ElementAt(i));
                 //    //  DCC To Do read in the created rooms
                 //}
-                foreach (KeyValuePair<string, object> entry in userState)
-                {
-                    //Debug.Log("Presence State: " + entry.Key + ", " + entry.Value.ToString());
-                }
                 if (userState.Count > 0)
                 {
                     Debug.Log("temp: Userstate count is " + userState.Count);
@@ -1210,7 +1298,7 @@ namespace Visyde
                             LeaveRoom();
                         }
                     }
-                    else
+                    else if (userState.ContainsKey("name"))
                     {
                         Debug.Log("temp: Adding room, retrieving properties");
                         string name = (string)userState["name"];
@@ -1223,10 +1311,107 @@ namespace Visyde
                         roomInfo.PlayerList.Add(owner);
                         PubNubAddRoom(roomInfo);
                     }
+                    /*
+                    //  Now add the members to the room
+                    foreach (KeyValuePair<string, object> entry in userState)
+                    {
+                        Debug.Log("Presence State: " + entry.Key + ", " + entry.Value.ToString());
+                        if (entry.Key.StartsWith("request_"))
+                        {
+                            Dictionary<string, object> payload = (Dictionary<string, object>)entry.Value;
+                            string requestType = (string)payload["requestType"];
+                            if (requestType.Equals("join"))
+                            {
+                                Debug.Log("Some other user is requesting to join my room: " + entry.Key);
+                                //Dictionary<string, object> payload = JsonConvert.DeserializeObject<Dictionary<string, object>>(entry.Value.ToString());
+                                //Debug.Log("Requestor is " + payload["requestorId"]);
+                                if (payload.ContainsKey("ignore") && (bool)payload["ignore"] == true)
+                                {
+                                    Debug.Log("Ignoring request to join");
+                                    break;
+                                }
+
+                                string roomOwnerId = (string)payload["roomOwnerId"];
+                                string requestorId = (string)payload["requestorId"];
+                                string requestorNickname = (string)payload["nickname"];
+                                int requestedCharacter = System.Int32.Parse((string)payload["chosenCharacter"]);
+                                int requestedHat = System.Int32.Parse((string)payload["chosenHat"]);
+
+                                if (requestorId == userId)
+                                {
+                                    //  Ignore requests to join a room initiated by ourselves, since that is handled elsewhere
+                                    break;
+                                }
+
+                                //string requestorNickname = payload[2];
+                                //int requestedCharacter = System.Int32.Parse(payload[3]);
+                                //int requestedHat = System.Int32.Parse(payload[4]);
+                                //string roomOwnerId = payload[5];
+                                Debug.Log("Received Remote join request from " + requestorId);
+                                PubNubPlayer remotePlayer = new PubNubPlayer(requestorId, requestorNickname, false, false, requestedCharacter, requestedHat);
+                                //  Consider whether the player entered the current room
+
+                                //if (CurrentRoom != null && CurrentRoom.PlayerList != null)
+                                //    CurrentRoom.PlayerList.Add(remotePlayer);
+                                //  Consider the case where we are not in the room
+                                foreach (PubNubRoomInfo room in pubNubRooms)
+                                {
+                                    if (room.OwnerId.Equals(roomOwnerId))
+                                    {
+                                        if (!room.ContainsPlayer(requestorId))
+                                        {
+                                            room.PlayerList.Add(remotePlayer);
+                                            break;
+                                        }
+                                    }
+                                }
+                                OnPlayerEnteredRoom(remotePlayer);
+                                onRoomListChange(pubNubRooms.Count);
+                            }
+                            else
+                            {
+                                //  Leave room
+                                Debug.Log("Received a request to leave a room");
+                                if (payload.ContainsKey("ignore") && (bool)payload["ignore"] == true)
+                                {
+                                    Debug.Log("Ignoring leave request");
+                                    break;
+                                }
+
+                                string roomOwnerId = (string)payload["roomOwnerId"];
+                                string requestorId = (string)payload["requestorId"];
+                                Debug.Log("Leaving room " + requestorId);
+                                OnPlayerLeftRoom(requestorId);
+                                for (int i = 0; i < pubNubRooms.Count; i++)
+                                {
+                                    if (pubNubRooms[i].OwnerId.Equals(roomOwnerId))
+                                    {
+                                        for (int j = 0; j < pubNubRooms[i].PlayerList.Count; j++)
+                                        {
+                                            Debug.Log("Player Count: " + pubNubRooms[i].PlayerList.Count);
+                                            if (pubNubRooms[i].PlayerList[j].UserId.Equals(requestorId))
+                                            {
+                                                pubNubRooms[i].PlayerList.RemoveAt(j);
+                                                break;
+                                            }
+                                            else
+                                            {
+                                                Debug.Log("Comparing " + pubNubRooms[i].PlayerList[j].UserId + " with " + requestorId + " but did not match");
+                                            }
+                                        }
+                                    }
+                                }
+                                onRoomListChange(pubNubRooms.Count);
+                            }
+                        }
+                    }
+                    */
+
                 }
                 else
                 {
                     Debug.Log("temp: User State did not contain any data");
+
                 }
 
 
@@ -1302,6 +1487,7 @@ namespace Visyde
                 }
             });
             */
+            return true;
 
         }
 
@@ -1383,7 +1569,7 @@ namespace Visyde
         }
 
         //private void SubscribeCallbackHandler(object sender, System.EventArgs e)
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private async void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //Debug.Log("temp: Received message on " + result.Channel + ", message is " + result.Message);
             //SubscribeEventEventArgs mea = e as SubscribeEventEventArgs;
@@ -1514,6 +1700,8 @@ namespace Visyde
                     }
                     if (payload[0].Equals("JOIN_CUSTOM_ROOM"))
                     {
+                        //  DCC uuu
+                        //return;
                         string requestorNickname = payload[2];
                         int requestedCharacter = System.Int32.Parse(payload[3]);
                         int requestedHat = System.Int32.Parse(payload[4]);
@@ -1538,6 +1726,8 @@ namespace Visyde
                     }
                     else if (payload[0].Equals("LEAVE_CUSTOM_ROOM"))
                     {
+                        //  DCC uuu
+                        //return;
                         Debug.Log("Received Remote leave request from " + requestorId);
                         string roomOwnerId = payload[2];
                         OnPlayerLeftRoom(requestorId);
@@ -1561,6 +1751,68 @@ namespace Visyde
                             }
                         }
                         onRoomListChange(pubNubRooms.Count);
+                    }
+                    else if (payload[0].Equals("GET_ROOM_MEMBERS"))
+                    {
+                        string roomOwnerId = payload[2];
+                        for (int i = 0; i < pubNubRooms.Count; i++)
+                        {
+                            //  If it is a room that I own
+                            if (roomOwnerId == userId && pubNubRooms[i].OwnerId.Equals(roomOwnerId))
+                            {
+                                for (int j = 0; j < pubNubRooms[i].PlayerList.Count; j++)
+                                {
+                                    string[] rxRoomMemberPayload = new string[7];
+                                    rxRoomMemberPayload[0] = "RECEIVE_ROOM_MEMBER";
+                                    rxRoomMemberPayload[1] = pubNubRooms[i].PlayerList[j].UserId;
+                                    rxRoomMemberPayload[2] = pubNubRooms[i].PlayerList[j].NickName;
+                                    rxRoomMemberPayload[3] = "" + pubNubRooms[i].PlayerList[j].Character;
+                                    rxRoomMemberPayload[4] = "" + pubNubRooms[i].PlayerList[j].Cosmetics[0];
+                                    rxRoomMemberPayload[5] = pubNubRooms[i].OwnerId;
+                                    rxRoomMemberPayload[6] = requestorId;
+                                    Debug.Log("Sending Receive Room Member");
+                                    PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                                        .Channel("rooms." + roomOwnerId)
+                                        .Message(rxRoomMemberPayload)
+                                        .ExecuteAsync();
+                                    if (publishResponse.Status.Error)
+                                    {
+                                        Debug.Log("Error sending PubNub Message (Receive Room Member): " + publishResponse.Status.ErrorData.Information);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (payload[0].Equals("RECEIVE_ROOM_MEMBER"))
+                    {
+                        //  THINK THIS IS THE SAME AS JOIN_CUSTOM_ROOM, apart from one condition
+                        Debug.Log("In Receive Room Member");
+                        string requestorNickname = payload[2];
+                        int requestedCharacter = System.Int32.Parse(payload[3]);
+                        int requestedHat = System.Int32.Parse(payload[4]);
+                        string roomOwnerId = payload[5];
+                        string recipientId = payload[6];
+                        Debug.Log("Received Remote join request to " + recipientId);
+                        if (userId == recipientId)
+                        {
+                            PubNubPlayer remotePlayer = new PubNubPlayer(requestorId, requestorNickname, false, false, requestedCharacter, requestedHat);
+                            //  Consider whether the player entered the current room
+
+                            //if (CurrentRoom != null && CurrentRoom.PlayerList != null)
+                            //    CurrentRoom.PlayerList.Add(remotePlayer);
+                            //  Consider the case where we are not in the room
+                            foreach (PubNubRoomInfo room in pubNubRooms)
+                            {
+                                if (room.OwnerId.Equals(roomOwnerId) && !room.OwnerId.Equals(requestorId))
+                                {
+                                    room.PlayerList.Add(remotePlayer);
+                                    break;
+                                }
+                            }
+                            //OnPlayerEnteredRoom(remotePlayer);
+                            onRoomListChange(pubNubRooms.Count);
+                        }
+
                     }
                 }
             }
@@ -1627,6 +1879,8 @@ namespace Visyde
             //});
         }
 
+
+
         private async void PNLeaveCustomRoom(Pubnub pubnub, string channel, string myUserId, string ownerId)
         {
             string[] leaveCustomRoomMsg = new string[3];
@@ -1642,15 +1896,32 @@ namespace Visyde
             {
                 Debug.Log("Error sending PubNub Message (Leave Custom Room " + channel + "): " + publishResponse.Status.ErrorData.Information);
             }
-
-            //pubnub.Publish().Message(leaveCustomRoomMsg).Channel(channel).Async((result, status) =>
-            //{
-            //    if (status.Error)
-            //    {
-            //        Debug.Log("Error sending PubNub Message (Leave Custom Room " + channel + ")");
-            //    }
-            //});
         }
+        /*
+        private async void PNLeaveCustomRoom2(string roomOwnerId, string requestorId)
+        {
+            Dictionary<string, object> characterProps = new Dictionary<string, object>();
+            characterProps["requestType"] = "leave";
+            characterProps["roomOwnerId"] = roomOwnerId;
+            characterProps["requestorId"] = requestorId;
+            //characterProps["ignore"] = false;
+            Dictionary<string, object> metaData = new Dictionary<string, object>();
+            metaData["request_" + requestorId] = characterProps;
+            //Dictionary<string, object> ignore = new Dictionary<string, object>();
+            //ignore["ignore"] = true;
+            //metaData["request_join_" + requestorId] = ignore;
+            string[] channels = new string[] { PubNubUtilities.gameLobbyChannel };
+            PNResult<PNSetStateResult> setPresenceResponse = await pubnub.SetPresenceState()
+                .Channels(channels)
+                .Uuid(roomOwnerId)
+                .State(metaData)
+                .ExecuteAsync();
+            if (setPresenceResponse.Status.Error)
+            {
+                Debug.Log("Error setting PubNub Presence State (PNJoinCustomRoom2): " + setPresenceResponse.Status.ErrorData.Information);
+            }
+        }
+        */
 
     }
 }
