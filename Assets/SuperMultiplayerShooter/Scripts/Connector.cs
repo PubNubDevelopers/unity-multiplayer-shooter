@@ -335,7 +335,7 @@ namespace Visyde
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         private static string userId = null;
-        public bool atLeastOnePlayerReady = false;
+        //public bool atLeastOnePlayerReady = false;
         public PubNubRoomInfo CurrentRoom = null;
         public bool inRoom = false;
         public List<PubNubRoomInfo> pubNubRooms { get; protected set; }

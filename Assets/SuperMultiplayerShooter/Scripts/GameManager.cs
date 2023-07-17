@@ -1175,7 +1175,6 @@ namespace Visyde
                     }
                     if (payload.ContainsKey("gameStartTime"))
                     {
-                        
                         startTime = System.Convert.ToSingle(payload["gameStartTime"]);
                         CheckTime();
                         
@@ -1342,7 +1341,8 @@ namespace Visyde
                 if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
                 {
                     //  The specified user has left, remove any room they created from the rooms array
-                    if (!isGameOver)
+                    //  DCC uuu
+                    if (true || !isGameOver)
                     {
                         Debug.Log("Game: Presence: User has Left");
                         bool bWasOwner = false;
@@ -1365,7 +1365,8 @@ namespace Visyde
                             //Connector.instance.PubNubRemoveRoom(mea.PresenceEventResult.UUID, true);
                             Connector.instance.PubNubRemoveRoom(result.Uuid, true);
                         }
-                        //Connector.instance.LeaveRoom();
+                        //  DCC uuu
+                        Connector.instance.LeaveRoom();
                         //Connector.instance.UserIsOffline(playerUserId);
                         Debug.Log("Calling OnDisconnected from presence event");
                         OnDisconnected(bWasOwner, playerName);
