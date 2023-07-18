@@ -15,6 +15,7 @@ This is a Unity game built using the [Super Multiplayer Shooter Unity](https://a
 * Language Translation: Translate your messages to a variety of languages using Message Filters.
 * Profanity Filtering: Block profane and hateful messages while in-game using Message Filters.
 * User Metadata: Search and filter for players and view their usernames via App Context.
+* Player movement: Send small, ephemeral updates for player movement and state
 
 While this README is focused on the PubNub functionality added to the game, please review Assets > SuperMultiplayerShooter > Guide.pdf. The developers of the original asset have provided detail instructions on how to play the game itself, how to add your own skins/weapons/bullets, and various settings to adjust in the game.
 
@@ -137,9 +138,6 @@ export default (request) => {
 ### Install Unity
 Install [Unity](https://store.unity.com/download-nuo) if you do not have it. The editor used for this game is 2021.3.10f1.
 
-### Create a Photon Account
-This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengine.com/pun/) in its current state. You'll need to create a [free account](https://id.photonengine.com/Account) and set up an application to obtain the AppID necessary to power the multiplayer sync for this game. Save the AppID for later.
-
 ## Building
 
 1. Clone the GitHub repository.
@@ -148,11 +146,7 @@ This game depends on the [Photon Network Engine (PUN v2)](https://www.photonengi
 	git clone https://github.com/PubNubDevelopers/unity-multiplayer-shooter.git
 	```  
 2. Open the Project in the Unity Hub.
-3. In case there are errors thrown related to Photon: You will need to install the photon package, as the current addition is throwing errors when attempting to open the game. Once the repo has been downloaded, perform the following.
--Delete Assets > Photon
--Import the [PUN 2 package](https://assetstore.unity.com/packages/tools/network/pun-2-free-119922) from the Unity Asset Store.
--Once you have downloaded the package, it will ask you to enter the AppID in the configuration wizard that pops up. Enter the AppId obtained earlier during the Photon account creation.
-3. Open Assets > SuperMultiplayerShooter > Scripts > PubNubManager.cs. In the ```InitializePubNub``` function, replace ```SUBSCRIBE_KEY``` and ```PUBLISH_KEY``` with the Pub/Sub keys you obtained earlier, respectively. Save the file.
+3. Follow the instructions at https://www.pubnub.com/docs/sdks/unity7 to add PubNub and configure it with your application
 4. Run the game in the editor.
 
 ## Playing the Game
@@ -169,7 +163,6 @@ When players first launch the game, this is the first Scene that loads (also ref
 </p>
 
 Players can:
-* Search for a Game using Photon's Matchmaking Services
 * Host a Custom Game (Lobby, will typically be done this way). In the custom game, players can send messages, as well as send messages that will be translated in real time by selecting the language drop-down menu.
 
 <p align="middle">
@@ -207,18 +200,17 @@ Related to PubNub Functionality, Players can:
 
 The following files are of focus to review for this scene that pertain to PubNub Functionality.
 - Assets > SuperMultiplayerShooter > Scripts > GameChat.cs
+- Assets > SuperMultiplayerShooter > Scripts > Connector.cs
 - Assets > SuperMultiplayerShooter > Scripts > ControlsManager.cs
 - Assets > SuperMultiplayerShooter > Scripts > PlayerController.cs
 - Assets > SuperMultiplayerShooter > Scripts > GameManager.cs
 - Assets > SuperMultiplayerShooter > Scripts > UIManager.cs
 
 ## Links
-- PubNub Unity SDK: https://developer.dolby.io/demos/GDC-demo-experience/
+- PubNub Unity SDK: https://www.pubnub.com/docs/sdks/unity7
 - PubNub Unity Resources: https://www.pubnub.com/developers/unity-real-time-developer-path/
 - Admin Portal (to obtain Pub/Sub API Keys): https://admin.pubnub.com/
 - Super Multiplayer Shooter Template Game: https://assetstore.unity.com/packages/templates/systems/super-multiplayer-shooter-template-124977
-- PUN 2 Asset: https://assetstore.unity.com/packages/tools/network/pun-2-free-119922
-- Photon Account: https://id.photonengine.com/Account/
 
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");
