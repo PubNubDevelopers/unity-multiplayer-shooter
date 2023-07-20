@@ -13,8 +13,6 @@ GameObject:
   - component: {fileID: 50510776567303904}
   - component: {fileID: 114085804100523808}
   - component: {fileID: 82597832079465918}
-  - component: {fileID: 114383193927190574}
-  - component: {fileID: 114589466572930174}
   m_Layer: 0
   m_Name: Grenade
   m_TagString: Untagged
@@ -87,22 +85,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ccd8f900810e48428ceb4097cda7696, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 150
-  radius: 2.1
-  delay: 2.3
-  impactSound: {fileID: 8300000, guid: 1029a9ccb230e9a498dec9d32ae27f2e, type: 3}
-  aus: {fileID: 82597832079465918}
-  explosionEffect: {fileID: 1103505875146606, guid: 413a37c7772956f4daa4219c1093ca49,
-    type: 3}
-  graphic: {fileID: 1951258859126350}
-  rg: {fileID: 50510776567303904}
-  owner:
-    playerID: 0
-    playerName: 
-    character: 0
-    kills: 0
-    deaths: 0
-    otherScore: 0
 --- !u!82 &82597832079465918
 AudioSource:
   m_ObjectHideFlags: 0
@@ -199,46 +181,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
---- !u!114 &114383193927190574
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1455061095329930}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 0
-  ObservedComponents:
-  - {fileID: 114085804100523808}
-  - {fileID: 114589466572930174}
-  sceneViewId: 0
-  InstantiationId: -1
-  isRuntimeInstantiated: 0
---- !u!114 &114589466572930174
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1455061095329930}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SynchronizePosition: 1
-  m_SynchronizeRotation: 1
-  m_SynchronizeScale: 0
-  m_UseLocal: 0
 --- !u!1 &1951258859126350
 GameObject:
   m_ObjectHideFlags: 0
