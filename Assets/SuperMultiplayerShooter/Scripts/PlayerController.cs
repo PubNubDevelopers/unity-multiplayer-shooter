@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-//using Photon.Pun;
-//using Photon.Realtime;
 using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
@@ -14,15 +12,13 @@ namespace Visyde
     /// Player Controller
     /// - The player controller itself! Requires a 2D character controller (like the MovementController.cs) to work.
     /// </summary>
-
-    public class PlayerController : MonoBehaviour //MonoBehaviourPunCallbacks, IPunObservable, IInRoomCallbacks
+    public class PlayerController : MonoBehaviour 
     {
         //  PubNub variables
         private PubNubUtilities pubNubUtilities;
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
-        //  dcc todo give this an accessor
-        public PubNubPlayerProps pubNubPlayerProps;
+        public PubNubPlayerProps pubNubPlayerProps { get; set; }
         private bool initialPosition = true;
         //  Control the timing to send movement data to other players
         private float positionUpdateTimer = 0.0f;
@@ -119,8 +115,7 @@ namespace Visyde
         {
             get
             {
-                //return photonView.IsSceneView;
-                return pubNubPlayerProps.isBot;
+                return pubNubPlayerProps.IsBot;
             }
         }
         // Check if this player is ours and not owned by a bot or another player:
@@ -129,7 +124,7 @@ namespace Visyde
             get {
                 if (playerInstance != null)
                 {
-                    return !playerInstance.isBot && playerInstance.isMine;
+                    return !playerInstance.IsBot && playerInstance.IsMine;
                 }
                 else
                 {
@@ -140,14 +135,12 @@ namespace Visyde
 
         void Awake(){
             pubNubPlayerProps = GetComponent<PubNubPlayerProps>();
-            forPreview = pubNubPlayerProps.preview;
+            forPreview = pubNubPlayerProps.IsPreview;
             SetAsPreview();
             if (forPreview) return;
-            Debug.Log("NOT for preview");
 
             // Find essential references:
             gm = GameManager.instance;
-
 
             pubNubUtilities = new PubNubUtilities();
             //Add Listeners
@@ -169,9 +162,9 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             if (result.Message != null &&
-                (result.Channel.Equals(PubNubUtilities.itemChannel) ||
-                result.Channel.StartsWith(PubNubUtilities.playerActionsChannelPrefix) ||
-                result.Channel.StartsWith(PubNubUtilities.playerPositionChannelPrefix)))
+                (result.Channel.Equals(PubNubUtilities.chanItems) ||
+                result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerActions) ||
+                result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerPos)))
             {
                 try
                 {
@@ -181,7 +174,6 @@ namespace Visyde
                     if (!containsDoubles)
                     {
                         long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
-                        //long[] payload = (long[])mea.MessageResult.Payload;
                         if (payload[1] == MessageConstants.idMsgReceivePowerUp)
                         {
                             //  Receive Power up state
@@ -252,7 +244,7 @@ namespace Visyde
                                 int playerId = System.Convert.ToInt32(payload[0]);
                                 float positionX = (float)payload[2];
                                 float positionY = (float)payload[3];
-                                if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                                if (playerId == playerInstance.playerID && !playerInstance.IsMine)
                                 {
                                     TriggerDeadZone(new Vector2(positionX, positionY));
                                 }
@@ -260,9 +252,9 @@ namespace Visyde
                         }
                     }
                 }
-                catch (System.Exception ex)
+                catch (System.Exception)
                 {
-                    Debug.Log("Issue parsing PubNub messages: " + ex.Message);
+                    //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
                 }
             }
         }
@@ -275,9 +267,9 @@ namespace Visyde
         private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
         {
             if (result.Message != null &&
-                (result.Channel.StartsWith(PubNubUtilities.playerActionsChannelPrefix)) ||
-                (result.Channel.StartsWith(PubNubUtilities.playerPositionChannelPrefix)) ||
-                (result.Channel.StartsWith(PubNubUtilities.playerCursorChannelPrefix)))
+                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerActions)) ||
+                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerPos)) ||
+                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerCursor)))
             {
                 try
                 {
@@ -292,7 +284,7 @@ namespace Visyde
                             //  Emote
                             int playerId = System.Convert.ToInt32(payload[0]);
                             int emote = System.Convert.ToInt32(payload[2]);
-                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            if (playerId == playerInstance.playerID && !playerInstance.IsMine)
                             {
                                 Emote(emote);
                             }
@@ -301,7 +293,7 @@ namespace Visyde
                         {
                             //  Melee Attack
                             int playerId = System.Convert.ToInt32(payload[0]);
-                            if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                            if (playerId == playerInstance.playerID && !playerInstance.IsMine)
                             {
                                 MeleeAttack();
                             }
@@ -321,7 +313,7 @@ namespace Visyde
                                 float positionY = (float)payload[3];
                                 float velocityX = (float)payload[4];
                                 float velocityY = (float)payload[5];
-                                if (playerId == playerInstance.playerID && !playerInstance.isMine)
+                                if (playerId == playerInstance.playerID && !playerInstance.IsMine)
                                 {
                                     long serverSentTimeToken = result.Timetoken;
                                     if (serverSentTimeToken <= mostRecentTimeToken)
@@ -331,22 +323,14 @@ namespace Visyde
                                         return;
                                     }
 
-                                    //if (networkPos != null)
                                     networkPos.Set(positionX, positionY);
-                                    //else
-                                    //    networkPos = new Vector2();
-
-                                    //if (movementController.velocity != null)
                                     movementController.velocity.Set(velocityX, velocityY);
-                                    //else
-                                    //    movementController.velocity = new Vector2();
 
                                     //  If is still moving, do predict next location based on current velocity and lag:
                                     if (Helper.GetDistance(lastPos, networkPos) > 0.2f)
                                     {
                                         networkPos += (movementController.velocity);
                                     }
-
 
                                     lastPos = networkPos;
 
@@ -358,8 +342,6 @@ namespace Visyde
                                         movementController.position = networkPos;
                                     }
                                     mostRecentTimeToken = serverSentTimeToken;
-
-
                                 }
                             }
                             else if (command == MessageConstants.idMsgCursor)
@@ -370,7 +352,7 @@ namespace Visyde
                                 float mousePosY = (float)payload[3];
                                 float movingFalling = (float)payload[4];
                                 float xInputLocal = (float)payload[5];
-                                if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                                if (playerId == playerInstance.playerID && (!playerInstance.IsMine || gm.isBot(playerId)))
                                 {
                                     nMousePos.Set(mousePosX, mousePosY, 0.0f);
                                     if (movingFalling > 9.9f)
@@ -395,7 +377,7 @@ namespace Visyde
                             {
                                 //  Shoot message
                                 int playerId = System.Convert.ToInt32(payload[0]);
-                                if (playerId == playerInstance.playerID && (!playerInstance.isMine || gm.isBot(playerId)))
+                                if (playerId == playerInstance.playerID && (!playerInstance.IsMine || gm.isBot(playerId)))
                                 {
                                     float mousePosX = (float)payload[2];
                                     float mousePosY = (float)payload[3];
@@ -407,13 +389,12 @@ namespace Visyde
                         }
                     }
                 }
-                catch (System.Exception ex)
+                catch (System.Exception)
                 {
-                    Debug.Log("Issue parsing PubNub messages: " + ex.Message);
+                    //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
                 }
             }
         }
-
         
         public void OnEnable(){
             if (gm)
@@ -437,7 +418,6 @@ namespace Visyde
         void Start()
         {
             if (forPreview) return;
-            Debug.Log("NOT for preview");
 
             // Spawn VFX:
             Instantiate(spawnVFX, transform);
@@ -445,9 +425,7 @@ namespace Visyde
             // If this is a bot, we need to initialize it and get its bot index from its instantiation data:
             if (isBot)
             {
-                //  DCC todo with bots
-                //ai.InitializeBot((int)photonView.InstantiationData[0]);
-                ai.InitializeBot(pubNubPlayerProps.botId, pubNubPlayerProps.ownerId, pubNubPlayerProps.IsMine);
+                ai.InitializeBot(pubNubPlayerProps.BotId, pubNubPlayerProps.OwnerId, pubNubPlayerProps.IsMine);
                 ai.enabled = true;
             }
             else
@@ -472,28 +450,16 @@ namespace Visyde
             curEmote.owner = this;
 
             // If we're the local player, let the camera know:
-            if (playerInstance.isMine)
+            if (playerInstance.IsMine)
             {
                 gm.gameCam.target = this;
             }
 
             // Let the movement controller know how to behave:
-            //movementController.isMine = photonView.IsMine;
             movementController.isMine = pubNubPlayerProps.IsMine;
 
             // Equip the starting weapon (if our current character has one):
             EquipStartingWeapon();
-
-            /*
-            //if (photonView.IsMine)
-            if (pubNubPlayerProps.IsMine)
-            {
-                // Setting up send rates: See PhotonHandler.cs
-                //PhotonNetwork.SendRate = 16;
-                //PhotonNetwork.SerializationRate = 16;
-            }
-            */
-
         }
         void Update()
         {
@@ -522,9 +488,7 @@ namespace Visyde
                 // Check if we're currently falling:
                 isFalling = movementController.velocity.y < 0;
 
-
                 // If owned by us (including bots):
-                //if (photonView.IsMine)
                 if (pubNubPlayerProps.IsMine)
                 {
                     // Dead zone interaction:
@@ -618,7 +582,6 @@ namespace Visyde
                 }
 
                 // Update the others about our status:
-                //if (photonView.IsMine)
                 if (pubNubPlayerProps.IsMine)
                 {
                     pubNubUtilities.UpdateOthersPlayerStatus(gm.pubnub, playerInstance.playerID, health, shield);
@@ -644,14 +607,8 @@ namespace Visyde
         void FixedUpdate(){
             if (forPreview) return;
 
-            //if (!photonView.IsMine && movementController)
-            //if (!pubNubPlayerProps.IsMine && movementController)
             if (!pubNubPlayerProps.IsMine && movementController)
             {
-                //Debug.Log("Updating Player position for ID " + playerInstance.playerID);
-                //Debug.Log("Current Pos: " + movementController.position.x);
-                //Debug.Log("Network Pos: " + networkPos.x);
-                //movementController.position = Vector2.MoveTowards(movementController.position, networkPos, Time.fixedDeltaTime * (lag * 10));
                 if (initialPosition)
                 {
                     movementController.position = networkPos;
@@ -743,7 +700,6 @@ namespace Visyde
                 movementController.DestroyRigidbody();
                 ai.enabled = false;
                 meleeWeapon.enabled = false;
-                //Destroy(photonView);
                 Destroy(pubNubPlayerProps);
 
                 // Get the chosen character (locally):
@@ -783,8 +739,7 @@ namespace Visyde
         public void RestartPlayer()
         {
             // Get the dedicated player instance for this player:
-            //playerInstance = gm.GetPlayerInstance(isBot ? ai.botID : photonView.Owner.ActorNumber);
-            playerInstance = gm.GetPlayerInstance(isBot ? ai.botID : pubNubPlayerProps.ownerId);
+            playerInstance = gm.GetPlayerInstance(isBot ? ai.botID : pubNubPlayerProps.OwnerId);
 
             // Subscibe to Controls Manager's jump event if player is ours:
             if (isPlayerOurs){
@@ -792,7 +747,7 @@ namespace Visyde
             }
 
             // Get the chosen character of this player (we only need the index of the chosen character in DataCarrier's characters array):
-            int chosenCharacter = playerInstance.character;
+            int chosenCharacter = playerInstance.Character;
             for (int i = 0; i < characters.Length; i++)
             {
                 if (characters[i].data == DataCarrier.characters[chosenCharacter])
@@ -846,7 +801,6 @@ namespace Visyde
         {
             if (curMeleeAttackRate >= 1)
             {
-                Debug.Log("Owner Melee Attack");
                 MeleeAttack();
                 pubNubUtilities.MeleeAttack(gm.pubnub, playerInstance.playerID);
                 curMeleeAttackRate = 0;
@@ -873,7 +827,6 @@ namespace Visyde
                 if (killerPc)
                 {
                     // If the killer is ours (bots are also ours if we're the master client):
-                    //if (killerPc.playerInstance.playerID != playerInstance.playerID && (killerPc.isPlayerOurs || (PhotonNetwork.IsMasterClient && killerPc.isBot)))
                     if (killerPc.playerInstance.playerID != playerInstance.playerID && (killerPc.isPlayerOurs || (Connector.instance.isMasterClient && killerPc.isBot)))
                     {
                         killerPc.curMultikill += 1;
@@ -895,13 +848,9 @@ namespace Visyde
                 catch (System.Exception) { }
 
                 // and then destroy (give a time for the death animation):
-                //if (photonView.IsMine)
-                if (true || pubNubPlayerProps.IsMine || isBot)
-                {
-                    listener.onMessage -= OnPnMessage;
-                    listener.onSignal -= OnPnSignal;
-                    Invoke("PlayerDestroy", 1f);
-                }
+                listener.onMessage -= OnPnMessage;
+                listener.onSignal -= OnPnSignal;
+                Invoke("PlayerDestroy", 1f);
             }
 
             // Cancel any movement:
@@ -939,15 +888,11 @@ namespace Visyde
             }
         }
 
-        //  DCC todo rename this (respawns bots)
+        //  Also destroys bots
         void PlayerDestroy()
         {
-            Debug.Log("Destroying " + playerInstance.playerID);
             Destroy(this);
-            //PhotonNetwork.Destroy(photonView);
         }
-        
-
 
         /// <summary>
         /// Deal damage to player.
@@ -958,6 +903,7 @@ namespace Visyde
         public void ApplyDamage(int fromPlayer, int value, bool gun){
             pubNubUtilities.ApplyDamage(gm.pubnub, playerInstance.playerID, fromPlayer, value, gun);
         }
+
         void Hurt(int fromPlayer, int value, bool gun)
         {
             if (!gm.isGameOver)
@@ -990,17 +936,6 @@ namespace Visyde
                     // Finally, apply the excess damage to HP:
                     if (damageToHP > 0) health -= damageToHP;
 
-                    /*
-                    // Let others know our real health value if this player is ours:
-                    if (photonView.IsMine){
-
-                    }
-                    // Do a damage prediction locally while waiting for the server's side if not ours:
-                    else{
-
-                    }
-                    */
-
                     // Damage popup:
                     if (gm.damagePopups)
                     {
@@ -1019,11 +954,13 @@ namespace Visyde
                 }
             }
         }
+
         void TriggerDeadZone(Vector2 position){
             movementController.position = position;
             networkPos = position;
             DeadZoned();
         }
+
         // Called by the owner client of this player:
         public void Shoot(Vector3 curMousePos, Vector2 curPlayerPos, Vector2 curVelocity)
         {
@@ -1033,40 +970,28 @@ namespace Visyde
             if (movementController) movementController.position = curPlayerPos;
             networkPos = curPlayerPos;
             movementController.velocity = curVelocity;
-            // ...then the shooting itself:
+            //  then the shooting itself:
             curWeapon.Shoot();
         }
+
         public void Shoot(Vector3 curMousePos)
         {
             mousePos = curMousePos;
             nMousePos = curMousePos;
             curWeapon.Shoot();
         }
+
         public void ThrowGrenade()
         {
             //  Grenades have been removed for simplicity
             return;
-            /*
-            // Sound:
-            aus.PlayOneShot(throwGrenadeSFX);
-
-            // Grenade spawning:
-            if (photonView.IsMine)
-            {
-                Vector2 p1 = new Vector2(grenadePoint.position.x, grenadePoint.position.y);
-                Vector2 p2 = new Vector2(weaponHandler.position.x, weaponHandler.position.y);
-                Vector2 throwDirection = (p1 - p2) * grenadeThrowForce;
-
-                object[] data = new object[] { (p1 - p2) * grenadeThrowForce, playerInstance.playerID }; // the instantiation data of a grenade includes the direction of the throw and the owner's player ID 
-                PhotonNetwork.Instantiate(grenadePrefab, grenadePoint.position, Quaternion.identity, 0, data);
-            }
-            */
         }
+
         public void MeleeAttack()
         {
-            //meleeWeapon.Attack(photonView.IsMine, this);
             meleeWeapon.Attack(pubNubPlayerProps.IsMine, this);
         }
+
         public void GrabWeapon(int id, int getFromSpawnPoint)
         {
             // Find the weapon in spawnable weapons of the current map:
@@ -1082,6 +1007,7 @@ namespace Visyde
             // Also, let's save the weapon ID:
             lastWeaponId = getFromSpawnPoint != -1 ? System.Array.IndexOf(gm.maps[gm.chosenMap].spawnableWeapons, gm.maps[gm.chosenMap].weaponSpawnPoints[getFromSpawnPoint].onlySpawnThisHere) : id;
         }
+
         public void ReceivePowerUp(int id, int getFromSpawnPoint)
         {
             // Find the power-up in spawnable power-ups of the current map:
@@ -1133,8 +1059,6 @@ namespace Visyde
         {
             if (curWeapon)
             {
-                //Pickup p = Instantiate (pickupPrefab, transform.up * 2, Quaternion.identity);
-                //p.itemHandled = originalItem;
                 Destroy(curWeapon.gameObject);
             }
         }
@@ -1142,12 +1066,9 @@ namespace Visyde
         void OnDestroy()
         {
             if (forPreview) return;
-            //if (!forPreview) gm.playerControllers.RemoveAll(p => p == null);
-            //if (!forPreview) gm.RemovePlayerController(playerInstance.playerID);
             listener.onMessage -= OnPnMessage;
             listener.onSignal -= OnPnSignal;
             OnDisable();
-            Debug.Log("Player Controllers Count: " + gm.playerControllers.Count);
             Destroy(cosmeticsManager);
         }
         // *****************************************************
@@ -1180,8 +1101,7 @@ namespace Visyde
         {
             if (forPreview) return;
 
-            //if (playerInstance.isMine || (PhotonNetwork.IsMasterClient && playerInstance.isBot))
-            if (playerInstance.isMine || (Connector.instance.isMasterClient && playerInstance.isBot))
+            if (playerInstance.IsMine || (Connector.instance.isMasterClient && playerInstance.IsBot))
             {
                 pubNubUtilities.UpdatePlayerPosition(gm.pubnub, playerInstance.playerID,
                 movementController.position, movementController.velocity);
@@ -1191,19 +1111,11 @@ namespace Visyde
         private void UpdatePlayerCursor()
         {
             if (forPreview) return;
-            //if (playerInstance.isMine || (PhotonNetwork.IsMasterClient && playerInstance.isBot))
-            if (playerInstance.isMine || (Connector.instance.isMasterClient && playerInstance.isBot))
+            if (playerInstance.IsMine || (Connector.instance.isMasterClient && playerInstance.IsBot))
             {
                     pubNubUtilities.UpdatePlayerCursor(gm.pubnub, playerInstance.playerID,
                     mousePos, moving, isFalling, xInput);
             }
         }
-
-        /*
-        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
-        {
-            return;
-        }
-        */
     }
 }

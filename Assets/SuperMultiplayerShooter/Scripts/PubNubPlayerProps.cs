@@ -7,11 +7,10 @@ namespace PubNubUnityShowcase
 
     public class PubNubPlayerProps : MonoBehaviour
     {
-        //  DCC todo sort out the capitalization
-        public bool isBot { get; set; }
-        public int ownerId { get; set; }
+        public bool IsBot { get; set; }
+        public int OwnerId { get; set; }
         public bool IsMine { get; set; }
-        public int botId { get; set;  }
-        public bool preview { get; set; }
+        public int BotId { get; set;  }
+        public bool IsPreview { get; set; }
     }
 }

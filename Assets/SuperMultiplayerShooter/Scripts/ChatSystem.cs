@@ -1,10 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-//using Photon.Chat;
-//using Photon.Pun;
 using PubnubApi;
-using PubnubApi.Unity;
 using PubNubUnityShowcase;
 using Newtonsoft.Json;
 
@@ -33,25 +30,12 @@ namespace Visyde
 
         // Internals:
         VerticalLayoutGroup vlg;
-        //private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
         private string _lobbyPublish = "chat.translate."; //Publish channel will include
         private string targetLanguage = "en"; //Changes based on when users select a different value in the drop-down list.
-
-        //PubNub
-        //private Pubnub pubnub;
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
-            //Initializes the PubNub Connection.
-            //pubnub = PNManager.pubnubInstance.InitializePubNub();
-            //pubnub = Connector.instance.GetPubNubObject();
-
-            //Add Listeners
-            //pubnub.AddListener(listener);
-            //listener.onMessage += OnPnMessage;
-
             vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
             languageOptions.onValueChanged.AddListener(delegate {
                 OnLanguageChange(languageOptions);
@@ -62,13 +46,13 @@ namespace Visyde
         {
             Connector.instance.onJoinRoom += OnJoinedRoom;
             Connector.instance.onLeaveRoom += OnLeftRoom;
-            Connector.instance.onLobbyChatMessage += OnPnMessage;
+            Connector.instance.onPubNubMessage += OnPnMessage;
         }
         void OnDisable()
         {
             Connector.instance.onJoinRoom -= OnJoinedRoom;
             Connector.instance.onLeaveRoom -= OnLeftRoom;
-            Connector.instance.onLobbyChatMessage -= OnPnMessage;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
         }
 
         // Update is called once per frame
@@ -86,7 +70,6 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            //listener.onMessage -= OnPnMessage;
         }
 
         /// <summary>
@@ -94,14 +77,11 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(/*Pubnub pn, */PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
-            Debug.Log("OnPnMessage");
-            //if (result != null && result.Channel.Equals(_lobbySubscribe))
-            if (result != null && result.Channel.StartsWith(PubNubUtilities.lobbyChatWildcardRoot))
+            if (result != null && result.Channel.StartsWith(PubNubUtilities.chanPrefixLobbyChat))
             {
                 string message = ParseMessage(result.Message);
-                Debug.Log("Message: " + message);
                 GetUsername(result, message);
             }
         }
@@ -164,25 +144,12 @@ namespace Visyde
             vlg.enabled = true;
         }
 
-        /// <summary>
-        /// Photon event triggerred when a user joins a room.
-        /// </summary>
+        //  Event triggerred when a user joins a room.
         void OnJoinedRoom()
         {
-            //TODO: Will be changed to the current room after replacing Photon Room with PubNub lobby
-            //  DCC todo
-            _lobbyPublish = PubNubUtilities.lobbyChatWildcardRoot + Connector.instance.CurrentRoom.OwnerId;
+            _lobbyPublish = PubNubUtilities.chanPrefixLobbyChat + Connector.instance.CurrentRoom.OwnerId;
             loadingIndicator.SetActive(false);
             messageDisplay.text = "";
-
-            //Subscribe to the list of Channels
-            //PubNub subscribe
-            //pubnub.Subscribe<string>()
-            //   .Channels(new string[]
-            //   {
-            //       _lobbySubscribe
-            //   })
-            //   .Execute();
         }
 
         /// <summary>
@@ -254,28 +221,6 @@ namespace Visyde
             }
         }
 
-        //TODO: Photon functions. Will be removed as more functionality is integrated.
         void OnLeftRoom() { }
-        //public void OnChatStateChange(ChatState state) { }
-        public void OnStatusUpdate(string user, int status, bool gotMessage, object message) { }
-        public void OnPrivateMessage(string sender, object message, string channelName) { }
-        public void OnUserUnsubscribed(string channel, string user) { }
-        /*
-        public void DebugReturn(ExitGames.Client.Photon.DebugLevel level, string message)
-        {
-            if (level == ExitGames.Client.Photon.DebugLevel.ERROR)
-            {
-                UnityEngine.Debug.LogError(message);
-            }
-            else if (level == ExitGames.Client.Photon.DebugLevel.WARNING)
-            {
-                UnityEngine.Debug.LogWarning(message);
-            }
-            else
-            {
-                UnityEngine.Debug.Log(message);
-            }
-        }
-        */
     }
 }

@@ -3,14 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-//using Photon.Pun;
-//using Photon.Realtime;
 using PubnubApi;
 using PubnubApi.Unity;
 using Newtonsoft.Json;
-using System;
-//using ExitGames.Client.Photon.StructWrapping;
-using UnityEngine.Networking;
 
 namespace Visyde
 {
@@ -276,32 +271,8 @@ namespace Visyde
         // Update is called once per frame
         void Update()
         {
-            //  DCC 
-            //bool connecting = false;
-            /*
-            bool connecting = !PhotonNetwork.IsConnectedAndReady || PhotonNetwork.NetworkClientState == ClientState.ConnectedToNameServer || PhotonNetwork.InRoom;
-
-            // Handling texts:
-            ///  DCC
-            connectionStatusText.text = connecting ? PhotonNetwork.NetworkClientState == ClientState.ConnectingToGameServer ? "Connecting..." : "Finding network..."
-                : "Connected! (" + PhotonNetwork.CloudRegion + ") | Ping: " + PhotonNetwork.GetPing();
-            connectionStatusText.color = PhotonNetwork.IsConnectedAndReady ? Color.green : Color.yellow;
-            matchmakingPlayerCountText.text = PhotonNetwork.InRoom ? Connector.instance.totalPlayerCount + "/" + PhotonNetwork.CurrentRoom.MaxPlayers : "Matchmaking...";
-            */
-            // Handling buttons:
-            //customMatchBTN.interactable = !connecting;
-            //customMatchBTN.interactable = true;
-            //  DCC
-            /*
-            findMatchBTN.interactable = false;
-            //findMatchBTN.interactable = !connecting;
-            findMatchCancelButtonObj.SetActive(PhotonNetwork.InRoom);
-            */
             // Handling panels:
-            //Debug.Log(Connector.instance.isInCustomGame);
             customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
-            //  DCC todo decide when to show the loading panel (if at all)
-            //loadingPanel.SetActive(PhotonNetwork.NetworkClientState == ClientState.ConnectingToGameServer || PhotonNetwork.NetworkClientState == ClientState.DisconnectingFromGameServer);
 
             // Messages popup system (used for checking if we we're kicked or we quit the match ourself from the last game etc):
             if (DataCarrier.message.Length > 0)
@@ -367,9 +338,6 @@ namespace Visyde
             if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
                 playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-                //Nickname is used throughout the system to define the player
-                //TODO: Remove once Photon Engine is removed for finding and supporting multiplayer sync.
-                //PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
             }
             //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
             else
@@ -537,10 +505,7 @@ namespace Visyde
             {
                 //Update cached players name.
                 PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
-                //Nickname is used throughout the system to define the player
-                //PhotonNetwork.NickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
             }
-
 
             //Update specific gameobject if user updates while the filter list is open.          
             GameObject playerContainer = GameObject.Find(pubnub.GetCurrentUserId());
@@ -554,8 +519,7 @@ namespace Visyde
         public void FindMatch(){
             // Enable the "finding match" panel:
             findingMatchPanel.SetActive(true);
-            // ...then finally, find a match:
-            Connector.instance.FindMatch();
+            //  Matchmaking has been removed for simplicity
         }
 
         // Others:

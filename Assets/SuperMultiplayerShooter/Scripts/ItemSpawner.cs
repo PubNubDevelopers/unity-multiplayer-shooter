@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
@@ -96,7 +94,7 @@ namespace Visyde
         {
             //  There is one subscribe handler per character
             try {
-                if (result.Message != null && result.Channel.Equals(PubNubUtilities.itemChannel))
+                if (result.Message != null && result.Channel.Equals(PubNubUtilities.chanItems))
                 {
                     long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                     if (payload != null)
@@ -118,9 +116,9 @@ namespace Visyde
                     }
                 }
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                Debug.Log("Issue parsing PubNub messages: " + ex.Message);
+                //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
             }
         }
 
@@ -144,7 +142,6 @@ namespace Visyde
 
         void SpawnWeapon(int index, int spawnId)
         {
-
             // Mark next spawn time:
             MarkWhenToSpawnNextWeapon(index);
 
@@ -172,7 +169,6 @@ namespace Visyde
 
         void SpawnPowerUp(int index, int spawnId)
         {
-
             // Mark next spawn time:
             MarkWhenToSpawnNextPowerUp(index);
 
@@ -189,7 +185,6 @@ namespace Visyde
                 currentPowerUpSpawns[index] = new PubNubUtilities().InstantiateItem(powerUpPickupPrefab,
                     map.powerUpSpawnPoints[index].point.position, Quaternion.identity, spawnId, spawnPointIndex, index).transform;
             }
-
         }
 
         // "Picked up" calls:

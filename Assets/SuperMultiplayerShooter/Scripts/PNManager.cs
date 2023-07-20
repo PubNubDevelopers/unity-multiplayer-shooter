@@ -110,7 +110,6 @@ public class PNManager : PNManagerBehaviour
                 Custom = getUuidMetadataResult.Custom,
                 Updated = getUuidMetadataResult.Updated
             };
-            Debug.Log("Retrieved metadata nickname");
             if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
             {
                 PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);

@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
-//using Photon.Pun;
 
 namespace Visyde{
 
@@ -18,12 +15,12 @@ namespace Visyde{
 
         void Start()
         {
-            //PhotonNetwork.LoadLevel(DataCarrier.sceneToLoad);
+
         }
 
         void Update()
         {
-            //loadingBar.value = PhotonNetwork.LevelLoadingProgress;
+
         }
     }
 }

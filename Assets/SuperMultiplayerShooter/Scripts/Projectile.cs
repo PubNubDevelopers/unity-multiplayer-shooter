@@ -1,8 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-//using Photon.Pun;
-//using Photon.Realtime;
 using PubNubUnityShowcase;
 
 namespace Visyde
@@ -291,7 +289,7 @@ namespace Visyde
             pooler = objectPooler;
 
             // other settings:
-            thisIsMine = owner.isMine || (owner.isBot && PubNubUtilities.IsMasterClient /*PhotonNetwork.IsMasterClient*/);
+            thisIsMine = owner.IsMine || (owner.IsBot && PubNubUtilities.IsMasterClient);
             curDestroyDelay = destroyDelay;
             destroyNow = false;
             shot = false;

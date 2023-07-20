@@ -1,10 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-//using Photon.Pun;
-//using Photon.Realtime;
 using PubnubApi;
-using PubnubApi.Unity;
-using Newtonsoft.Json;
 
 namespace Visyde
 {
@@ -138,7 +134,6 @@ public class MyClass
         // Update is called once per frame
         void Update()
         {
-
             // Disable the main UI when the game is over so only the "Game Over" screen and the "Scoreboard" are shown:
             rootPanel.gameObject.SetActive(!gm.isGameOver);
 
@@ -159,15 +154,15 @@ public class MyClass
                 int[] otherScore = new int[playersSorted.Length];
                 for (int i = 0; i < playersSorted.Length; i++)
                 {
-                    kills[i] = playersSorted[i].kills;
-                    deaths[i] = playersSorted[i].deaths;
-                    otherScore[i] = playersSorted[i].otherScore;
+                    kills[i] = playersSorted[i].Kills;
+                    deaths[i] = playersSorted[i].Deaths;
+                    otherScore[i] = playersSorted[i].OtherScore;
                     if (notPublished){
 
-                         if (playersSorted[i].playerName == Connector.pnNickName){
+                         if (playersSorted[i].PlayerName == Connector.PNNickName){
                                     MyClass mc = new MyClass();
-                                    mc.username = Connector.pnNickName;
-                                    mc.score = playersSorted[i].kills.ToString();
+                                    mc.username = Connector.PNNickName;
+                                    mc.score = playersSorted[i].Kills.ToString();
                                     string json = JsonUtility.ToJson(mc);
                             PublishMessage(json, _leaderboardChannelPub);
                         }
@@ -336,9 +331,9 @@ public class MyClass
                 int[] otherScore = new int[playersSorted.Length];
                 for (int i = 0; i < playersSorted.Length; i++)
                 {
-                    kills[i] = playersSorted[i].kills;
-                    deaths[i] = playersSorted[i].deaths;
-                    otherScore[i] = playersSorted[i].otherScore;
+                    kills[i] = playersSorted[i].Kills;
+                    deaths[i] = playersSorted[i].Deaths;
+                    otherScore[i] = playersSorted[i].OtherScore;
                 }
 
                 // Scoreboard:
@@ -355,8 +350,6 @@ public class MyClass
                     item.killsText.text = kills[i].ToString();
                     item.deathsText.text = deaths[i].ToString();
                     item.scoreText.text = (otherScore[i] + kills[i]/*  - deaths[i] */).ToString();
-                    Debug.Log(item.represented);
-                
                 }
 
                 // Leaderboard:
@@ -364,8 +357,8 @@ public class MyClass
                 {
                     if (playersSorted.Length > i)
                     {
-                        leaderboardItems[i].playerName.text = playersSorted[i].playerName;
-                        leaderboardItems[i].playerName.color = leaderboardItems[i].playerName.text == Connector.pnNickName ? Color.cyan : Color.white;
+                        leaderboardItems[i].playerName.text = playersSorted[i].PlayerName;
+                        leaderboardItems[i].playerName.color = leaderboardItems[i].playerName.text == Connector.PNNickName ? Color.cyan : Color.white;
                         leaderboardItems[i].score.text = ((kills[i]/*  - deaths[i] */) + otherScore[i]).ToString();
                     }
                     else
@@ -418,7 +411,7 @@ public class MyClass
         public void SomeoneKilledSomeone(PlayerInstance dying, PlayerInstance killer)
         {
             // You we're killed:
-            if (dying.isMine)
+            if (dying.IsMine)
             {
                 // You've committed suicide:
                 if (dying == killer)
@@ -428,7 +421,7 @@ public class MyClass
                 // You we're killed by others:
                 else
                 {
-                    DisplayMessage("You've been killed by " + killer.playerName, MessageType.Death);
+                    DisplayMessage("You've been killed by " + killer.PlayerName, MessageType.Death);
                 }
                 // Die sound effect:
                 mainAus.PlayOneShot(dieSFX);
@@ -436,9 +429,9 @@ public class MyClass
             else
             {
                 // You killed someone:
-                if (killer.isMine)
+                if (killer.IsMine)
                 {
-                    DisplayMessage("You killed " + dying.playerName + "!", MessageType.Kill);
+                    DisplayMessage("You killed " + dying.PlayerName + "!", MessageType.Kill);
                     // Kill sound effect:
                     float baseMK = gm.ourPlayer.curMultikill <= gm.multiKillMessages.Length ? gm.ourPlayer.curMultikill : gm.multiKillMessages.Length;
                     killAus.pitch = gm.ourPlayer.curMultikill > 1 ? baseMK * baseMK * multikillSfxPitchFactor / 10 + 1 : 1;
@@ -449,12 +442,12 @@ public class MyClass
                     // Someone committed suicide:
                     if (killer == dying)
                     {
-                        DisplayMessage(dying.playerName + " committed suicide", MessageType.Normal);
+                        DisplayMessage(dying.PlayerName + " committed suicide", MessageType.Normal);
                     }
                     // Someone killed someone:
                     else
                     {
-                        DisplayMessage(killer.playerName + " killed " + dying.playerName, MessageType.Normal);
+                        DisplayMessage(killer.PlayerName + " killed " + dying.PlayerName, MessageType.Normal);
                     }
                 }
             }

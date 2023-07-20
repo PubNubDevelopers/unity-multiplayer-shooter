@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using PubNubUnityShowcase;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Visyde
 {
@@ -21,7 +19,6 @@ namespace Visyde
         private readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
         private string playerPrefab = "Player";   
         GameObject instance = null;                  
-
 
         List<InventorySlot> curSlots = new List<InventorySlot>();   // the current instatiated slots
         PlayerController preview;                                   // the instantiated player prefab for preview
@@ -49,8 +46,6 @@ namespace Visyde
         public void Open(){
 
             // Create a preview of the player:
-            Debug.Log("Character Preview Open");
-            //if (preview) Destroy(preview.gameObject);
             if (playerPrefabController) Destroy(playerPrefabController.gameObject);
 
             GameObject res = null;
@@ -59,7 +54,7 @@ namespace Visyde
             {
                 res = Resources.Load<GameObject>(playerPrefab);
                 if (res == null)
-                    Debug.LogError("DefaultPool failed to load " + playerPrefab + ", did you add it to a Resources folder?");
+                    Debug.LogError("DefaultPool failed to load " + playerPrefab + ", did you add it to a Resources folder? ");
                 else
                     this.ResourceCache.Add(playerPrefab, res);
             }
@@ -68,8 +63,6 @@ namespace Visyde
                 res.SetActive(false);
 
             instance = GameObject.Instantiate(res) as GameObject;
-            //if (instance.activeSelf)
-            //    instance.SetActive(false);
             PubNubPlayerProps properties = instance.GetComponent<PubNubPlayerProps>() as PubNubPlayerProps;
             if (properties == null)
             {
@@ -77,21 +70,16 @@ namespace Visyde
             }
             else
             {
-                properties.preview = true;
+                properties.IsPreview = true;
             }
             playerPrefabController = instance.GetComponent<PlayerController>();
             
-            //preview = Instantiate(playerPrefabController, playerPreviewHandler);
             instance.SetActive(true);
-            //preview.forPreview = true;
-            //preview.SetAsPreview();
 
             RefreshSlots();
 
             // Refresh the player preview:
             Cosmetics c = new Cosmetics(DataCarrier.chosenHat);
-            //Cosmetics c2 = new Cosmetics(2);
-            //preview.cosmeticsManager.Refresh(c);
             playerPrefabController.cosmeticsManager.Refresh(c);
         }
 
@@ -115,14 +103,12 @@ namespace Visyde
                     int hat = Array.IndexOf(ItemDatabase.instance.hats, item);
                     DataCarrier.chosenHat = DataCarrier.chosenHat == hat ? -1 : hat;    // equipping an already equipped item will unequip it (value of -1 means 'no item')
                     break;
-                // add more here...
             }
 
             RefreshSlots();
 
             // Refresh the player preview:
             Cosmetics c = new Cosmetics(DataCarrier.chosenHat);
-            //preview.cosmeticsManager.Refresh(c);
             playerPrefabController.cosmeticsManager.Refresh(c);
         }
     }

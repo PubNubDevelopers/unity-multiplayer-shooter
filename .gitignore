@@ -100,3 +100,8 @@ sysinfo.txt
 Icon?
 ehthumbs.db
 Thumbs.db
+
+# Script Templates
+Assets/ScriptTemplates/55-PubNub__PubNub Manager Script-PNManager.cs.txt
+Assets/ScriptTemplates/55-PubNub__PubNub Manager Script-PNManager.cs.txt.meta
+Assets/ScriptTemplates.meta

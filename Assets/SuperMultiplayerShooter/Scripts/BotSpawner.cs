@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-//using Photon.Pun;
+﻿using UnityEngine;
 
 namespace Visyde
 {
@@ -46,34 +43,23 @@ namespace Visyde
             // Do respawn if it's dead:
             else
             {
-                // If we are the master client, we have the authority to respawn bots:
-                //if (PhotonNetwork.IsMasterClient)
-                //  DCC also want to respawn on clients who aren't the master now
-                //if (Connector.instance.isMasterClient)
-                //{
-                    // Respawn!
-                    //if (PhotonNetwork.Time - lastDeathTime >= GameManager.instance.respawnTime)
-                    if (Time.timeAsDouble - lastDeathTime >= GameManager.instance.respawnTime)
-                    {
-                        dead = false;
-                        Respawn();
-                    }
-                //}
+                // Respawn!
+                if (Time.timeAsDouble - lastDeathTime >= GameManager.instance.respawnTime)
+                {
+                    dead = false;
+                    Respawn();
+                }
             }
         }
 
         public void Respawn()
         {
             GameManager gm = GameManager.instance;
-            //Transform spawnPoint = gm.maps[gm.chosenMap].playerSpawnPoints[UnityEngine.Random.Range(0, gm.maps[gm.chosenMap].playerSpawnPoints.Count)];
-            //theBot = PhotonNetwork.InstantiateSceneObject(gm.playerPrefab, spawnPoint.position, Quaternion.identity, 0, new object[] { botId }).GetComponent<PlayerController>();
-            //  DCC todo need to respawn bot
             theBot = gm.SpawnBot(botId, ownerId, isMine);
         }
 
         public void Died()
         {
-            //lastDeathTime = PhotonNetwork.Time;
             lastDeathTime = Time.timeAsDouble;
             dead = true;
         }

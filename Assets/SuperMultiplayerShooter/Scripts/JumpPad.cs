@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Visyde
 {
@@ -22,7 +20,6 @@ namespace Visyde
                 PlayerController p = col.GetComponent<PlayerController>();
                 if (p)
                 {
-                    //if (p.photonView.IsMine && !p.isOnJumpPad)
                     if (p.pubNubPlayerProps.IsMine && !p.isOnJumpPad)
                     {
                         // Let the player know that they're on a jump pad:
@@ -44,7 +41,6 @@ namespace Visyde
                 PlayerController p = col.GetComponent<PlayerController>();
                 if (p)
                 {
-                    //if (p.photonView.IsMine) p.isOnJumpPad = false;
                     if (p.pubNubPlayerProps.IsMine) p.isOnJumpPad = false;
                 }
             }

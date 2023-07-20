@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace Visyde
@@ -22,7 +21,7 @@ namespace Visyde
 
             if (!player){
                 Destroy(this);
-                Debug.LogError("Cosmetics Manager should be attach to the same object the Player Controller is attached to.");
+                Debug.LogError("Cosmetics Manager should be attached to the same object the Player Controller is attached to.");
             }
         }
 

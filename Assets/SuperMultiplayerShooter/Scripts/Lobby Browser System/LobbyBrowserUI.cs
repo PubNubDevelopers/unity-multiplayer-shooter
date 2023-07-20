@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using PubNubUnityShowcase;
 using UnityEngine;
 using UnityEngine.UI;
-//using Photon.Pun;
-//using Photon.Realtime;
 
 namespace Visyde
 {
@@ -77,9 +74,7 @@ namespace Visyde
                 listStatusText.text = "";
                 for (int i = 0; i < Connector.instance.pubNubRooms.Count; i++)
                 {
-
-                    //if (!PhotonNetwork.InRoom || (bool)Connector.instance.rooms[i].CustomProperties["isInMatchmaking"] == false)
-                    if (!Connector.instance.inRoom)
+                    if (!Connector.instance.InRoom)
                     {
                         RoomItem r = Instantiate(roomItemPrefab, roomItemHandler);
                         r.Set(Connector.instance.pubNubRooms[i], this);
@@ -101,12 +96,9 @@ namespace Visyde
             }
 
             // Repopulate:
-
-            //  DCC todo define a type for player
-            //Player[] players = PhotonNetwork.PlayerList;
             if (Connector.instance.CurrentRoom != null)
             {
-                PubNubPlayer[] players = Connector.instance.CurrentRoom.PlayerList.ToArray();
+                PNPlayer[] players = Connector.instance.CurrentRoom.PlayerList.ToArray();
                 for (int i = 0; i < players.Length; i++)
                 {
                     CustomGamePlayerItem cgp = Instantiate(playerItemPrefab, playerItemHandler, false);
@@ -115,39 +107,33 @@ namespace Visyde
             }
 
             // Player number in room text:
-            //  DCC modified this
-            //currentNumberOfPlayersInRoomText.text = "Players (" + PhotonNetwork.CurrentRoom.PlayerCount + "/" + PhotonNetwork.CurrentRoom.MaxPlayers + ")";
             currentNumberOfPlayersInRoomText.text = "Players (" + Connector.instance.CurrentRoom.PlayerCount + "/" + Connector.instance.CurrentRoom.MaxPlayers + ")";
 
             // Enable/disable start button:
-            //  DCC modified this
-            //bool allowBots = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("customAllowBots") && (bool)PhotonNetwork.CurrentRoom.CustomProperties["customAllowBots"];
             bool allowBots = Connector.instance.CurrentRoom.AllowBots;
-            //startBTN.interactable = PhotonNetwork.IsMasterClient && ((players.Length > 1 && !allowBots) || (allowBots));
             startBTN.interactable = Connector.instance.isMasterClient && ((Connector.instance.CurrentRoom.PlayerList.Count > 1 && !allowBots) || (allowBots));
         }
-        public void Join(PubNubRoomInfo room){
+        public void Join(PNRoomInfo room){
             Connector.instance.JoinCustomGame(room);
         }
         public void Leave()
         {
-            if (Connector.instance.inRoom)
+            if (Connector.instance.InRoom)
             {
                 Connector.instance.LeaveRoom();
             }
-
-            /*
-            if (PhotonNetwork.InRoom)
-            {
-                PhotonNetwork.LeaveRoom();
-            }
-            */
         }
-        public void Create(){
-            Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn);
+        public async void Create(){
+            await Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn);
         }
         public void StartGame(){
             Connector.instance.StartCustomGame();
+        }
+        public async void RefreshRooms()
+        {
+            //  Force a refresh of available Rooms from PubNub
+            await Connector.instance.PubNubGetRooms();
+            RefreshBrowser();
         }
 
         // Subscribed to Connector's "onRoomListChange" event:
@@ -156,7 +142,7 @@ namespace Visyde
             RefreshBrowser();
         }
         // Subscribed to Connector's "OnPlayerJoin" event:
-        void OnPlayerJoined(PubNubPlayer player)
+        void OnPlayerJoined(PNPlayer player)
         {
             // When a player connects, update the player list:
             RefreshPlayerList();
@@ -165,7 +151,7 @@ namespace Visyde
             chatSystem.SendSystemChatMessage(player.NickName + " joined the game.", false);
         }
         // Subscribed to Connector's "onPlayerLeave" event:
-        void OnPlayerLeft(PubNubPlayer player)
+        void OnPlayerLeft(PNPlayer player)
         {
             // When a player disconnects, update the player list:
             RefreshPlayerList();
@@ -184,22 +170,9 @@ namespace Visyde
             // Update the player list when we join a room:
             RefreshPlayerList();
 
-            //  DCC modified this
-            //chosenMapText.text = Connector.instance.maps[(int)PhotonNetwork.CurrentRoom.CustomProperties["map"]];
             chosenMapText.text = Connector.instance.maps[(int)Connector.instance.CurrentRoom.Map];
-            //chosenPlayerNumberText.text = PhotonNetwork.CurrentRoom.MaxPlayers.ToString();
             chosenPlayerNumberText.text = Connector.instance.CurrentRoom.MaxPlayers.ToString();
-            //if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("customAllowBots")) enableBotsText.text = (bool)PhotonNetwork.CurrentRoom.CustomProperties["customAllowBots"] ? "Yes" : "No";
             if (Connector.instance.CurrentRoom.AllowBots) enableBotsText.text = Connector.instance.CurrentRoom.AllowBots ? "Yes" : "No";
         }
-        // Subscribed to Connector's "onLeaveRoom" event:
-        //  DCC todo remove Photon here and retest
-        /*
-        void OnLeftRoom(){
-            if (PhotonNetwork.InRoom){
-                PhotonNetwork.LeaveRoom();
-            }
-        }
-        */
     }
 }

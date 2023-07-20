@@ -37,7 +37,7 @@ namespace Visyde
             if (owner)
             {
                 // Set text of name text to owner's name:
-                playerNameText.text = owner.playerInstance.playerName;
+                playerNameText.text = owner.playerInstance.PlayerName;
 
                 // Set name text color:
                 playerNameText.color = owner.isPlayerOurs ? nameTextColorOwner : Color.white;

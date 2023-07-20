@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-//using Photon.Pun;
+﻿using UnityEngine;
 
 namespace Visyde
 {
@@ -65,7 +62,6 @@ namespace Visyde
             // Only do stuff when the game isn't over yet and in-game menu is hidden:
             if (!GameManager.instance.isGameOver && !GameManager.instance.ui.isMenuShown)
             {
-                //if (owner.photonView.IsMine)
                 if (owner.pubNubPlayerProps.IsMine)
                 {
                     // Rate of fire:
