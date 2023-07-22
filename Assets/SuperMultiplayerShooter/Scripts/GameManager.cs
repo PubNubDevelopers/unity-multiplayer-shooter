@@ -403,7 +403,6 @@ namespace Visyde
         //  Spawns a bot (only works on master client).
         public PlayerController SpawnBot(int bot, int ownerId, bool isMine)
         {
-            Debug.Log("Spawning Bot " + bot);
             Transform spawnPoint = maps[chosenMap].playerSpawnPoints[UnityEngine.Random.Range(0, maps[chosenMap].playerSpawnPoints.Count)];
             // Instantiate the bot. Bots are assigned with random hats 
             if (Connector.instance.CurrentRoom != null)
