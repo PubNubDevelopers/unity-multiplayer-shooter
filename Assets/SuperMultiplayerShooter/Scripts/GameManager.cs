@@ -161,16 +161,16 @@ namespace Visyde
             List<string> channels = new List<string>();
             //  Room status updates, such as bot attributes or game started?
             channels.Add(PubNubUtilities.chanRoomStatus);  
-            channels.Add(PubNubUtilities.chanItems);
-            channels.Add(PubNubUtilities.chanItems + "-pnpres");  //  We are only interested in presence events for this channel
+            channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems));
+            channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems) + "-pnpres");  //  We are only interested in presence events for this channel
             //  Every player will send their updates on a unique channel, so subscribe to those
             foreach (PlayerInstance playerInstance in players)
             {
                 if (!playerInstance.IsMine)
                 {
-                    channels.Add(PubNubUtilities.chanPrefixPlayerActions + playerInstance.playerID);
-                    channels.Add(PubNubUtilities.chanPrefixPlayerPos + playerInstance.playerID);
-                    channels.Add(PubNubUtilities.chanPrefixPlayerCursor + playerInstance.playerID);
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerActions + playerInstance.playerID));
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerPos + playerInstance.playerID));
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor + playerInstance.playerID));
                 }
             }
             //  The master client controls the bots, so if we are not the master, register to receive bot updates
@@ -178,9 +178,9 @@ namespace Visyde
             {
                 if (!Connector.instance.isMasterClient)
                 {
-                    channels.Add(PubNubUtilities.chanPrefixPlayerActions + bot.playerID);
-                    channels.Add(PubNubUtilities.chanPrefixPlayerPos + bot.playerID);
-                    channels.Add(PubNubUtilities.chanPrefixPlayerCursor + bot.playerID);
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerActions + bot.playerID));
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerPos + bot.playerID));
+                    channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor + bot.playerID));
                 }
             }
             pubnub.AddListener(listener);
@@ -403,6 +403,7 @@ namespace Visyde
         //  Spawns a bot (only works on master client).
         public PlayerController SpawnBot(int bot, int ownerId, bool isMine)
         {
+            Debug.Log("Spawning Bot " + bot);
             Transform spawnPoint = maps[chosenMap].playerSpawnPoints[UnityEngine.Random.Range(0, maps[chosenMap].playerSpawnPoints.Count)];
             // Instantiate the bot. Bots are assigned with random hats 
             if (Connector.instance.CurrentRoom != null)
@@ -895,7 +896,7 @@ namespace Visyde
         //  PubNub Presence event handler
         private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
         {
-            if (result.Channel.Equals(PubNubUtilities.chanItems))
+            if (result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
             {
                 if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
                 {

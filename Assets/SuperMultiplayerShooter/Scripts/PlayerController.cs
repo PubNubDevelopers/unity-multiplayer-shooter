@@ -162,9 +162,9 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             if (result.Message != null &&
-                (result.Channel.Equals(PubNubUtilities.chanItems) ||
-                result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerActions) ||
-                result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerPos)))
+                (result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)) ||
+                result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerActions)) ||
+                result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerPos))))
             {
                 try
                 {
@@ -267,9 +267,9 @@ namespace Visyde
         private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
         {
             if (result.Message != null &&
-                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerActions)) ||
-                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerPos)) ||
-                (result.Channel.StartsWith(PubNubUtilities.chanPrefixPlayerCursor)))
+                (result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerActions))) ||
+                (result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerPos))) ||
+                (result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor))))
             {
                 try
                 {

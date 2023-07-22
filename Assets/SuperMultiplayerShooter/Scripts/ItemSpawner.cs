@@ -94,7 +94,7 @@ namespace Visyde
         {
             //  There is one subscribe handler per character
             try {
-                if (result.Message != null && result.Channel.Equals(PubNubUtilities.chanItems))
+                if (result.Message != null && result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
                 {
                     long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                     if (payload != null)

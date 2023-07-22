@@ -77,7 +77,6 @@ namespace Visyde
             return -1;
         }
 
-        public int SelectedMap { get;  protected set; }
         public int TotalPlayerCount { get; protected set; }
 
         //  PubNub properties
@@ -186,6 +185,7 @@ namespace Visyde
                         CurrentRoom.IsOpen = false;
                         CurrentRoom.SortPlayerListAndAssignIds();
                         SynchronizePlayerCharacteristics(); //  Exchange info about human players
+                        PubNubGameInProgress();
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
 
                         //  Notify other participants to load their own scene and provide the required info to allow
@@ -259,6 +259,7 @@ namespace Visyde
                 Dictionary<string, object> metaData = new Dictionary<string, object>();
                 metaData["name"] = PNNickName;  
                 metaData["visible"] = 1;    //  If the user leaves the room then we can toggle the room's visibility
+                metaData["inProgress"] = 0; //  Set to 1 when the game starts
                 metaData["ownerId"] = userId;
                 metaData["maxPlayers"] = maxPlayers;
                 metaData["started"] = 0;
@@ -603,7 +604,9 @@ namespace Visyde
                         int maxPlayers = System.Convert.ToInt32(userState["maxPlayers"]);
                         bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
                         string ownerId = (string)userState["ownerId"];
-                        PNRoomInfo roomInfo = new PNRoomInfo(uuid, name, SelectedMap, maxPlayers, allowBots, roomCounter);
+                        bool inProgress = System.Convert.ToInt32(userState["inProgress"]) == 1;
+                        PNRoomInfo roomInfo = new PNRoomInfo(uuid, name, map, maxPlayers, allowBots, roomCounter);
+                        roomInfo.IsOpen = !inProgress;
                         roomCounter++;
                         PNPlayer owner = new PNPlayer(uuid, name, false, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
                         if (userId.Equals(ownerId))
@@ -689,6 +692,23 @@ namespace Visyde
                         break;
                     }
                 }
+            }
+        }
+
+        //  Called by the master instance to indicate that their controlled game is in progress
+        private async void PubNubGameInProgress()
+        {
+            Dictionary<string, object> metaData = new Dictionary<string, object>();
+            metaData["inProgress"] = 0;
+            string[] channels = new string[] { PubNubUtilities.chanGlobal };
+            PNResult<PNSetStateResult> setPresenceResponse = await pubnub.SetPresenceState()
+                .Channels(channels)
+                .Uuid(userId)
+                .State(metaData)
+                .ExecuteAsync();
+            if (setPresenceResponse.Status.Error)
+            {
+                Debug.Log($"Error setting PubNub Presence State ({PubNubUtilities.GetCurrentMethodName()}): {setPresenceResponse.Status.ErrorData.Information}");
             }
         }
 

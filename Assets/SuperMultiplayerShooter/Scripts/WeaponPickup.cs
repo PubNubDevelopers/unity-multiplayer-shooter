@@ -87,7 +87,7 @@ namespace Visyde
                 if (col.CompareTag("Player"))
                 {
                     PlayerController p = col.GetComponent<PlayerController>();
-                    if (p)
+                    if (p && pubNubUtilities != null && gm != null)
                     {
                         allowPickup = false;
 
@@ -112,7 +112,7 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per weapon
-            if (result.Message != null && result.Channel.Equals(PubNubUtilities.chanItems))
+            if (result.Message != null && result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
             {
                 long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                 if (payload != null)

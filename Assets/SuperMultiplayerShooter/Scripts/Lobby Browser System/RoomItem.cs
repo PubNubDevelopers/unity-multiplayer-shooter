@@ -37,7 +37,7 @@ namespace Visyde
             playerNumberText.text = info.PlayerCount + "/" + info.MaxPlayers;
 
 			// Disable/enable join button:
-            joinBTN.interactable = (info.PlayerCount < info.MaxPlayers);
+            joinBTN.interactable = (info.PlayerCount < info.MaxPlayers && info.IsOpen);
         }
 
         public void Join(){

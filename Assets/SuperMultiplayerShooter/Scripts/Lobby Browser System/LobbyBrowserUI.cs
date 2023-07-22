@@ -40,7 +40,6 @@ namespace Visyde
             Connector.instance.onRoomListChange += onRoomListUpdate;
             Connector.instance.onCreateRoomFailed += onCreateRoomFailed;
             Connector.instance.onJoinRoom += OnJoinedRoom;
-            //Connector.instance.onLeaveRoom += OnLeftRoom;
             Connector.instance.onPlayerJoin += OnPlayerJoined;
             Connector.instance.onPlayerLeave += OnPlayerLeft;
         }
@@ -48,7 +47,6 @@ namespace Visyde
             Connector.instance.onRoomListChange -= onRoomListUpdate;
             Connector.instance.onCreateRoomFailed -= onCreateRoomFailed;
             Connector.instance.onJoinRoom -= OnJoinedRoom;
-            //Connector.instance.onLeaveRoom -= OnLeftRoom;
             Connector.instance.onPlayerJoin -= OnPlayerJoined;
             Connector.instance.onPlayerLeave -= OnPlayerLeft;
         }
