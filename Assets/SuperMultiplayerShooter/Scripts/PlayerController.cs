@@ -27,6 +27,7 @@ namespace Visyde
         private float cursorUpdateInterval = 0.2f;    //  5 times a second
 
         private long mostRecentTimeToken = 0;
+        private bool gamepadDetected = false;
 
         public bool forPreview = false;                                 // used for non in-game such as character customization preview in the main menu
 
@@ -659,12 +660,18 @@ namespace Visyde
                     }
                     else
                     {
-                        // PC mouse:
-                        //mousePos = gm.gameCam.theCamera.ScreenToWorldPoint(Input.mousePosition);
-                        //  DCC todo
-                        float x = Input.GetAxis("WeaponAimX") * 1000;
                         float y = Input.GetAxis("WeaponAimY") * 1000;
-                        mousePos = new Vector3(x, y, 0);
+                        if (gamepadDetected || y != 0.0f)
+                        {
+                            float x = Input.GetAxis("WeaponAimX") * 1000;
+                            gamepadDetected = true;
+                            mousePos = new Vector3(x, y, 0);
+                        }
+                        else
+                        {
+                            // PC mouse:
+                            mousePos = gm.gameCam.theCamera.ScreenToWorldPoint(Input.mousePosition);
+                        }
                     }
 
                     // Horizontal movement input:
@@ -674,7 +681,7 @@ namespace Visyde
                     shooting = gm.controlsManager.shoot;
 
                     // Melee:
-                    if (!gm.useMobileControls && Input.GetButtonDown("Fire2"))
+                    if (!gm.useMobileControls && (Input.GetButtonDown("Fire2") || Input.GetAxis("LeftBumper") > 0.7))
                     {
                         OwnerMeleeAttack();
                     }

@@ -271,7 +271,7 @@ namespace Visyde
                     .Uuid(userId)
                     .State(metaData)
                     .ExecuteAsync();
-                if (setPresenceStateResponse.Status.Error)
+                if (setPresenceStateResponse != null && setPresenceStateResponse.Status.Error)
                 {
                     Debug.Log($"Error setting PubNub Presence State ({PubNubUtilities.GetCurrentMethodName()}): {setPresenceStateResponse.Status.ErrorData.Information}");
                 }
@@ -518,7 +518,7 @@ namespace Visyde
             PNHereNowResult hereNowResult = herenowResponse.Result;
             PNStatus status = herenowResponse.Status;
 
-            if(status.Error)
+            if (status != null && status.Error)
             {
                 Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
             }
