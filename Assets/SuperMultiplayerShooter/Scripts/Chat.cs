@@ -7,6 +7,7 @@ using PubnubApi.Unity;
 using PubNubUnityShowcase;
 using Newtonsoft.Json;
 using UnityEngine.EventSystems;
+using Visyde;
 
 public class Chat : MonoBehaviour
 {
@@ -16,38 +17,20 @@ public class Chat : MonoBehaviour
     public Dropdown chatTargetDropdown;
     public Text messageDisplay;
     public InputField inputField;
-    public Button sendButton;
-    public GameObject loadingIndicator;
     public GameObject privateMessagePopupPanel;
     public GameObject privateMessageDarkenPanel;
-    //public Dropdown languageOptions;
 
     //Internals
-    //private string _lobbySubscribe = "chat.translate."; //Wildcard subscribe to listen for all channels
-    //private string _lobbyPublish = "chat.translate."; //Publish channel will include
-    private string allChat = "chat.all";
-    private string cgFriendList = "friends-";
-    private string friendChat = "presence-";
-    private string whisperChat = $"chat.private.*";
-    private string targetChatChannel = ""; // intended target when sending chat messages
-    private Pubnub pubnub;
-    private SubscribeCallbackListener listener = new SubscribeCallbackListener();
+    private string targetChatChannel = PubNubUtilities.chanChatAll; // intended target when sending chat messages
 
     // Start is called before the first frame update
     void Start()
-    {
-        //Initializes the PubNub Connection.
-        pubnub = PNManager.pubnubInstance;
-
+    {  
         //Add Listeners
-        pubnub.AddListener(listener);
-        listener.onMessage += OnPnMessage;
-        Debug.Log($"UUID:{pubnub.GetCurrentUserId()}");
-        //whisperChat += $"{pubnub.GetCurrentUserId()}&*";
-        targetChatChannel = allChat; // default to all channel
-        friendChat += pubnub.GetCurrentUserId(); //Private channels in form of "presence-<UserId>". Used to publish so friend groups can be notified of messages.
-        cgFriendList += pubnub.GetCurrentUserId(); //Manages the friend lists.
+        Connector.instance.onPubNubMessage += OnPnMessage;
 
+        //TODO: MOVE CHANNEL NAMES TO PUBNUBUTILITIES.CS
+        //Debug.Log($"UUID:{Connector.instance.GetPubNubObject().GetCurrentUserId()}");
 
         chatTargetDropdown.onValueChanged.AddListener(delegate
         {
@@ -55,6 +38,7 @@ public class Chat : MonoBehaviour
         });
 
         //Subscribe to the list of Channels and channel groups. Subscribe events happen elsewhere
+        /*TODO: SUBSCRIBE IN CONNECTOR.CS
         pubnub.Subscribe<string>()
            .Channels(new string[]
            {
@@ -66,7 +50,7 @@ public class Chat : MonoBehaviour
                cgFriendList // listen for friend list
            })
            .Execute();
-
+        */
         //Close darken panel click events (to close private message search friends list)
         EventTrigger eventTrigger = privateMessageDarkenPanel.AddComponent<EventTrigger>();
 
@@ -109,19 +93,19 @@ public class Chat : MonoBehaviour
         {
             case "ALL":
                 Debug.Log("You selected ALL");
-                targetChatChannel = allChat;
+                targetChatChannel = PubNubUtilities.chanChatAll;
                 // Include the logic you want to happen when "ALL" is selected
                 break;
             case "WHISPER":
                 Debug.Log("You selected WHISPER");
-                targetChatChannel = whisperChat;
+                targetChatChannel = PubNubUtilities.chanPrivateChat;
 
                 //Opens the panels.          
                 privateMessagePopupPanel.SetActive(true);
                 privateMessageDarkenPanel.SetActive(true);       
                 break;
             case "FRIENDS":
-                targetChatChannel = friendChat;
+                targetChatChannel = PubNubUtilities.chanFriendChat;
                 Debug.Log("You selected FRIENDS");
                 // Include the logic you want to happen when "FRIENDS" is selected
                 break;
@@ -133,12 +117,12 @@ public class Chat : MonoBehaviour
                     // Create the private channel and set the targetChatChannel appropriately.
                     // publising a private message will always start with the targer user's uuid.
                     // subscribe will always be in the format starting with your uuid.
-                    targetChatChannel = $"chat.private.{PNManager.pubnubInstance.PrivateMessageUUID}&{pubnub.GetCurrentUserId()}";
+                    targetChatChannel = $"chat.private.{PNManager.pubnubInstance.PrivateMessageUUID}&{Connector.instance.GetPubNubObject().GetCurrentUserId()}";
                 }
 
                 else
                 {
-                    targetChatChannel = allChat;
+                    targetChatChannel = PubNubUtilities.chanChatAll;
                 }
                 break;
         }
@@ -149,7 +133,7 @@ public class Chat : MonoBehaviour
     /// </summary>
     private void OnDestroy()
     {
-        listener.onMessage -= OnPnMessage;
+        Connector.instance.onPubNubMessage -= OnPnMessage;
     }
 
     /// <summary>
@@ -167,16 +151,16 @@ public class Chat : MonoBehaviour
     /// </summary>
     /// <param name="pn"></param>
     /// <param name="result"></param>
-    private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+    private void OnPnMessage(PNMessageResult<object> result)
     {
         //TODO: dont include leaderboard channel msgs
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
             && !string.IsNullOrWhiteSpace(result.Channel) && !result.Channel.Equals("leaderboard_scores"))
         {
             string color = "";
-            if (result.Channel.StartsWith(whisperChat[..^1]))
+            if (result.Channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
             {
-                if (result.Channel.Contains(pubnub.GetCurrentUserId()))
+                if (result.Channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                 {
                     color = "green";
                 }        
@@ -210,7 +194,7 @@ public class Chat : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(inputField.text))
         { 
-            PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
                 .Channel(targetChatChannel)
                 .Message(inputField.text)
                 .ExecuteAsync();

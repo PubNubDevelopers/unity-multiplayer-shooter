@@ -150,13 +150,24 @@ namespace Visyde
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onPresence += OnPnPresence;
+
+            // Handle channel specific changes.
+            PubNubUtilities.chanFriendList += Connector.instance.GetPubNubObject().GetCurrentUserId();
+            PubNubUtilities.chanFriendChat += Connector.instance.GetPubNubObject().GetCurrentUserId();
+
             pubnub.Subscribe<string>()
                 .Channels(new List<string>() { 
                     PubNubUtilities.chanPrefixLobbyChat + "*",
                     PubNubUtilities.chanGlobal, 
                     PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
                     PubNubUtilities.chanPrefixLobbyRooms + "*", 
-                    PubNubUtilities.chanRoomStatus })
+                    PubNubUtilities.chanRoomStatus,
+                    PubNubUtilities.chanChatAll,
+                    PubNubUtilities.chanPrivateChat
+                })
+                .ChannelGroups(new List<string>() {
+                    PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat
+                })
                 .Execute();
             await PubNubGetRooms();
             //  Everything is configured, allow users to create or join a room
