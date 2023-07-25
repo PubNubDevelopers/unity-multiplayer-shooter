@@ -660,7 +660,11 @@ namespace Visyde
                     else
                     {
                         // PC mouse:
-                        mousePos = gm.gameCam.theCamera.ScreenToWorldPoint(Input.mousePosition);
+                        //mousePos = gm.gameCam.theCamera.ScreenToWorldPoint(Input.mousePosition);
+                        //  DCC todo
+                        float x = Input.GetAxis("WeaponAimX") * 1000;
+                        float y = Input.GetAxis("WeaponAimY") * 1000;
+                        mousePos = new Vector3(x, y, 0);
                     }
 
                     // Horizontal movement input:
