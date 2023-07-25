@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using PubNubUnityShowcase;
 using UnityEngine;
 using UnityEngine.UI;
-using Photon.Realtime;
 
 namespace Visyde
 {
@@ -24,10 +22,10 @@ namespace Visyde
         public Text playerNumberText;
         public Button joinBTN;
 
-        [HideInInspector] public RoomInfo info;
+        [HideInInspector] public PNRoomInfo info;
         LobbyBrowserUI lb;
 
-        public void Set(RoomInfo theInfo, LobbyBrowserUI lobbyBrowser)
+        public void Set(PNRoomInfo theInfo, LobbyBrowserUI lobbyBrowser)
         {
             info = theInfo;
             lb = lobbyBrowser;
@@ -35,11 +33,11 @@ namespace Visyde
             // Labels:
             statusText.text = info.IsOpen ? openStatus : closedStatus;
             nameText.text = info.Name;
-            mapText.text = Connector.instance.maps[(int)info.CustomProperties["map"]];
+            mapText.text = Connector.instance.maps[info.Map];
             playerNumberText.text = info.PlayerCount + "/" + info.MaxPlayers;
 
 			// Disable/enable join button:
-            joinBTN.interactable = info.IsOpen;
+            joinBTN.interactable = (info.PlayerCount < info.MaxPlayers && info.IsOpen);
         }
 
         public void Join(){

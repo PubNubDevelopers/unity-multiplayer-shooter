@@ -1,9 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
-using Photon.Pun;
-using Photon.Realtime;
 
 namespace Visyde{
 
@@ -31,14 +27,14 @@ namespace Visyde{
 		void Start () {
 
 			// BG:
-			if (represented.isMine) {
+			if (represented.IsMine) {
 				nameText.color = you;
 			} else {
 				nameText.color = others;
 			}
 
 			// Stats:
-			nameText.text = represented.playerName;
+			nameText.text = represented.PlayerName;
 		}
 	}
 }

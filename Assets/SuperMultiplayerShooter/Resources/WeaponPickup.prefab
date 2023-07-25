@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4395033947893342}
   - component: {fileID: 58037761019953004}
   - component: {fileID: 114929057452788022}
-  - component: {fileID: 114321698984080962}
   - component: {fileID: -6848511441094354912}
   m_Layer: 0
   m_Name: WeaponPickup
@@ -67,29 +66,6 @@ MonoBehaviour:
   itemGraphic: {fileID: 212676943654236308}
   pickUpEffect: {fileID: 1909835213256384, guid: 88cc97c3deb848e4fa95150f043fe44b,
     type: 3}
---- !u!114 &114321698984080962
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1097501120205964}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 0
-  OwnershipTransfer: 1
-  observableSearch: 0
-  ObservedComponents:
-  - {fileID: 0}
-  sceneViewId: 0
-  InstantiationId: -1
-  isRuntimeInstantiated: 0
 --- !u!114 &-6848511441094354912
 MonoBehaviour:
   m_ObjectHideFlags: 0

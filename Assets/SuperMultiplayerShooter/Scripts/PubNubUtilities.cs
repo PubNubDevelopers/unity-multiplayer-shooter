@@ -1,10 +1,7 @@
 using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
-using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Photon.Pun;
 
 /// <summary>
 /// PubNubUtilities
@@ -34,12 +31,19 @@ namespace PubNubUnityShowcase
 
     public class PubNubUtilities
     {
+        //  CHANNELS
+        //  --  Channels specific to a game --
         //  For updates where we do not need to receive our own values, for example
         //  sending our position to others, there is 1 channel per player, 1 to 4.
-        static public string playerActionsChannelPrefix = "player_action_";       //  E.g. shooting
-        static public string playerPositionChannelPrefix= "player_position_";     //  position, velocity
-        static public string playerCursorChannelPrefix  = "player_cursor_";       //  cursor
-        static public string itemChannel = "item_update";
+        static public string chanPrefixPlayerActions = "player_action_";       //  E.g. shooting
+        static public string chanPrefixPlayerPos = "player_position_";     //  position, velocity
+        static public string chanPrefixPlayerCursor = "player_cursor_";       //  cursor
+        static public string chanItems = "item_update";
+        static public string chanRoomStatus = "currentRoomStatus";             //  E.g. game starting or scores update
+        //  --  Channels global to all games / lobbies  --
+        static public string chanPrefixLobbyRooms = "rooms.";
+        static public string chanGlobal = "global";
+        static public string chanPrefixLobbyChat = "chat.translate.";
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.
@@ -62,7 +66,7 @@ namespace PubNubUnityShowcase
         {
             get
             {
-                return PhotonNetwork.IsMasterClient;
+                return Visyde.Connector.instance.isMasterClient;
             }
         }
 
@@ -73,7 +77,7 @@ namespace PubNubUnityShowcase
             emojiMsg[0] = playerID;
             emojiMsg[1] = MessageConstants.idMsgEmoji;
             emojiMsg[2] = emojiId;
-            string channelName = playerActionsChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerActions + playerID);
             //  Note: int[] gets serialized to long[] by PubNub
             pubnub.Signal().Message(emojiMsg).Channel(channelName).Execute((result, status) =>
             {
@@ -93,7 +97,7 @@ namespace PubNubUnityShowcase
             shootData[2] = mousePos.x;
             shootData[3] = mousePos.y;
             shootData[4] = mousePos.z;
-            string channelName = playerActionsChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerActions + playerID);
             pubnub.Signal().Message(shootData).Channel(channelName).Execute((result, status) =>
             {
                 if (status.Error)
@@ -109,7 +113,7 @@ namespace PubNubUnityShowcase
             int[] meleeMsg = new int[2];
             meleeMsg[0] = playerID;
             meleeMsg[1] = MessageConstants.idMsgMelee;
-            string channelName = playerActionsChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerActions + playerID);
             pubnub.Signal().Message(meleeMsg).Channel(channelName).Execute((result, status) =>
             {
                 if (status.Error)
@@ -129,7 +133,7 @@ namespace PubNubUnityShowcase
             applyDamageMsg[3] = value;
             applyDamageMsg[4] = gun ? 1 : 0;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                         .Channel(itemChannel)
+                         .Channel(ToGameChannel(chanItems))
                          .Message(applyDamageMsg)
                          .ExecuteAsync();
             if (publishResponse.Status.Error)
@@ -145,7 +149,7 @@ namespace PubNubUnityShowcase
             forceDeadMsg[0] = playerID;
             forceDeadMsg[1] = MessageConstants.idMsgForceDead;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                         .Channel(itemChannel)
+                         .Channel(ToGameChannel(chanItems))
                          .Message(forceDeadMsg)
                          .ExecuteAsync();
             if (publishResponse.Status.Error)
@@ -162,12 +166,12 @@ namespace PubNubUnityShowcase
             spawnPowerUpMsg[1] = index;
             spawnPowerUpMsg[2] = powerUpIndex;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                         .Channel(itemChannel)
+                         .Channel(ToGameChannel(chanItems))
                          .Message(spawnPowerUpMsg)
                          .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Spawn Power Up " + index + "):");
+                Debug.Log("Error sending PubNub Message (Spawn Power Up " + index + ")");
             }
         }
 
@@ -180,12 +184,12 @@ namespace PubNubUnityShowcase
             receivePowerUpMsg[2] = powerUpIndex;
             receivePowerUpMsg[3] = spawnPointIndex;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                         .Channel(itemChannel)
+                         .Channel(ToGameChannel(chanItems))
                          .Message(receivePowerUpMsg)
                          .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Receive Power Up " + powerUpIndex + "):");
+                Debug.Log("Error sending PubNub Message (Receive Power Up " + powerUpIndex + ")");
             }
         }
 
@@ -196,12 +200,12 @@ namespace PubNubUnityShowcase
             pickedUpPowerUpMsg[0] = MessageConstants.idMsgPickedUpPowerUp;
             pickedUpPowerUpMsg[1] = index;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                                     .Channel(itemChannel)
+                                     .Channel(ToGameChannel(chanItems))
                                      .Message(pickedUpPowerUpMsg)
                                      .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Picked Power Up " + index + "):");
+                Debug.Log("Error sending PubNub Message (Picked Power Up " + index + ")");
             }
         }
 
@@ -214,7 +218,7 @@ namespace PubNubUnityShowcase
             updateOthersMsg[1] = MessageConstants.idMsgUpdateOthers;
             updateOthersMsg[2] = health;
             updateOthersMsg[3] = shield;
-            string channelName = playerActionsChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerActions + playerID);
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                     .Channel(channelName)
                                     .Message(updateOthersMsg)
@@ -233,12 +237,12 @@ namespace PubNubUnityShowcase
             spawnWeaponMsg[1] = index;
             spawnWeaponMsg[2] = weaponIndex;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                                     .Channel(itemChannel)
+                                     .Channel(ToGameChannel(chanItems))
                                      .Message(spawnWeaponMsg)
                                      .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Spawn Weapon" + index + "):");
+                Debug.Log("Error sending PubNub Message (Spawn Weapon" + index + ")");
             }
         }
 
@@ -251,12 +255,12 @@ namespace PubNubUnityShowcase
             grabWeaponMsg[2] = weaponIndex;
             grabWeaponMsg[3] = spawnPointIndex;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                                     .Channel(itemChannel)
+                                     .Channel(ToGameChannel(chanItems))
                                      .Message(grabWeaponMsg)
                                      .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Grab Weapon " + weaponIndex + "):");
+                Debug.Log("Error sending PubNub Message (Grab Weapon " + weaponIndex + ")");
             }
         }
 
@@ -267,12 +271,12 @@ namespace PubNubUnityShowcase
             pickedUpWeaponMsg[0] = MessageConstants.idMsgPickedUpWeapon;
             pickedUpWeaponMsg[1] = index;
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                                     .Channel(itemChannel)
+                                     .Channel(ToGameChannel(chanItems))
                                      .Message(pickedUpWeaponMsg)
                                      .ExecuteAsync();
             if (publishResponse.Status.Error)
             {
-                Debug.Log("Error sending PubNub Message (Picked Up Weapon " + index + "):");
+                Debug.Log("Error sending PubNub Message (Picked Up Weapon " + index + ")");
             }
         }
 
@@ -284,7 +288,7 @@ namespace PubNubUnityShowcase
             triggerDeadZoneData[1] = MessageConstants.idMsgTriggerDeadZone;
             triggerDeadZoneData[2] = position.x;
             triggerDeadZoneData[3] = position.y;
-            string channelName = playerPositionChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerPos + playerID);
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                      .Channel(channelName)
                                      .Message(triggerDeadZoneData)
@@ -316,7 +320,7 @@ namespace PubNubUnityShowcase
             movementData[4] = velocity.x;
             movementData[5] = velocity.y;
 
-            string channelName = playerPositionChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerPos + playerID);
             pubnub.Signal().Message(movementData).Channel(channelName).Execute((result, status) =>
             {
                 if (status.Error)
@@ -353,7 +357,7 @@ namespace PubNubUnityShowcase
             cursorData[4] = movingFalling;
             cursorData[5] = xInput;
 
-            string channelName = playerCursorChannelPrefix + playerID;
+            string channelName = ToGameChannel(chanPrefixPlayerCursor + playerID);
             pubnub.Signal().Message(cursorData).Channel(channelName).Execute((result, status) =>
             {
                 if (status.Error)
@@ -394,6 +398,39 @@ namespace PubNubUnityShowcase
             }
             instance.SetActive(true);
             return instance;
+        }
+
+        public async void PubNubSendRoomProperties(Pubnub pubnub, Dictionary<string, object> payload)
+        {
+            await pubnub.Publish()
+                .Channel(PubNubUtilities.chanRoomStatus)
+                .Message(payload)
+                .ExecuteAsync();
+        }
+
+        public void PubNubSendRoomProperties(Pubnub pubnub, string property, object value)
+        {
+            Dictionary<string, object> payload = new Dictionary<string, object>();
+            payload[property] = value;
+            PubNubSendRoomProperties(pubnub, payload);
+        }
+
+        public static string GetCurrentMethodName()
+        {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            System.Diagnostics.StackFrame stackFrame = stackTrace.GetFrame(1);
+            return stackFrame.GetMethod().Name;
+        }
+
+        public static string ToGameChannel(string channelName)
+        {
+            return ToGameChannel(Visyde.Connector.instance.CurrentRoom, channelName);
+        }
+
+        public static string ToGameChannel(PNRoomInfo roomInfo, string channelName)
+        {
+            if (roomInfo == null) return channelName;
+            return "" + roomInfo.ID + "_" + channelName;
         }
     }
 }

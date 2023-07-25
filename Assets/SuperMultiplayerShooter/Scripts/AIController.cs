@@ -1,7 +1,5 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using Photon.Realtime;
 using PubNubUnityShowcase;
 
 namespace Visyde
@@ -40,7 +38,7 @@ namespace Visyde
         [HideInInspector] public bool doMeleeAttack;
 
         // Others:
-        [HideInInspector] public Player owner;
+        //[HideInInspector] public Player owner;
         [HideInInspector] public PlayerController player;
         [HideInInspector] public PlayerController nearestPlayer;
         [HideInInspector] public WeaponPickup nearestWeapon;
@@ -57,6 +55,7 @@ namespace Visyde
         float wanderDelay;
         int lastHp, doMoveDir;
         public int chosenEmote = -1;
+        private BotSpawner bs;
 
         // Map bounds knowledge so we know where should we not go:
         float worldBoundXPos, worldBoundXNeg, worldBoundYPos, worldBoundYNeg;
@@ -96,22 +95,27 @@ namespace Visyde
         }
 
         // Bot initialization. This is called by the PlayerController component on spawn/start:
-        public void InitializeBot(int id)
+        public void InitializeBot(int id, int ownerId, bool isMine)
         {
             botID = id;  // this is now basically the same as the player ID of this bot
 
             // Create a bot spawner for this bot:
-            if (!GameManager.instance.gameStarted)
+            if (!GameManager.instance.spawnComplete)
             {
-                BotSpawner bs = Instantiate(botSpawnerPrefab, new Vector3(), Quaternion.identity);
-                bs.Initialize(botID, player);
+                bs = Instantiate(botSpawnerPrefab, new Vector3(), Quaternion.identity);
+                bs.Initialize(botID, player, ownerId, isMine);
             }
+        }
+
+        public void Die()
+        {
+            bs.Died();
         }
 
         // Update is called once per frame
         void Update()
         {
-            if (player.photonView.IsMine)
+            if (player.pubNubPlayerProps.IsMine)
             {
                 if (player)
                 {

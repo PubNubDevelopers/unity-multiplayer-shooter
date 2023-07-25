@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
+using System.Threading.Tasks;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -66,7 +67,7 @@ public class PNManager : PNManagerBehaviour
     /// Returns the user's nickname. If it is not cached, it will obtain this information.
     /// </summary>
     /// <returns></returns>
-    public string GetUserNickname()
+    public async Task<string> GetUserNickname()
     {
         string nickname = "";
         if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
@@ -74,11 +75,10 @@ public class PNManager : PNManagerBehaviour
         {
             nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
         }
-
         else
         {
             //Obtain the user metadata. IF the nickname cannot be found, set to be the first 6 characters of the UserId.
-            GetUserMetadata(pubnub.GetCurrentUserId());
+            await GetUserMetadata(pubnub.GetCurrentUserId());
             nickname = !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name) ? PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name : pubnub.GetCurrentUserId();
         }
 
@@ -89,7 +89,7 @@ public class PNManager : PNManagerBehaviour
     /// Get the User Metadata given the UserId.
     /// </summary>
     /// <param name="Uuid">UserId of the Player</param>
-    public async void GetUserMetadata(string Uuid)
+    public async Task<bool> GetUserMetadata(string Uuid)
     {
         //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
         // Get Metadata for a specific UUID
@@ -114,6 +114,8 @@ public class PNManager : PNManagerBehaviour
             {
                 PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
             }
+            return true;
         }
+        return false;
     }
 }

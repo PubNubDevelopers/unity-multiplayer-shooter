@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
@@ -95,26 +93,32 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per character
-            if (result.Message != null)
-            {
-                long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
-                if (payload != null)
+            try {
+                if (result.Message != null && result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
                 {
-                    if (payload[0] == MessageConstants.idMsgSpawnPowerUp)
+                    long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
+                    if (payload != null)
                     {
-                        //  Spawn a Power Up
-                        int index = System.Convert.ToInt32(payload[1]);
-                        int powerUpIndex = System.Convert.ToInt32(payload[2]);
-                        SpawnPowerUp(index, powerUpIndex);
-                    }
-                    else if (payload[0] == MessageConstants.idMsgSpawnWeapon)
-                    {
-                        //  Spawn a Weapon
-                        int index = System.Convert.ToInt32(payload[1]);
-                        int weaponIndex = System.Convert.ToInt32(payload[2]);
-                        SpawnWeapon(index, weaponIndex);
+                        if (payload[0] == MessageConstants.idMsgSpawnPowerUp)
+                        {
+                            //  Spawn a Power Up
+                            int index = System.Convert.ToInt32(payload[1]);
+                            int powerUpIndex = System.Convert.ToInt32(payload[2]);
+                            SpawnPowerUp(index, powerUpIndex);
+                        }
+                        else if (payload[0] == MessageConstants.idMsgSpawnWeapon)
+                        {
+                            //  Spawn a Weapon
+                            int index = System.Convert.ToInt32(payload[1]);
+                            int weaponIndex = System.Convert.ToInt32(payload[2]);
+                            SpawnWeapon(index, weaponIndex);
+                        }
                     }
                 }
+            }
+            catch (System.Exception)
+            {
+                //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
             }
         }
 
@@ -138,7 +142,6 @@ namespace Visyde
 
         void SpawnWeapon(int index, int spawnId)
         {
-
             // Mark next spawn time:
             MarkWhenToSpawnNextWeapon(index);
 
@@ -166,7 +169,6 @@ namespace Visyde
 
         void SpawnPowerUp(int index, int spawnId)
         {
-
             // Mark next spawn time:
             MarkWhenToSpawnNextPowerUp(index);
 
@@ -183,7 +185,6 @@ namespace Visyde
                 currentPowerUpSpawns[index] = new PubNubUtilities().InstantiateItem(powerUpPickupPrefab,
                     map.powerUpSpawnPoints[index].point.position, Quaternion.identity, spawnId, spawnPointIndex, index).transform;
             }
-
         }
 
         // "Picked up" calls:

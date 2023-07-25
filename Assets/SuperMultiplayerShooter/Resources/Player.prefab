@@ -470,22 +470,22 @@ GameObject:
   m_Component:
   - component: {fileID: 4876869588437844}
   - component: {fileID: 114466436095002142}
-  - component: {fileID: 114705431097084856}
   - component: {fileID: 5732537548818131023}
+  - component: {fileID: 114705431097084856}
   - component: {fileID: 114326737305104346}
   - component: {fileID: 50395683206262458}
   - component: {fileID: 70188746159205442}
   - component: {fileID: 61495022634722168}
   - component: {fileID: 58284585958645060}
   - component: {fileID: 82190540328430380}
-  - component: {fileID: 114770333360348242}
+  - component: {fileID: 5875326460210619825}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4876869588437844
 Transform:
   m_ObjectHideFlags: 0
@@ -549,15 +549,23 @@ MonoBehaviour:
     type: 3}
   playerInstance:
     playerID: 0
-    playerName: 
-    character: 0
-    kills: 0
-    deaths: 0
-    otherScore: 0
   isOnJumpPad: 0
   nMousePos: {x: 0, y: 0, z: 0}
   shooting: 0
   xInput: 0
+--- !u!114 &5732537548818131023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1474160780722792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82a70f17104da53449e867a98396e121, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chosenHat: -1
 --- !u!114 &114705431097084856
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -576,19 +584,6 @@ MonoBehaviour:
   moveSpeed: 6
   jumpForce: 17
   isMine: 0
---- !u!114 &5732537548818131023
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1474160780722792}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82a70f17104da53449e867a98396e121, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  chosenHat: -1
 --- !u!114 &114326737305104346
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -797,7 +792,7 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
---- !u!114 &114770333360348242
+--- !u!114 &5875326460210619825
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -806,20 +801,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1474160780722792}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Script: {fileID: 11500000, guid: b9772da2dd22d4ddcb9316a1553e3c87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 0
-  ObservedComponents:
-  - {fileID: 114466436095002142}
-  sceneViewId: 0
-  InstantiationId: -1
-  isRuntimeInstantiated: 0
 --- !u!1 &1502697357441260
 GameObject:
   m_ObjectHideFlags: 0

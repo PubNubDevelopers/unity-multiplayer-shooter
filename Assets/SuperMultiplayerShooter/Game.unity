@@ -28908,8 +28908,6 @@ GameObject:
   - component: {fileID: 1596447575}
   - component: {fileID: 1596447579}
   - component: {fileID: 1596447581}
-  - component: {fileID: 1596447578}
-  - component: {fileID: 1596447583}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -29014,7 +29012,7 @@ MonoBehaviour:
   respawnTime: 5
   invulnerabilityDuration: 2
   preparationTime: 1
-  gameLength: 2000
+  gameLength: 120
   showEnemyHealth: 1
   damagePopups: 1
   multiKillMessages:
@@ -29045,6 +29043,7 @@ MonoBehaviour:
   bots: []
   players: []
   playerControllers: []
+  spawnComplete: 0
 --- !u!4 &1596447577
 Transform:
   m_ObjectHideFlags: 0
@@ -29061,29 +29060,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1596447578
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1596447574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 0
-  Group: 0
-  prefixField: -1
-  Synchronization: 0
-  OwnershipTransfer: 1
-  observableSearch: 0
-  ObservedComponents:
-  - {fileID: 0}
-  sceneViewId: 1
-  InstantiationId: 1
-  isRuntimeInstantiated: 0
 --- !u!114 &1596447579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29291,26 +29267,6 @@ MonoBehaviour:
   aimX: 0
   aimY: 0
   showScoreboard: 0
---- !u!114 &1596447583
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1596447574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6d8f1ad1b81b4694a9d1796ffe0460b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ourColor: {r: 0, g: 1, b: 1, a: 1}
-  othersColor: {r: 1, g: 1, b: 1, a: 1}
-  ourChatColor: {r: 1, g: 1, b: 1, a: 1}
-  othersChatColor: {r: 0.67058825, g: 0.67058825, b: 0.67058825, a: 1}
-  positiveNotifColor: {r: 1, g: 1, b: 0, a: 1}
-  negativeNotifColor: {r: 1, g: 0, b: 0, a: 1}
-  messageDisplay: {fileID: 0}
-  inputField: {fileID: 0}
 --- !u!1 &1616235476
 GameObject:
   m_ObjectHideFlags: 0
