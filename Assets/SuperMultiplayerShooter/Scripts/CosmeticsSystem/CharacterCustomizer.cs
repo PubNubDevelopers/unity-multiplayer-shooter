@@ -87,10 +87,17 @@ namespace Visyde
             // Refresh all inventory slots:
             for (int i = 0; i < curSlots.Count; i++)
             {
-                curSlots[i].curItem = SampleInventory.instance.items[i];
+                if (SampleInventory.instance.availableHats.Contains(i))
+                {
+                    curSlots[i].curItem = SampleInventory.instance.items[i];
+                }
+                else
+                {
+                    curSlots[i].curItem = null;
+                }
                 curSlots[i].Refresh();
             }
-            
+
         }
 
         /// <summary>

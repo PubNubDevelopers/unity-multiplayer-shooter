@@ -6,6 +6,8 @@ using UnityEngine.SceneManagement;
 using PubnubApi;
 using PubnubApi.Unity;
 using Newtonsoft.Json;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Visyde
 {
@@ -78,7 +80,7 @@ namespace Visyde
         }
 
         // Use this for initialization
-        void Start()
+        async void Start()
         {
             //Initializes the PubNub Connection.
             pubnub = PNManager.pubnubInstance.InitializePubNub();
@@ -93,6 +95,7 @@ namespace Visyde
             _cgFriendList += pubnub.GetCurrentUserId(); //Manages the friend lists.
          
             //Obtain and cache user metadata.
+            //  todo I think we should await this but it seems unreliable (I suspect because SampleMenu.cs and Connector use different instances of pubnub)
             GetAllUserMetadata();
 
             //Add client to Channel Group just in case first time load. Will not add if already present.
@@ -300,7 +303,7 @@ namespace Visyde
         /// <summary>
         /// Obtains all player metadata from this PubNub Keyset to cache.
         /// </summary>
-        private async void GetAllUserMetadata()
+        private async Task GetAllUserMetadata()
         {
             PNResult<PNGetAllUuidMetadataResult> getAllUuidMetadataResponse = await pubnub.GetAllUuidMetadata()
                 .IncludeCustom(true)
@@ -338,14 +341,29 @@ namespace Visyde
             if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
                 playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+                Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
+
+                //  Populate the available hat inventory, read from PubNub App Context
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+                if (customData != null && customData.ContainsKey("hats"))
+                {
+                    List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
+                    UpdateAvailableHats(availableHats);
+                }
             }
             //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
             else
             {
+                //  Generate some random starting hats for this player
+                Dictionary<string, object> customData = new Dictionary<string, object>();
+                customData["hats"] = JsonConvert.SerializeObject(GenerateRandomHats());
+
                 // Set Metadata for UUID set in the pubnub instance
                 PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
                     .Uuid(pubnub.GetCurrentUserId())
                     .Name(pubnub.GetCurrentUserId())
+                    .Custom(customData)
+                    .IncludeCustom(true)
                     .ExecuteAsync();
                 PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
                 PNStatus setUUIDResponseStatus = setUuidMetadataResponse.Status;
@@ -362,6 +380,15 @@ namespace Visyde
                         Custom = setUuidMetadataResult.Custom,
                         Updated = setUuidMetadataResult.Updated
                     };
+                    if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
+                    {
+                        PNManager.pubnubInstance.CachedPlayers.Remove(setUuidMetadataResult.Uuid);
+                    }
+                    if (setUuidMetadataResult.Custom != null && setUuidMetadataResult.Custom.ContainsKey("hats"))
+                    {
+                        List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(setUuidMetadataResult.Custom["hats"].ToString());
+                        UpdateAvailableHats(availableHats);
+                    }
                     PNManager.pubnubInstance.CachedPlayers.Add(setUuidMetadataResult.Uuid, meta);
                     playerNameInput.text = setUuidMetadataResult.Uuid;
                 }
@@ -505,6 +532,7 @@ namespace Visyde
             {
                 //Update cached players name.
                 PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
+                Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
             }
 
             //Update specific gameobject if user updates while the filter list is open.          
@@ -862,6 +890,24 @@ namespace Visyde
             if (rmChFromCgResponse.Status.Error)
             {
                 Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", rmChFromCgResponse.Status.StatusCode, rmChFromCgResponse.Status.ErrorData, rmChFromCgResponse.Status.Category));
+            }
+        }
+
+        //  When the player is first created, they are assigned some random hats 
+        private List<int> GenerateRandomHats()
+        {
+            System.Random rnd = new System.Random();
+            List<int> myHats = Enumerable.Range(0, 7).OrderBy(x => rnd.Next()).Take(4).ToList();
+            return myHats;
+        }
+
+        //  Update the player hat inventory (shown on the customize screen)
+        private void UpdateAvailableHats(List<int> availableHats)
+        {
+            SampleInventory.instance.availableHats.Clear();
+            foreach (int hat in availableHats)
+            {
+                SampleInventory.instance.availableHats.Add(hat);
             }
         }
     }
