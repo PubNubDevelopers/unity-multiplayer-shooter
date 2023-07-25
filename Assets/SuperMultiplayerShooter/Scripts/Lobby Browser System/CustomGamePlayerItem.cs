@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using Photon.Pun;
-using Photon.Realtime;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -20,9 +19,9 @@ namespace Visyde
         public Text playerNameText;
         public Button kickBTN;
 
-		public Player owner;
+		public PNPlayer owner;
 
-        public void Set(Player player)
+        public void Set(PNPlayer player)
         {
             owner = player;
 
@@ -36,12 +35,12 @@ namespace Visyde
             // Host indicator, position in list, and the kick buttons:
             hostIndicator.SetActive(owner.IsMasterClient);
             if (owner.IsMasterClient) transform.SetAsFirstSibling(); else transform.SetAsLastSibling();
-            kickBTN.gameObject.SetActive(PhotonNetwork.IsMasterClient && !owner.IsLocal);
+            //  Note the ability to kick someone from a lobby has been removed for simplicity.
         }
 
         public void Kick()
         {
-            PhotonNetwork.CloseConnection(owner);
+            //  Note the ability to kick someone from a lobby has been removed for simplicity.
         }
     }
 }

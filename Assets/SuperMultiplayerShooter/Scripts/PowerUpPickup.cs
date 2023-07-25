@@ -56,8 +56,12 @@ namespace Visyde
 
             // data from network (by master client):
 
-            itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[powerUpIndex];
-            if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[spawnPointIndex].onlySpawnThisHere;
+            try
+            {
+                itemHandled = gm.maps[gm.chosenMap].spawnablePowerUps[powerUpIndex];
+                if (spawnPointIndex != -1) itemHandled = gm.maps[gm.chosenMap].powerUpSpawnPoints[spawnPointIndex].onlySpawnThisHere;
+            }
+            catch (System.Exception ex) { Debug.Log(ex.Message); }
 
             // Visual:
             itemGraphic.sprite = itemHandled.icon;
@@ -89,7 +93,7 @@ namespace Visyde
                 if (col.tag == "Player")
                 {
                     PlayerController p = col.GetComponent<PlayerController>();
-                    if (p)
+                    if (p && pubNubUtilities != null && gm != null)
                     {
                         allowPickup = false;
 
@@ -119,7 +123,7 @@ namespace Visyde
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
             //  There is one subscribe handler per character
-            if (result.Message != null)
+            if (result.Message != null && result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
             {
                 long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                 if (payload != null)

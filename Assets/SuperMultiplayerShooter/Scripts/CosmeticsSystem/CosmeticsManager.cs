@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace Visyde
@@ -22,7 +21,7 @@ namespace Visyde
 
             if (!player){
                 Destroy(this);
-                Debug.LogError("Cosmetics Manager should be attach to the same object the Player Controller is attached to.");
+                Debug.LogError("Cosmetics Manager should be attached to the same object the Player Controller is attached to.");
             }
         }
 
@@ -43,6 +42,7 @@ namespace Visyde
             // If has hat:
             if (chosenHat >= 0)
             {
+                PlayerController player = GetComponent<PlayerController>();
                 GameObject item = Instantiate(ItemDatabase.instance.hats[chosenHat].prefab, player.character.hatPoint);
                 ResetItemPosition(item.transform);
                 spawnedItems.Add(item);
@@ -53,6 +53,14 @@ namespace Visyde
             item.localEulerAngles = Vector3.zero;
             item.localPosition = Vector3.zero;
             item.localScale = Vector3.one;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < spawnedItems.Count; i++)
+            {
+                Destroy(spawnedItems[i]);
+            }
         }
     }
 }
