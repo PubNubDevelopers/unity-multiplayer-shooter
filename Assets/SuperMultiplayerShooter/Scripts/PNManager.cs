@@ -14,6 +14,9 @@ public class PNManager : PNManagerBehaviour
     //Cached players from connection.
     private static Dictionary<string, UserMetadata> cachedPlayers = new Dictionary<string, UserMetadata>();
 
+    //The list of private message connections a user can quickly connect to.
+    private static string privateMessageUUID = "";
+
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
     private void Awake()
@@ -115,5 +118,11 @@ public class PNManager : PNManagerBehaviour
                 PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
             }
         }
+    }
+
+    public string PrivateMessageUUID
+    {
+        get { return privateMessageUUID; }
+        set { privateMessageUUID = value; }
     }
 }
