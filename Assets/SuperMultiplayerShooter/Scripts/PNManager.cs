@@ -95,6 +95,7 @@ public class PNManager : PNManagerBehaviour
         // Get Metadata for a specific UUID
         PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
             .Uuid(Uuid)
+            .IncludeCustom(true)
             .ExecuteAsync();
         PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
         PNStatus status = getUuidMetadataResponse.Status;

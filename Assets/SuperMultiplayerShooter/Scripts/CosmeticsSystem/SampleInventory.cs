@@ -15,6 +15,7 @@ namespace Visyde
         public static SampleInventory instance;
 
         public CosmeticItemData[] items;
+        public List<int> availableHats = new List<int>();
 
         void Awake(){
             instance = this;
