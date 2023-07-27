@@ -84,7 +84,15 @@ namespace Visyde
             }
         }
         void LateUpdate(){
-            shoot = mobileControls? shootStick.progress >= shootingThreshold && shootStick.isHolding : Input.GetButton("Fire1");
+            if (mobileControls)
+            {
+                shoot = shootStick.progress >= shootingThreshold && shootStick.isHolding;
+            }
+            else
+            {
+                //  Not mobile controls
+                shoot = Input.GetButton("Fire1") || Input.GetAxis("RightBumper") > 0.7;
+            }
         }
 
         // Jumping (can be called by an on-screen button):
