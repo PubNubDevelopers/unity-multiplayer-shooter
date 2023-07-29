@@ -18,6 +18,8 @@ public class PNManager : PNManagerBehaviour
     //The list of private message connections a user can quickly connect to.
     private static string privateMessageUUID = "";
 
+    private static string lobbyRoomName = "";
+
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
     private void Awake()

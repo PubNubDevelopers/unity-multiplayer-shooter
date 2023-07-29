@@ -8,6 +8,7 @@ using PubNubUnityShowcase;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
 
 namespace Visyde
 {
@@ -100,6 +101,7 @@ namespace Visyde
         public UnityAction onJoinRoom;
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
+        public event Action<bool, string> OnDropdownChange;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
@@ -157,13 +159,13 @@ namespace Visyde
 
             pubnub.Subscribe<string>()
                 .Channels(new List<string>() { 
-                    PubNubUtilities.chanPrefixLobbyChat + "*",
+                    PubNubUtilities.chanChatLobby + "*",
                     PubNubUtilities.chanGlobal, 
                     PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
                     PubNubUtilities.chanPrefixLobbyRooms + "*", 
                     PubNubUtilities.chanRoomStatus,
                     PubNubUtilities.chanChatAll,
-                    PubNubUtilities.chanPrivateChat
+                    PubNubUtilities.chanPrivateChat,
                 })
                 .ChannelGroups(new List<string>() {
                     PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat
@@ -300,7 +302,7 @@ namespace Visyde
                     // Clear the bots array first:
                     curBots = new Bot[0];
                     // Generate a number to be attached to the bot names:
-                    bnp = Random.Range(0, 9999);
+                    bnp = UnityEngine.Random.Range(0, 9999);
                     int numCreatedBots = 0;
                     int max = CurrentRoom.MaxPlayers - TotalPlayerCount;
                     while (numCreatedBots < max)
@@ -333,10 +335,10 @@ namespace Visyde
                 b[b.Length - 1] = new Bot();
 
                 // Setup the new bot (set the name and the character chosen):
-                b[b.Length - 1].name = botPrefixes[Random.Range(0, botPrefixes.Length)] + bnp;
-                b[b.Length - 1].characterUsing = Random.Range(0, characterSelector.characters.Length);
+                b[b.Length - 1].name = botPrefixes[UnityEngine.Random.Range(0, botPrefixes.Length)] + bnp;
+                b[b.Length - 1].characterUsing = UnityEngine.Random.Range(0, characterSelector.characters.Length);
                 // And choose a random hat, or none:
-                b[b.Length - 1].hat = Random.Range(-1, ItemDatabase.instance.hats.Length);
+                b[b.Length - 1].hat = UnityEngine.Random.Range(-1, ItemDatabase.instance.hats.Length);
                 bnp += 1;   // make next bot name unique
                 
                 // Now replace the old bot array with the new one:
@@ -993,6 +995,15 @@ namespace Visyde
             {
                 Debug.Log($"Error sending PubNub Message ({PubNubUtilities.GetCurrentMethodName()}): {publishResponse.Status.ErrorData.Information}");
             }
+        }
+
+        /// <summary>
+        /// Update the chat dropdown when an option is added/removed.
+        /// </summary>
+        /// <param name="id"></param>
+        public void DropdownChange(bool add, string id)
+        {
+            OnDropdownChange?.Invoke(add, id);
         }
     }
 }

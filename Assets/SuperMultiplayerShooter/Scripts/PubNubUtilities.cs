@@ -44,7 +44,7 @@ namespace PubNubUnityShowcase
         //  --  Channels global to all games / lobbies  --
         static public string chanPrefixLobbyRooms = "rooms.";
         static public string chanGlobal = "global";
-        static public string chanPrefixLobbyChat = "chat.translate.";
+        static public string chanChatLobby = "chat.lobby.";
         //  --  Channels specific for chat messages
         static public string chanChatAll = "chat.all";
         static public string chanFriendList = "friends-";

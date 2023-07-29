@@ -40,6 +40,7 @@ namespace Visyde
         public Transform searchPlayerContent;
         public Transform searchPlayer;
         public Image onlineStatus;
+        public GameObject chat;
 
         // leaderboard
         public Text leaderboardText;
@@ -283,6 +284,13 @@ namespace Visyde
                 messagePopupObj.SetActive(true);
                 messagePopupText.text = DataCarrier.message;
                 DataCarrier.message = "";
+            }
+
+            //Listen for whenever user opens the chat window.
+            if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
+            {
+                //opens the chat window.
+                chat.SetActive(true);
             }
         }
 

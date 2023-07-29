@@ -22,10 +22,10 @@ namespace Visyde
         public Color positiveNotifColor;
         public Color negativeNotifColor;
         [Header("References:")]
-        public Text messageDisplay;
-        public InputField inputField;
-        public Button sendButton;
-        public GameObject loadingIndicator;
+       // public Text messageDisplay;
+       // public InputField inputField;
+       // public Button sendButton;
+       // public GameObject loadingIndicator;
         public Dropdown languageOptions;
 
         // Internals:
@@ -36,7 +36,7 @@ namespace Visyde
         // Use this for initialization. Will initiate at main menu since the manager that controls this window is attached to the MainMenu.Managers.
         void Start()
         {
-            vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
+            //vlg = messageDisplay.transform.parent.GetComponent<VerticalLayoutGroup>();
             languageOptions.onValueChanged.AddListener(delegate {
                 OnLanguageChange(languageOptions);
             });
@@ -46,24 +46,13 @@ namespace Visyde
         {
             Connector.instance.onJoinRoom += OnJoinedRoom;
             Connector.instance.onLeaveRoom += OnLeftRoom;
-            Connector.instance.onPubNubMessage += OnPnMessage;
         }
         void OnDisable()
         {
             Connector.instance.onJoinRoom -= OnJoinedRoom;
             Connector.instance.onLeaveRoom -= OnLeftRoom;
-            Connector.instance.onPubNubMessage -= OnPnMessage;
         }
 
-        // Update is called once per frame
-        void Update()
-        {
-            //Can always check to see if pubnub connection still active.
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-            {
-                SendChatMessage();
-            }
-        }
 
         /// <summary>
         /// Called whenever the scene or game ends. Unsbscribe from event listeners.
@@ -72,127 +61,13 @@ namespace Visyde
         {
         }
 
-        /// <summary>
-        /// Event listener to handle PubNub Message events
-        /// </summary>
-        /// <param name="pn"></param>
-        /// <param name="result"></param>
-        private void OnPnMessage(PNMessageResult<object> result)
-        {
-            if (result != null && result.Channel.StartsWith(PubNubUtilities.chanPrefixLobbyChat))
-            {
-                string message = ParseMessage(result.Message);
-                GetUsername(result, message);
-            }
-        }
-
-        /// <summary>
-        /// Publishes the chat message.
-        /// </summary>
-        public async void SendChatMessage()
-        {
-            if (!string.IsNullOrEmpty(inputField.text))
-            {
-                MessageModeration filter = new MessageModeration();
-                filter.text = inputField.text;
-                filter.source = "en";
-                filter.target = targetLanguage;
-                PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
-                    .Channel(_lobbyPublish)
-                    .Message(filter)
-                    .ExecuteAsync();
-
-                PNPublishResult publishResult = publishResponse.Result;
-                PNStatus status = publishResponse.Status;
-
-                //clear input field.
-                inputField.text = string.Empty;
-            }
-        }
-
-        public void SendSystemChatMessage(string message, bool negative)
-        {
-            //DisplayChat(message, "", false, true, negative);
-        }
-
-        /// <summary>
-        /// Displays the chat mesage
-        /// </summary>
-        /// <param name="message">The message from the user</param>
-        /// <param name="from">The user who the sent the message</param>
-        /// <param name="ours">Is the message sent from client</param>
-        /// <param name="systemMessage">Message sent by systen.</param>
-        /// <param name="negative">Color scheme</param>
-        void DisplayChat(string message, string from, bool ours, bool systemMessage, bool negative)
-        {
-
-            string finalMessage = "";
-
-            if (systemMessage)
-            {
-                finalMessage = "\n" + "<color=#" + ColorUtility.ToHtmlStringRGBA(negative ? negativeNotifColor : positiveNotifColor) + ">" + message + "</color>";
-            }
-            else
-            {
-                finalMessage = "\n" + "<color=#" + ColorUtility.ToHtmlStringRGBA(ours ? ourColor : othersColor) + ">" + from + "</color>: <color=" + ColorUtility.ToHtmlStringRGBA(ours ? ourChatColor : othersChatColor) + ">" + message + "</color>";
-            }
-            messageDisplay.text += finalMessage;
-
-            // Canvas refresh:
-            Canvas.ForceUpdateCanvases();
-            vlg.enabled = false;
-            vlg.enabled = true;
-        }
-
+      
         //  Event triggerred when a user joins a room.
         void OnJoinedRoom()
         {
-            _lobbyPublish = PubNubUtilities.chanPrefixLobbyChat + Connector.instance.CurrentRoom.OwnerId;
-            loadingIndicator.SetActive(false);
-            messageDisplay.text = "";
-        }
-
-        /// <summary>
-        /// Obtains the username and displays the chat.
-        /// </summary>
-        /// <param name="message"></param>
-        private void GetUsername(PNMessageResult<object> result, string message)
-        {
-            string username = "";
-            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Publisher))
-            {
-                username = PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name;
-                Debug.Log("Username2: " + username);
-            }
-
-            //Check in case the username is null. Set to back-up of UUID just in case.
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                username = result.Publisher;
-                Debug.Log("Username: " + username);
-            }
-
-            //Display the chat pulled.
-            Debug.Log("Display Chat");
-            DisplayChat(message, username, Connector.instance.GetPubNubObject().GetCurrentUserId().Equals(result.Publisher), false, false);
-        }
-
-        /// <summary>
-        /// Parses the payload for translating the message.
-        /// If the payload does contain profanity, simply prints the entire message as asterisks.
-        /// You can, however, isolate the profanity and replace only the words containing profanity with asterisks.
-        /// </summary>
-        /// <param name="payload"></param>
-        /// <returns></returns>
-        private string ParseMessage(object message)
-        {
-            //Extracting text from the payload. If it cannot be found, simply print a temp message.
-            var messageDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.ToString());
-            if (messageDictionary == null || !messageDictionary.TryGetValue("text", out object parsedMessage))
-            {
-                parsedMessage = "<...>";
-            }
-            return parsedMessage.ToString();
+         
+            //_lobbyPublish = PubNubUtilities.chanPrefixLobbyChat + Connector.instance.CurrentRoom.OwnerId;
+           
         }
 
         /// <summary>
@@ -221,6 +96,11 @@ namespace Visyde
             }
         }
 
-        void OnLeftRoom() { }
+        void OnLeftRoom() 
+        {
+            //Remove Lobby option from dropdown.
+            //print message in console indicating you left the lobby
+            //change option to ALL as default
+        }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using PubNubUnityShowcase;
+using System.Drawing;
+//using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,7 +28,7 @@ namespace Visyde
         [Header("Joined Screen:")]
         public CustomGamePlayerItem playerItemPrefab;
         public Transform playerItemHandler;
-        public ChatSystem chatSystem;
+        public Text messageDisplay;             // displays messages when joining/leaving lobby
         public Text chosenMapText;
         public Text chosenPlayerNumberText;
         public Text enableBotsText;
@@ -119,6 +121,8 @@ namespace Visyde
             if (Connector.instance.InRoom)
             {
                 Connector.instance.LeaveRoom();
+                //Send updates to Chat.cs
+                Connector.instance.DropdownChange(false, "Lobby");                  
             }
         }
         public async void Create(){
@@ -146,7 +150,8 @@ namespace Visyde
             RefreshPlayerList();
 
             // Notify other players through chat:
-            chatSystem.SendSystemChatMessage(player.NickName + " joined the game.", false);
+            string message = $"<color=blue>[{player.NickName}: joined the room]</color>\n";
+            messageDisplay.text += message;
         }
         // Subscribed to Connector's "onPlayerLeave" event:
         void OnPlayerLeft(PNPlayer player)
@@ -155,7 +160,8 @@ namespace Visyde
             RefreshPlayerList();
 
             // Notify other players through chat:
-            chatSystem.SendSystemChatMessage(player.NickName + " left the game.", true);
+            string message = $"<color=blue>[{player.NickName}: left the room]</color>\n";
+            messageDisplay.text += message;
         }
         // Subscribed to Connector's "onCreateRoomFailed" event:
         void onCreateRoomFailed(){
@@ -170,7 +176,11 @@ namespace Visyde
 
             chosenMapText.text = Connector.instance.maps[(int)Connector.instance.CurrentRoom.Map];
             chosenPlayerNumberText.text = Connector.instance.CurrentRoom.MaxPlayers.ToString();
+
             if (Connector.instance.CurrentRoom.AllowBots) enableBotsText.text = Connector.instance.CurrentRoom.AllowBots ? "Yes" : "No";
+
+            //Send updates to Chat.cs
+            Connector.instance.DropdownChange(true,"Lobby");      
         }
     }
 }

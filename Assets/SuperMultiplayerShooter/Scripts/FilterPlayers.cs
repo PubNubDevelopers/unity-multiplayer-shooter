@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using PubnubApi;
 using UnityEngine;
 using UnityEngine.UI;
+using Visyde;
 
 public class FilterPlayers : MonoBehaviour
 {
@@ -10,13 +11,6 @@ public class FilterPlayers : MonoBehaviour
     public Button listItemPrefab; 
     public Transform contentPanel; 
     public InputField searchPlayersInput;
-    //public Dropdown dropdown;
-
-    //Internals
-
-    //Controls how many private message recipients you would like to store.
-    private int numPrivateMessageRecipients = 3;
-
 
     void Start()
     {
@@ -45,30 +39,11 @@ public class FilterPlayers : MonoBehaviour
     /// </summary>
     /// <param name="id">The UserID of the clicked player</param>
     public void OnPlayerClick(string id)
-    {    
+    {  
+        //The UUID is used to track for sending private messages as Names are not unique.
         PNManager.pubnubInstance.PrivateMessageUUID = id;
         //Use the dropdown from Chat.cs to trigger event handlers.
-        Dropdown chatDropdown = GameObject.Find("ChatTargetDropdown").GetComponent<Dropdown>();
-        if(chatDropdown != null)
-        {
-            //Create a new dropdown option for the communication with the private player. Use their nickname.
-            Dropdown.OptionData privateMessageOption = new Dropdown.OptionData(PNManager.pubnubInstance.CachedPlayers[PNManager.pubnubInstance.PrivateMessageUUID].Name);
-
-            //Allow only 4 options: ALL, Friends, Whisper, and Private Message with a specific person.
-            //This overwrites the previous specific option if was previously set.
-            if(chatDropdown.options.Count > 3)
-            {
-                chatDropdown.options[3] = privateMessageOption;
-            }
-
-            else
-            {
-                chatDropdown.options.Add(privateMessageOption);
-            }
-
-            //Change the target to trigger the on change event in Chat.cs.
-            chatDropdown.value = chatDropdown.options.Count - 1;
-        }       
+        Connector.instance.DropdownChange(true, PNManager.pubnubInstance.CachedPlayers[PNManager.pubnubInstance.PrivateMessageUUID].Name);
     }
     
     /// <summary>
@@ -102,6 +77,11 @@ public class FilterPlayers : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates the row that contains each player to select from.
+    /// </summary>
+    /// <param name="uuid"></param>
+    /// <param name="name"></param>
     private void CreatePlayerItem(string uuid, string name)
     {
         Button newItem = Instantiate(listItemPrefab, contentPanel);
