@@ -101,7 +101,7 @@ namespace Visyde
         public UnityAction onJoinRoom;
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
-        public event Action<bool, string> OnDropdownChange;
+        public event Action<bool, string> OnPlayerSelect;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
@@ -998,12 +998,12 @@ namespace Visyde
         }
 
         /// <summary>
-        /// Update the chat dropdown when an option is added/removed.
+        /// Update the calling class when selecting a player in the list.
         /// </summary>
         /// <param name="id"></param>
-        public void DropdownChange(bool add, string id)
+        public void PlayerSelected(bool add, string id)
         {
-            OnDropdownChange?.Invoke(add, id);
+            OnPlayerSelect?.Invoke(add, id);
         }
     }
 }

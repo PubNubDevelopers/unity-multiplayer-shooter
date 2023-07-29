@@ -14,8 +14,14 @@ using System;
 public class Chat : MonoBehaviour
 {
     //UI Fields
-    //[Header("Chat Target Dropdown")]
-    [Header("UI Fields")]
+    [Header("Settings:")]
+    public Color allChatColor;
+    public Color friendsChatColor;
+    public Color privateChatColor;
+    public Color lobbyChatColor;
+    public Color systemNotificationColor;
+
+    [Header("UI References")]
     public Dropdown chatTargetDropdown;
     public Text messageDisplay;
     public InputField inputField;
@@ -53,7 +59,7 @@ public class Chat : MonoBehaviour
         });
 
         //Subscribe to trigger events whenever a new dropdown option is added.
-        Connector.instance.OnDropdownChange += UpdateDropdown;
+        Connector.instance.OnPlayerSelect += UpdateDropdown;
   
     }
 
@@ -142,7 +148,10 @@ public class Chat : MonoBehaviour
 
                 //Opens the panels.          
                 privateMessagePopupPanel.SetActive(true);
-                privateMessageDarkenPanel.SetActive(true);       
+                privateMessageDarkenPanel.SetActive(true);
+
+                //Disable input field to not take priority over searching for other players.
+                inputField.gameObject.SetActive(false);
                 break;
             case "Friends":
                 targetChatChannel = PubNubUtilities.chanFriendChat;
@@ -186,7 +195,7 @@ public class Chat : MonoBehaviour
     private void OnDestroy()
     {
         Connector.instance.onPubNubMessage -= OnPnMessage;
-        Connector.instance.OnDropdownChange -= UpdateDropdown;
+        Connector.instance.OnPlayerSelect -= UpdateDropdown;
     }
 
     /// <summary>
@@ -196,7 +205,8 @@ public class Chat : MonoBehaviour
     public void ClosePrivateMessagePopup()
     {
         privateMessageDarkenPanel.SetActive(false);
-        privateMessagePopupPanel.SetActive(false);      
+        privateMessagePopupPanel.SetActive(false);
+        inputField.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -206,26 +216,25 @@ public class Chat : MonoBehaviour
     /// <param name="result"></param>
     private void OnPnMessage(PNMessageResult<object> result)
     {
-        //TODO: dont include leaderboard channel msgs. DONT INCLUDE CHANNELROOMSTATUS FOR MESSAGES.
-        //TODO: I SHOULD REALLY FOCUS ON JUST A LIST OF CHAT CHANNELS TO FOCUS ON. IF STARTS WITH CHAT?
+        //all chat messages start with "chat"
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
             && !string.IsNullOrWhiteSpace(result.Channel) && result.Channel.StartsWith("chat"))
         {
-            string color = "";
+            Color color = new Color(0, 0, 0, 0);
 
             //Private Chat
             if (result.Channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
             {
                 if (result.Channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                 {
-                    color = "green";
+                    color = privateChatColor;
                 }        
             }
 
             //Friends
             else if(result.Channel.StartsWith("presence"))
             {
-                color = "orange";
+                color = friendsChatColor;
             }
 
             //Lobby
@@ -233,7 +242,7 @@ public class Chat : MonoBehaviour
             {
                 if (Connector.instance.CurrentRoom != null && result.Channel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
                 {
-                    color = "blue";
+                    color = lobbyChatColor;
 
                 }
             }
@@ -241,11 +250,11 @@ public class Chat : MonoBehaviour
             //All Chat
             else
             {
-                color = "white";
+                color = allChatColor;
             }
 
             //If color wasn't set, then it means the message isn't meant for us to display.
-            if(!string.IsNullOrWhiteSpace(color))
+            if(color.a == 0)
             {
                 string message = result.Message.ToString();
                 string username = GetUsername(result.Publisher, message);
@@ -280,10 +289,15 @@ public class Chat : MonoBehaviour
     /// <param name="message">The message from the user</param>
     /// <param name="recipient">The user who the sent the message</param>
     /// <param name="color">The color of the chat, representing whom it came from</param>
-    void DisplayChat(string message, string recipient,string color)
-    { 
-       string finalMessage = $"<color={color}>{recipient}:{message}</color>\n";
-       messageDisplay.text += finalMessage;
+    void DisplayChat(string message, string recipient, Color color)
+    {
+        //Forat color to be read in an HTML string.
+        string colorHex = ColorUtility.ToHtmlStringRGB(color);
+        Debug.Log($"Color string: #{colorHex}");
+
+        string finalMessage = $"<color=#{colorHex}>{recipient}:{message}</color>\n";
+
+        messageDisplay.text += finalMessage;
     }
 
     /// <summary>
