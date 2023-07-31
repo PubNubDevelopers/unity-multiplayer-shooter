@@ -45,6 +45,7 @@ namespace PubNubUnityShowcase
         static public string chanPrefixLobbyRooms = "rooms.";
         static public string chanGlobal = "global";
         static public string chanChatLobby = "chat.lobby.";
+        static public string chanChatTranslate = "translate.";
         //  --  Channels specific for chat messages
         static public string chanChatAll = "chat.all";
         static public string chanFriendList = "friends-";

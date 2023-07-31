@@ -10,6 +10,9 @@ using UnityEngine.EventSystems;
 using Visyde;
 using UnityEditor;
 using System;
+using System.Linq;
+using UnityEngine.Localization.Settings;
+using Unity.VisualScripting;
 
 public class Chat : MonoBehaviour
 {
@@ -26,7 +29,6 @@ public class Chat : MonoBehaviour
     public Text messageDisplay;
     public InputField inputField;
     public GameObject privateMessagePopupPanel;
-    public GameObject privateMessageDarkenPanel;
     public GameObject chatView;
     public Scrollbar verticalScrollbar;
     public Button closeChatButton;
@@ -49,18 +51,9 @@ public class Chat : MonoBehaviour
         {
             ChatTargetChanged(chatTargetDropdown);
         });
-   
-        //Close darken panel click events (to close private message search friends list)
-        EventTrigger eventTrigger = privateMessageDarkenPanel.AddComponent<EventTrigger>();
-        EventTrigger.Entry entry = new EventTrigger.Entry();
-        entry.eventID = EventTriggerType.PointerClick;
-        entry.callback.AddListener((eventData) => {
-            ClosePrivateMessagePopup();
-        });
 
         //Subscribe to trigger events whenever a new dropdown option is added.
         Connector.instance.OnPlayerSelect += UpdateDropdown;
-  
     }
 
     // Update is called once per frame
@@ -85,7 +78,14 @@ public class Chat : MonoBehaviour
                 //If there is text to send, send it.
                 if (!string.IsNullOrWhiteSpace(inputField.text))
                 {
-                    SendChatMessage();
+                    //Include the selected locale language whenever you are sending messages.
+                    //For sending messages, it doesn't matter what the languages are in, provided you include the source language.
+                    MessageModeration translateMessage = new MessageModeration();
+                    translateMessage.text = inputField.text;
+                    translateMessage.source = LocalizationSettings.SelectedLocale.Identifier.Code;
+                    translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
+                    translateMessage.publisher = Connector.instance.GetPubNubObject().GetCurrentUserId();
+                    SendChatMessage(translateMessage, targetChatChannel);
                 }
 
                 //Otherwise close the chat window.
@@ -130,7 +130,7 @@ public class Chat : MonoBehaviour
         Debug.Log("Selected Value : " + dropdown.value); //This will log the index of the selected option
         dropdown.RefreshShownValue();
         //Check in case the popup panels are still active. Close if they are
-        if(privateMessagePopupPanel.activeSelf || privateMessageDarkenPanel.activeSelf)
+        if(privateMessagePopupPanel.activeSelf)
         {
             ClosePrivateMessagePopup();
         }
@@ -148,7 +148,6 @@ public class Chat : MonoBehaviour
 
                 //Opens the panels.          
                 privateMessagePopupPanel.SetActive(true);
-                privateMessageDarkenPanel.SetActive(true);
 
                 //Disable input field to not take priority over searching for other players.
                 inputField.gameObject.SetActive(false);
@@ -204,7 +203,6 @@ public class Chat : MonoBehaviour
     /// </summary>
     public void ClosePrivateMessagePopup()
     {
-        privateMessageDarkenPanel.SetActive(false);
         privateMessagePopupPanel.SetActive(false);
         inputField.gameObject.SetActive(true);
     }
@@ -216,31 +214,36 @@ public class Chat : MonoBehaviour
     /// <param name="result"></param>
     private void OnPnMessage(PNMessageResult<object> result)
     {
-        //all chat messages start with "chat"
+        //all chat messages start with "chat" or "translate"
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
-            && !string.IsNullOrWhiteSpace(result.Channel) && result.Channel.StartsWith("chat"))
+            && !string.IsNullOrWhiteSpace(result.Channel) && (result.Channel.StartsWith("chat")
+            || result.Channel.StartsWith(PubNubUtilities.chanChatTranslate)))
         {
             Color color = new Color(0, 0, 0, 0);
-
-            //Private Chat
-            if (result.Channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
+            string channel = result.Channel;
+            if(result.Channel.StartsWith(PubNubUtilities.chanChatTranslate))
             {
-                if (result.Channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                channel = result.Channel.Substring(PubNubUtilities.chanChatTranslate.Length);
+            }
+            //Private Chat
+            if (channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
+            {
+                if (channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                 {
                     color = privateChatColor;
                 }        
             }
 
             //Friends
-            else if(result.Channel.StartsWith("presence"))
+            else if(channel.StartsWith("presence"))
             {
                 color = friendsChatColor;
             }
 
             //Lobby
-            else if(result.Channel.StartsWith(PubNubUtilities.chanChatLobby)) 
+            else if(channel.StartsWith(PubNubUtilities.chanChatLobby)) 
             {
-                if (Connector.instance.CurrentRoom != null && result.Channel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
+                if (Connector.instance.CurrentRoom != null && channel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
                 {
                     color = lobbyChatColor;
 
@@ -256,9 +259,51 @@ public class Chat : MonoBehaviour
             //If color wasn't set, then it means the message isn't meant for us to display.
             if(color.a == 0)
             {
-                string message = result.Message.ToString();
-                string username = GetUsername(result.Publisher, message);
-                DisplayChat(message, username, color);
+                try
+                {                  
+                    string message = "";
+
+                    //Message is already filtered for profanity at this point.
+                    //Determine if we need to translate the language before we display the chat.
+                    var moderatedMessage = JsonConvert.DeserializeObject<MessageModeration>(result.Message.ToString());
+                    if(moderatedMessage != null)
+                    {
+                        message = moderatedMessage.text;
+                        //string uuid = !string.IsNullOrWhiteSpace(moderatedMessage.publisher) ? moderatedMessage.publisher : result.Publisher;
+
+                        //If the languages match and  (don't want to display chat twice), it's already been translated or is
+                        //already in the same language, no need to do any more work. Just display the chat.
+                        if (LocalizationSettings.SelectedLocale.Identifier.Code.Equals(moderatedMessage.source))
+                        {
+                            string username = GetUsername(moderatedMessage.publisher);
+                            //Did not come from translate, display it.
+                            if (result.Channel.StartsWith("chat") 
+                                || (result.Channel.StartsWith(PubNubUtilities.chanChatTranslate) && !moderatedMessage.publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId())))
+                            {
+                                DisplayChat(message, username, color);
+                            }
+                        }
+
+                        //If they don't match, translate language
+                        else
+                        {
+                            string translateChannel = PubNubUtilities.chanChatTranslate + channel;
+
+                            //Include the selected locale language whenever you are sending messages.
+                            MessageModeration translateMessage = new MessageModeration();
+                            translateMessage.text = message;
+                            translateMessage.source = moderatedMessage.source;
+                            translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
+                            translateMessage.publisher = result.Publisher; //used to display the original name of hte user who published message.
+                            SendChatMessage(translateMessage, translateChannel);
+                        }                      
+                    }                 
+                }
+
+                catch(Exception e)
+                {
+                    Debug.Log($"Error when attempting to extract information from message: {e.Message}");
+                }                    
             }     
         }
     }
@@ -266,20 +311,19 @@ public class Chat : MonoBehaviour
     /// <summary>
     /// Publishes the chat message.
     /// </summary>
-    public async void SendChatMessage()
+    public async void SendChatMessage(MessageModeration message, string channel)
     {
-        if (!string.IsNullOrEmpty(inputField.text))
-        { 
-            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
-                .Channel(targetChatChannel)
-                .Message(inputField.text)
-                .ExecuteAsync();
+        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+            .Channel(channel)
+            .Message(message)
+            .ExecuteAsync();
+        
+        //clear input field.
+        inputField.text = string.Empty;
 
-            PNPublishResult publishResult = publishResponse.Result;
-            PNStatus status = publishResponse.Status;
-
-            //clear input field.
-            inputField.text = string.Empty;
+        if (publishResponse.Status.Error)
+        {
+            Debug.Log($"Error when attempting to send publish message: {publishResponse.Status.ErrorData}");
         }
     }
 
@@ -292,11 +336,10 @@ public class Chat : MonoBehaviour
     void DisplayChat(string message, string recipient, Color color)
     {
         //Forat color to be read in an HTML string.
-        string colorHex = ColorUtility.ToHtmlStringRGB(color);
-        Debug.Log($"Color string: #{colorHex}");
-
+        string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
+        //Filter message for profanity
+        //string filteredMessage = FilterMessageProfanity(message);
         string finalMessage = $"<color=#{colorHex}>{recipient}:{message}</color>\n";
-
         messageDisplay.text += finalMessage;
     }
 
@@ -304,7 +347,7 @@ public class Chat : MonoBehaviour
     /// Obtains the username and displays the chat.
     /// </summary>
     /// <param name="message"></param>
-    private string GetUsername(string uuid, string message)
+    private string GetUsername(string uuid)
     {
         string username = "";
         if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(uuid))
@@ -405,5 +448,5 @@ public class Chat : MonoBehaviour
             //Change to All chat.
             chatTargetDropdown.value = 0;
         }
-    }
+    } 
 }

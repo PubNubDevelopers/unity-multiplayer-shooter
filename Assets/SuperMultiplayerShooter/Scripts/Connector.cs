@@ -166,6 +166,7 @@ namespace Visyde
                     PubNubUtilities.chanRoomStatus,
                     PubNubUtilities.chanChatAll,
                     PubNubUtilities.chanPrivateChat,
+                    PubNubUtilities.chanChatTranslate + "*"
                 })
                 .ChannelGroups(new List<string>() {
                     PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat

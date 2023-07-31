@@ -6,5 +6,6 @@ public class MessageModeration
 	public string text;
 	public string source;
 	public string target;
+	public string publisher;
 }
 

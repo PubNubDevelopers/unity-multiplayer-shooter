@@ -81,7 +81,7 @@ namespace Visyde
         }
 
         // Use this for initialization
-        async void Start()
+        void Start()
         {
             //Initializes the PubNub Connection.
             pubnub = PNManager.pubnubInstance.InitializePubNub();
