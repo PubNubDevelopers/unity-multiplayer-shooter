@@ -3,6 +3,8 @@ using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
 using System.Threading.Tasks;
+using UnityEngine.Localization.Settings;
+using System;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -25,9 +27,9 @@ public class PNManager : PNManagerBehaviour
     private void Awake()
     {
         pubnubInstance = this;
+        privateMessageUUID = "";
         DontDestroyOnLoad(gameObject);
     }
-
 
     /// <summary>
     /// Returns the PNConfiguration to reinitialize the PubNub object in different scenes.
@@ -126,6 +128,46 @@ public class PNManager : PNManagerBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Update the User Metadata given the UserId.
+    /// </summary>
+    /// <param name="Uuid">UserId of the Player</param>
+    public async Task<bool> UpdateUserMetadata(string Uuid, Dictionary<string, object> metadata)
+    {      
+        //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
+        // Get Metadata for a specific UUID
+        PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
+            .Uuid(Uuid)
+            .IncludeCustom(true)
+            .ExecuteAsync();
+        PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
+        PNStatus status = getUuidMetadataResponse.Status;
+        if (!status.Error && getUuidMetadataResult != null)
+        {
+            UserMetadata meta = new UserMetadata
+            {
+                Uuid = getUuidMetadataResult.Uuid,
+                Name = getUuidMetadataResult.Name,
+                Email = getUuidMetadataResult.Email,
+                ExternalId = getUuidMetadataResult.ExternalId,
+                ProfileUrl = getUuidMetadataResult.ProfileUrl,
+                Custom = getUuidMetadataResult.Custom,
+                Updated = getUuidMetadataResult.Updated
+            };
+            if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
+            {
+                PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Store the UserId for when creating an option for the dropdown.
+    /// Dropdowns will only store one dropdown option.
+    /// </summary>
     public string PrivateMessageUUID
     {
         get { return privateMessageUUID; }

@@ -8,6 +8,7 @@ using PubnubApi.Unity;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Threading.Tasks;
+using UnityEngine.Localization.Settings;
 
 namespace Visyde
 {
@@ -350,13 +351,20 @@ namespace Visyde
             {
                 playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
                 Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-
                 //  Populate the available hat inventory, read from PubNub App Context
                 Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
-                if (customData != null && customData.ContainsKey("hats"))
+                if (customData != null)
                 {
-                    List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
-                    UpdateAvailableHats(availableHats);
+                    if(customData.ContainsKey("hats"))
+                    {
+                        List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
+                        UpdateAvailableHats(availableHats);
+                    }
+
+                    if(customData.ContainsKey("language"))
+                    {
+                        Connector.UserLanguage = JsonConvert.DeserializeObject<string>(customData["language"].ToString());
+                    }                  
                 }
             }
             //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
@@ -365,7 +373,7 @@ namespace Visyde
                 //  Generate some random starting hats for this player
                 Dictionary<string, object> customData = new Dictionary<string, object>();
                 customData["hats"] = JsonConvert.SerializeObject(GenerateRandomHats());
-
+                customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
                 // Set Metadata for UUID set in the pubnub instance
                 PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
                     .Uuid(pubnub.GetCurrentUserId())

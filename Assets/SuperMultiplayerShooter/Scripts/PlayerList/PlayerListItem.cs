@@ -39,11 +39,9 @@ namespace Visyde
         /// </summary>
         /// <param name="id">The UserID of the clicked player</param>
         public void OnPlayerClick()
-        {
-            //The UUID is used to track for sending private messages as Names are not unique.
-            PNManager.pubnubInstance.PrivateMessageUUID = userId;
+        {       
             //Use the dropdown from Chat.cs to trigger event handlers.
-            Connector.instance.PlayerSelected(true, PNManager.pubnubInstance.CachedPlayers[userId].Name);
+            Connector.instance.PlayerSelected(true, userId);
         }
     }
 }

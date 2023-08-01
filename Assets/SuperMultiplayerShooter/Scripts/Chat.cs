@@ -127,7 +127,6 @@ public class Chat : MonoBehaviour
     /// <param name="dropdown"></param>
     void ChatTargetChanged(Dropdown dropdown)
     {
-        Debug.Log("Selected Value : " + dropdown.value); //This will log the index of the selected option
         dropdown.RefreshShownValue();
         //Check in case the popup panels are still active. Close if they are
         if(privateMessagePopupPanel.activeSelf)
@@ -216,14 +215,15 @@ public class Chat : MonoBehaviour
     {
         //all chat messages start with "chat" or "translate"
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
-            && !string.IsNullOrWhiteSpace(result.Channel) && (result.Channel.StartsWith("chat")
+            && !string.IsNullOrWhiteSpace(result.Channel) && (result.Channel.StartsWith(PubNubUtilities.chanChat)
             || result.Channel.StartsWith(PubNubUtilities.chanChatTranslate)))
         {
             Color color = new Color(0, 0, 0, 0);
             string channel = result.Channel;
+            //Replace channel name with chat. to determine the color of the chat.
             if(result.Channel.StartsWith(PubNubUtilities.chanChatTranslate))
             {
-                channel = result.Channel.Substring(PubNubUtilities.chanChatTranslate.Length);
+                channel = PubNubUtilities.chanChat + result.Channel.Substring(PubNubUtilities.chanChatTranslate.Length);
             }
             //Private Chat
             if (channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
@@ -231,7 +231,18 @@ public class Chat : MonoBehaviour
                 if (channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                 {
                     color = privateChatColor;
-                }        
+                }
+
+                //Automatically add an option to the dropdown from the recipient if a private message
+                //option has not been added before. Don't actually switch dropdown selection,
+                //simply provide as an option.
+               if(string.IsNullOrEmpty(PNManager.pubnubInstance.PrivateMessageUUID))
+               {
+                    string displayName = PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name;
+                    Dropdown.OptionData newOption = new Dropdown.OptionData(displayName);
+                    PNManager.pubnubInstance.PrivateMessageUUID = result.Publisher;
+                    chatTargetDropdown.options.Add(newOption);
+               }
             }
 
             //Friends
@@ -257,7 +268,7 @@ public class Chat : MonoBehaviour
             }
 
             //If color wasn't set, then it means the message isn't meant for us to display.
-            if(color.a == 0)
+            if(color != default(Color))
             {
                 try
                 {                  
@@ -269,7 +280,6 @@ public class Chat : MonoBehaviour
                     if(moderatedMessage != null)
                     {
                         message = moderatedMessage.text;
-                        //string uuid = !string.IsNullOrWhiteSpace(moderatedMessage.publisher) ? moderatedMessage.publisher : result.Publisher;
 
                         //If the languages match and  (don't want to display chat twice), it's already been translated or is
                         //already in the same language, no need to do any more work. Just display the chat.
@@ -277,17 +287,18 @@ public class Chat : MonoBehaviour
                         {
                             string username = GetUsername(moderatedMessage.publisher);
                             //Did not come from translate, display it.
-                            if (result.Channel.StartsWith("chat") 
+                            if (result.Channel.StartsWith(PubNubUtilities.chanChat) 
                                 || (result.Channel.StartsWith(PubNubUtilities.chanChatTranslate) && !moderatedMessage.publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId())))
                             {
                                 DisplayChat(message, username, color);
                             }
                         }
 
-                        //If they don't match, translate language
-                        else
+                        //If they don't match, translate language. Ignore messages coming from translate language, to avoid duplicating message.
+                        else if(!result.Channel.StartsWith(PubNubUtilities.chanChatTranslate))
                         {
-                            string translateChannel = PubNubUtilities.chanChatTranslate + channel;
+                            //Prep the channel name to send to the PubNub Function. Replace "chat" with "translate" as we already know it's a chat message.
+                            string translateChannel = PubNubUtilities.chanChatTranslate + channel.Substring(PubNubUtilities.chanChat.Length);
 
                             //Include the selected locale language whenever you are sending messages.
                             MessageModeration translateMessage = new MessageModeration();
@@ -423,26 +434,57 @@ public class Chat : MonoBehaviour
     /// <param name="id"></param>
     public void UpdateDropdown(bool add, string id)
     {
-        //If chat window is not open, force it open.
-        if(!gameObject.activeSelf)
+        string displayName = id;
+        bool privateMessage = PNManager.pubnubInstance.CachedPlayers.ContainsKey(id);
+        //Get the username of the ID which will represent the dropdown option.
+        //If the key does not exist, then it means it is not a private message option.
+        if (privateMessage)
         {
-            gameObject.SetActive(true);
+            displayName = PNManager.pubnubInstance.CachedPlayers[id].Name;
         }
-        //Add the new option
-        if(add)
+
+        //If chat window is not open, force it open.
+        if(!chatTargetDropdown.gameObject.activeSelf)
         {
-            Dropdown.OptionData lobbyOption = new Dropdown.OptionData(id);
-            chatTargetDropdown.options.Add(lobbyOption);
+            OpenChatWindow();
+        }
+
+        int index = chatTargetDropdown.options.FindIndex((options) => options.text == displayName);
+
+        //Add the new option
+        if (add)
+        {
+            //If the option is from a private message, then check to see if the option already exists.
+            //If it does, then overwrite the dropdown with the new private message player. Otherwise create it.
+            //Option doesn't exist yet - create it.
+            if (index < 0 && (id.Equals("Lobby") || (privateMessage && string.IsNullOrEmpty(PNManager.pubnubInstance.PrivateMessageUUID))))
+            {
+                Dropdown.OptionData newOption = new Dropdown.OptionData(displayName);
+                chatTargetDropdown.options.Add(newOption);
+                index = chatTargetDropdown.options.Count - 1;
+            }
+
+            //The option exists, change the private message target.
+            else
+            {
+                string previousPrivateMessageName = PNManager.pubnubInstance.CachedPlayers[PNManager.pubnubInstance.PrivateMessageUUID].Name;
+                index = chatTargetDropdown.options.FindIndex((options) => options.text == previousPrivateMessageName);
+                chatTargetDropdown.options[index].text = displayName;
+            }
+
+            if (privateMessage)
+            {
+                PNManager.pubnubInstance.PrivateMessageUUID = id;
+            }
 
             //Change the target to trigger the on change event in Chat.cs.
-            chatTargetDropdown.value = chatTargetDropdown.options.Count - 1;
+            chatTargetDropdown.value = index;          
         }
 
         //Remove the specific option
         else
         {
             //Finds the index of the id in the dropdown list.
-            int index = chatTargetDropdown.options.FindIndex((options) => options.text == id);
             chatTargetDropdown.options.RemoveAt(index);
 
             //Change to All chat.
