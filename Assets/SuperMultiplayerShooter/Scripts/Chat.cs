@@ -30,7 +30,6 @@ public class Chat : MonoBehaviour
     public InputField inputField;
     public GameObject privateMessagePopupPanel;
     public GameObject chatView;
-    public Scrollbar verticalScrollbar;
     public Button closeChatButton;
     public Text chatOpenText;
     public Button chatButton;
@@ -383,7 +382,6 @@ public class Chat : MonoBehaviour
         //Restore hidden game objects.
         chatTargetDropdown.gameObject.SetActive(true);
         inputField.gameObject.SetActive(true);
-        verticalScrollbar.gameObject.SetActive(true);
         closeChatButton.gameObject.SetActive(true);
         chatOpenText.gameObject.SetActive(true);
         chatButton.gameObject.SetActive(false);
@@ -405,7 +403,6 @@ public class Chat : MonoBehaviour
         //Whenever the chat window is closed, display chat in reduced form.
         chatTargetDropdown.gameObject.SetActive(false);
         inputField.gameObject.SetActive(false);
-        verticalScrollbar.gameObject.SetActive(false);
         closeChatButton.gameObject.SetActive(false);
         chatOpenText.gameObject.SetActive(false);
         chatButton.gameObject.SetActive(true);
