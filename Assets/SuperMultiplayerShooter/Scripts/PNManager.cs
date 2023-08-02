@@ -3,6 +3,8 @@ using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
 using System.Threading.Tasks;
+using UnityEngine.Localization.Settings;
+using System;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -15,14 +17,19 @@ public class PNManager : PNManagerBehaviour
     //Cached players from connection.
     private static Dictionary<string, UserMetadata> cachedPlayers = new Dictionary<string, UserMetadata>();
 
+    //The list of private message connections a user can quickly connect to.
+    private static string privateMessageUUID = "";
+
+    private static string lobbyRoomName = "";
+
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
     private void Awake()
     {
         pubnubInstance = this;
+        privateMessageUUID = "";
         DontDestroyOnLoad(gameObject);
     }
-
 
     /// <summary>
     /// Returns the PNConfiguration to reinitialize the PubNub object in different scenes.
@@ -117,6 +124,56 @@ public class PNManager : PNManagerBehaviour
             }
             return true;
         }
+
         return false;
+    }
+
+    /// <summary>
+    /// Update the User Metadata given the UserId.
+    /// </summary>
+    /// <param name="Uuid">UserId of the Player</param>
+    public async Task<bool> UpdateUserMetadata(string uuid, string name, Dictionary<string, object> metadata)
+    {        
+        PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
+            .Uuid(uuid)
+            .Name(name)
+            .Custom(metadata)
+            .IncludeCustom(true)
+            .ExecuteAsync();
+
+        PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
+        PNStatus status = setUuidMetadataResponse.Status;
+
+        //Update Cached Players.
+        if (!status.Error && setUuidMetadataResult != null)
+        {
+            UserMetadata meta = new UserMetadata
+            {
+                Uuid = setUuidMetadataResult.Uuid,
+                Name = setUuidMetadataResult.Name,
+                Email = setUuidMetadataResult.Email,
+                ExternalId = setUuidMetadataResult.ExternalId,
+                ProfileUrl = setUuidMetadataResult.ProfileUrl,
+                Custom = setUuidMetadataResult.Custom,
+                Updated = setUuidMetadataResult.Updated
+            };
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
+            {
+                PNManager.pubnubInstance.CachedPlayers[setUuidMetadataResult.Uuid] = meta;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Store the UserId for when creating an option for the dropdown.
+    /// Dropdowns will only store one dropdown option.
+    /// </summary>
+    public string PrivateMessageUUID
+    {
+        get { return privateMessageUUID; }
+        set { privateMessageUUID = value; }
     }
 }

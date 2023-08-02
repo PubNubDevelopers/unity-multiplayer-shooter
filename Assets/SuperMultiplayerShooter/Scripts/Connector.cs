@@ -8,6 +8,9 @@ using PubNubUnityShowcase;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
+using UnityEngine.Localization.Settings;
+using UnityEngine.Localization;
 
 namespace Visyde
 {
@@ -89,6 +92,8 @@ namespace Visyde
         public bool InRoom { get; set; } = false;
         public List<PNRoomInfo> pubNubRooms { get; set; }   //  List of created rooms system (managed by PubNub presence state)
         public static string PNNickName { get; set; } = "Uninitialized";  //  My nickname, ultimately populated from PubNub App Context
+        public static string UserLanguage { get; set; }  // The language code of the user, defaulting to English (en)
+        public static bool IsFPSSettingEnabled { get; set; } //Whether or not the setting is enabled for 60 FPS
         public Pubnub GetPubNubObject() { return pubnub; }
         public PNPlayer LocalPlayer { get; set; }
         private long roomCounter = 0;
@@ -100,6 +105,7 @@ namespace Visyde
         public UnityAction onJoinRoom;
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
+        public event Action<bool, string> OnPlayerSelect;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
@@ -147,16 +153,30 @@ namespace Visyde
             pubNubRooms = new List<PNRoomInfo>();
             pubnub = PNManager.pubnubInstance.InitializePubNub();
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
+            UserLanguage = GetUserLanguage();
+            IsFPSSettingEnabled = GetFPSSetting();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onPresence += OnPnPresence;
+
+            // Handle channel specific changes.
+            PubNubUtilities.chanFriendList += Connector.instance.GetPubNubObject().GetCurrentUserId();
+            PubNubUtilities.chanFriendChat += Connector.instance.GetPubNubObject().GetCurrentUserId();
+
             pubnub.Subscribe<string>()
                 .Channels(new List<string>() { 
-                    PubNubUtilities.chanPrefixLobbyChat + "*",
+                    PubNubUtilities.chanChatLobby + "*",
                     PubNubUtilities.chanGlobal, 
                     PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
                     PubNubUtilities.chanPrefixLobbyRooms + "*", 
-                    PubNubUtilities.chanRoomStatus })
+                    PubNubUtilities.chanRoomStatus,
+                    PubNubUtilities.chanChatAll,
+                    PubNubUtilities.chanPrivateChat,
+                    PubNubUtilities.chanChatTranslate + "*"
+                })
+                .ChannelGroups(new List<string>() {
+                    PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat
+                })
                 .Execute();
             await PubNubGetRooms();
             //  Everything is configured, allow users to create or join a room
@@ -289,7 +309,7 @@ namespace Visyde
                     // Clear the bots array first:
                     curBots = new Bot[0];
                     // Generate a number to be attached to the bot names:
-                    bnp = Random.Range(0, 9999);
+                    bnp = UnityEngine.Random.Range(0, 9999);
                     int numCreatedBots = 0;
                     int max = CurrentRoom.MaxPlayers - TotalPlayerCount;
                     while (numCreatedBots < max)
@@ -322,10 +342,10 @@ namespace Visyde
                 b[b.Length - 1] = new Bot();
 
                 // Setup the new bot (set the name and the character chosen):
-                b[b.Length - 1].name = botPrefixes[Random.Range(0, botPrefixes.Length)] + bnp;
-                b[b.Length - 1].characterUsing = Random.Range(0, characterSelector.characters.Length);
+                b[b.Length - 1].name = botPrefixes[UnityEngine.Random.Range(0, botPrefixes.Length)] + bnp;
+                b[b.Length - 1].characterUsing = UnityEngine.Random.Range(0, characterSelector.characters.Length);
                 // And choose a random hat, or none:
-                b[b.Length - 1].hat = Random.Range(-1, ItemDatabase.instance.hats.Length);
+                b[b.Length - 1].hat = UnityEngine.Random.Range(-1, ItemDatabase.instance.hats.Length);
                 bnp += 1;   // make next bot name unique
                 
                 // Now replace the old bot array with the new one:
@@ -982,6 +1002,54 @@ namespace Visyde
             {
                 Debug.Log($"Error sending PubNub Message ({PubNubUtilities.GetCurrentMethodName()}): {publishResponse.Status.ErrorData.Information}");
             }
+        }
+
+        /// <summary>
+        /// Update the calling class when selecting a player in the list.
+        /// </summary>
+        /// <param name="id"></param>
+        public void PlayerSelected(bool add, string id)
+        {
+            OnPlayerSelect?.Invoke(add, id);
+        }
+
+        /// <summary>
+        /// Returns the language of the user
+        /// TODO: Will be replaced by getting the metadata of the user.
+        /// </summary>
+        /// <returns></returns>
+        public string GetUserLanguage()
+        {
+            string localeCode = "";
+           
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(userId)
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom != null
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom.ContainsKey("language"))
+            {
+                localeCode =  PNManager.pubnubInstance.CachedPlayers[userId].Custom["language"].ToString();
+                LocalizationSettings.SelectedLocale = Locale.CreateLocale(localeCode);
+            }
+
+            // For legacy players who have not set their language. Defaults to English.
+            else
+            {
+                localeCode = LocalizationSettings.SelectedLocale.Identifier.Code;
+            }
+
+            return localeCode;
+        }
+
+        public bool GetFPSSetting()
+        {
+            bool setting = false;
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(userId)
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom != null
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom.ContainsKey("60fps"))
+            {
+                bool.TryParse(PNManager.pubnubInstance.CachedPlayers[userId].Custom["60fps"].ToString(), out setting);
+            }
+
+            return setting;
         }
     }
 }

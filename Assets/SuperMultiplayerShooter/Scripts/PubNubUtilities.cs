@@ -2,6 +2,7 @@ using UnityEngine;
 using PubnubApi;
 using PubnubApi.Unity;
 using System.Collections.Generic;
+using Visyde;
 
 /// <summary>
 /// PubNubUtilities
@@ -43,7 +44,14 @@ namespace PubNubUnityShowcase
         //  --  Channels global to all games / lobbies  --
         static public string chanPrefixLobbyRooms = "rooms.";
         static public string chanGlobal = "global";
-        static public string chanPrefixLobbyChat = "chat.translate.";
+        static public string chanChatLobby = "chat.lobby.";
+        static public string chanChatTranslate = "translate.";
+        static public string chanChat = "chat.";
+        //  --  Channels specific for chat messages
+        static public string chanChatAll = "chat.all";
+        static public string chanFriendList = "friends-";
+        static public string chanFriendChat = "presence-";
+        static public string chanPrivateChat = "chat.private.*";
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.

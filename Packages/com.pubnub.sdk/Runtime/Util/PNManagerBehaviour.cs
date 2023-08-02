@@ -3,14 +3,16 @@ using UnityEngine;
 namespace PubnubApi.Unity {
 	[AddComponentMenu("PubNub/PubNub Manager")]
 	[HelpURL("https://www.pubnub.com/docs/sdks/unity")]
-	public class PNManagerBehaviour : MonoBehaviour {
+	public class PNManagerBehaviour : MonoBehaviour
+	{
 		public PNConfigAsset pnConfiguration;
 
-		public Pubnub pubnub {
+		public Pubnub pubnub
+		{
 			get;
 			protected set;
 		}
-		
+
 		public SubscribeCallbackListener listener { get; }
 			= new SubscribeCallbackListener();
 
@@ -19,12 +21,15 @@ namespace PubnubApi.Unity {
 		/// </summary>
 		/// <param name="userId">You can use one User ID to represent a user on all their devices, or use one User ID per client. If you allow a user to connect from multiple devices simultaneously, use the same User ID for each device, as PubNub features such as Presence, which determine's a user's online status, rely on User IDs.<br/><a href="https://www.pubnub.com/docs/general/setup/application-setup#user-ids">See documentation</a></param>
 		/// <returns></returns>
-		public Pubnub Initialize(string userId) {
-			if (Application.isPlaying) {
+		public Pubnub Initialize(string userId)
+		{
+			if (Application.isPlaying)
+			{
 				DontDestroyOnLoad(gameObject);
 			}
-			
-			if (pnConfiguration is null) {
+
+			if (pnConfiguration is null)
+			{
 				Debug.LogError("PNConfigAsset is missing", this);
 				return null;
 			}
@@ -44,15 +49,17 @@ namespace PubnubApi.Unity {
 			return pubnub;
 		}
 
-		protected virtual void OnDestroy() {
-            //With the current version of the SDK, there is an occassional object reference error
-            //when the scene is changed. This is not affecting gameplay, but will be handled by the SDK
-            //team in the future.
-            pubnub?.UnsubscribeAll<string>();
-        }
-
-		public static implicit operator Pubnub(PNManagerBehaviour pn) {
-			return pn.pubnub;
+		protected virtual void OnDestroy()
+		{
+			//With the current version of the SDK, there is an occassional object reference error
+			//when the scene is changed. This is not affecting gameplay, but will be handled by the SDK
+			//team in the future.
+			pubnub?.UnsubscribeAll<string>();
 		}
-	}
+
+        public static implicit operator Pubnub(PNManagerBehaviour pn)
+        {
+            return pn.pubnub;
+        }
+    }
 }
