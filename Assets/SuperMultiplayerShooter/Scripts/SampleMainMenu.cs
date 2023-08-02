@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine.Localization.Settings;
+using UnityEngine.Localization;
 
 namespace Visyde
 {
@@ -33,7 +34,6 @@ namespace Visyde
         public GameObject characterSelectionPanel;
         public Image characterIconPresenter;
         public GameObject loadingPanel;
-        public Toggle frameRateSetting;
         public Text totalCountPlayers;
         public Button searchPlayers;
         public InputField searchPlayersInput;
@@ -124,10 +124,7 @@ namespace Visyde
             InitialPresenceFriendListLoad();
 
             //fire a refresh command to the pubnub function to get the leaderboard to update
-            PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", _leaderboardChannelPub);
-
-            // Others:
-            frameRateSetting.isOn = Application.targetFrameRate == 60;
+            PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", _leaderboardChannelPub);   
         }
 
         /// <summary>
@@ -360,11 +357,18 @@ namespace Visyde
                         List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
                         UpdateAvailableHats(availableHats);
                     }
-
+                    
                     if(customData.ContainsKey("language"))
                     {
-                        Connector.UserLanguage = JsonConvert.DeserializeObject<string>(customData["language"].ToString());
-                    }                  
+                        Connector.UserLanguage = customData["language"].ToString();
+                    }
+                    
+                    if(customData.ContainsKey("60fps"))
+                    {
+                        bool result = false;
+                        bool.TryParse(customData["60fps"].ToString(), out result);
+                        Connector.IsFPSSettingEnabled = result;
+                    }
                 }
             }
             //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
@@ -373,7 +377,8 @@ namespace Visyde
                 //  Generate some random starting hats for this player
                 Dictionary<string, object> customData = new Dictionary<string, object>();
                 customData["hats"] = JsonConvert.SerializeObject(GenerateRandomHats());
-                customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
+                customData["language"] = LocalizationSettings.SelectedLocale;
+                customData["60fps"] = false;
                 // Set Metadata for UUID set in the pubnub instance
                 PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
                     .Uuid(pubnub.GetCurrentUserId())
@@ -565,18 +570,7 @@ namespace Visyde
             findingMatchPanel.SetActive(true);
             //  Matchmaking has been removed for simplicity
         }
-
-        // Others:
-        // *called by the toggle itself in the "On Value Changed" event:
-        public void ToggleTargetFps(){
-            Application.targetFrameRate = frameRateSetting.isOn? 60 : 30;
-
-            // Display a notif message:
-            if (frameRateSetting.isOn){
-                DataCarrier.message = "Target frame rate has been set to 60.";
-            }
-        }   
-
+   
         /// <summary>
         /// Open a search window that lets users search for other players.
         /// </summary>

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using UnityEngine.Localization.Settings;
+using UnityEngine.Localization;
 
 namespace Visyde
 {
@@ -91,7 +92,8 @@ namespace Visyde
         public bool InRoom { get; set; } = false;
         public List<PNRoomInfo> pubNubRooms { get; set; }   //  List of created rooms system (managed by PubNub presence state)
         public static string PNNickName { get; set; } = "Uninitialized";  //  My nickname, ultimately populated from PubNub App Context
-        public static string UserLanguage { get; set; } = "en"; // The language of the user, defaulting to English (en)
+        public static string UserLanguage { get; set; }  // The language code of the user, defaulting to English (en)
+        public static bool IsFPSSettingEnabled { get; set; } //Whether or not the setting is enabled for 60 FPS
         public Pubnub GetPubNubObject() { return pubnub; }
         public PNPlayer LocalPlayer { get; set; }
         private long roomCounter = 0;
@@ -150,8 +152,9 @@ namespace Visyde
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
             pubnub = PNManager.pubnubInstance.InitializePubNub();
-            UserLanguage = GetUserLanguage();
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
+            UserLanguage = GetUserLanguage();
+            IsFPSSettingEnabled = GetFPSSetting();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onPresence += OnPnPresence;
@@ -1017,7 +1020,36 @@ namespace Visyde
         /// <returns></returns>
         public string GetUserLanguage()
         {
-            return PlayerPrefs.HasKey("language") ? PlayerPrefs.GetString("language") : LocalizationSettings.SelectedLocale.Identifier.Code;
+            string localeCode = "";
+           
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(userId)
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom != null
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom.ContainsKey("language"))
+            {
+                localeCode =  PNManager.pubnubInstance.CachedPlayers[userId].Custom["language"].ToString();
+                LocalizationSettings.SelectedLocale = Locale.CreateLocale(localeCode);
+            }
+
+            // For legacy players who have not set their language. Defaults to English.
+            else
+            {
+                localeCode = LocalizationSettings.SelectedLocale.Identifier.Code;
+            }
+
+            return localeCode;
+        }
+
+        public bool GetFPSSetting()
+        {
+            bool setting = false;
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(userId)
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom != null
+                && PNManager.pubnubInstance.CachedPlayers[userId].Custom.ContainsKey("60fps"))
+            {
+                bool.TryParse(PNManager.pubnubInstance.CachedPlayers[userId].Custom["60fps"].ToString(), out setting);
+            }
+
+            return setting;
         }
     }
 }

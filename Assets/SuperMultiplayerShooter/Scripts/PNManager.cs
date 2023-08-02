@@ -132,31 +132,34 @@ public class PNManager : PNManagerBehaviour
     /// Update the User Metadata given the UserId.
     /// </summary>
     /// <param name="Uuid">UserId of the Player</param>
-    public async Task<bool> UpdateUserMetadata(string Uuid, Dictionary<string, object> metadata)
-    {      
-        //If they do not exist, pull in their metadata (since they would have already registered when first opening app), and add to cached players.                
-        // Get Metadata for a specific UUID
-        PNResult<PNGetUuidMetadataResult> getUuidMetadataResponse = await pubnub.GetUuidMetadata()
-            .Uuid(Uuid)
+    public async Task<bool> UpdateUserMetadata(string uuid, string name, Dictionary<string, object> metadata)
+    {        
+        PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
+            .Uuid(uuid)
+            .Name(name)
+            .Custom(metadata)
             .IncludeCustom(true)
             .ExecuteAsync();
-        PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
-        PNStatus status = getUuidMetadataResponse.Status;
-        if (!status.Error && getUuidMetadataResult != null)
+
+        PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
+        PNStatus status = setUuidMetadataResponse.Status;
+
+        //Update Cached Players.
+        if (!status.Error && setUuidMetadataResult != null)
         {
             UserMetadata meta = new UserMetadata
             {
-                Uuid = getUuidMetadataResult.Uuid,
-                Name = getUuidMetadataResult.Name,
-                Email = getUuidMetadataResult.Email,
-                ExternalId = getUuidMetadataResult.ExternalId,
-                ProfileUrl = getUuidMetadataResult.ProfileUrl,
-                Custom = getUuidMetadataResult.Custom,
-                Updated = getUuidMetadataResult.Updated
+                Uuid = setUuidMetadataResult.Uuid,
+                Name = setUuidMetadataResult.Name,
+                Email = setUuidMetadataResult.Email,
+                ExternalId = setUuidMetadataResult.ExternalId,
+                ProfileUrl = setUuidMetadataResult.ProfileUrl,
+                Custom = setUuidMetadataResult.Custom,
+                Updated = setUuidMetadataResult.Updated
             };
-            if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
             {
-                PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+                PNManager.pubnubInstance.CachedPlayers[setUuidMetadataResult.Uuid] = meta;
             }
             return true;
         }
