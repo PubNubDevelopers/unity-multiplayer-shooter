@@ -80,7 +80,7 @@ namespace Visyde
             return -1;
         }
 
-        public int TotalPlayerCount { get; protected set; }
+        public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
         //  PubNub properties
         private Pubnub pubnub = null;   //  Connection to PubNub used for all network comms apart from game-specific comms
@@ -106,11 +106,14 @@ namespace Visyde
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
         public event Action<bool, string> OnPlayerSelect;
+        public event Action<int> OnGlobalPlayerCountUpdate;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
         public delegate void PNMessageEvent(PNMessageResult<object> message);
         public PNMessageEvent onPubNubMessage;  //  Send chat messages to e.g. the lobby chat pane
+        public delegate void PNPresenceEvent(PNPresenceEventResult result);
+        public PNPresenceEvent onPubNubPresence;  // Receive online/offline updates
 
         // Internal variables:
         private Bot[] curBots;
@@ -118,6 +121,7 @@ namespace Visyde
         private bool startCustomGameNow;
         private bool loadNow;                       // if true, the game scene will be loaded. 
         private bool isLoadingGameScene;
+        private int globalPlayerCount = 0;           // tracks the global number of players
 
         //  The local definition of a bot
         public class Bot
@@ -179,6 +183,7 @@ namespace Visyde
                 })
                 .Execute();
             await PubNubGetRooms();
+            await GetActiveGlobalPlayers();
             //  Everything is configured, allow users to create or join a room
             mainMenu = GetComponent<SampleMainMenu>();
             mainMenu.customMatchBTN.interactable = true;
@@ -947,6 +952,13 @@ namespace Visyde
         //  Handler for PubNub Presence events
         private async void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
         {
+            //  Notify other listeners
+            try
+            {
+                onPubNubPresence(result);
+            }
+            catch (System.Exception) { }
+
             if (result.Channel.Equals(PubNubUtilities.chanGlobal))
             {
                 if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
@@ -964,6 +976,9 @@ namespace Visyde
                     //  The specified user has created or deleted a room
                     await UserIsOnlineOrStateChange(result.Uuid);
                 }
+
+                //Inform the total number of global players.
+                GlobalPlayerCountUpdate(result.Occupancy);
             }
         }
 
@@ -1050,6 +1065,40 @@ namespace Visyde
             }
 
             return setting;
+        }
+
+        public async Task<bool> GetActiveGlobalPlayers()
+        {
+            //  Determine who is present based on who is subscribed to the global channel.
+            //  Called when we first launch to determine the game state
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[]
+                {
+                    PubNubUtilities.chanGlobal + "-pnpres"
+                })
+                .IncludeUUIDs(true)
+                .ExecuteAsync();
+            PNHereNowResult hereNowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+
+            if (status != null && status.Error)
+            {
+                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+            }
+            else
+            {               
+                GlobalPlayerCountUpdate(hereNowResult.TotalOccupancy);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Update the calling class when the global number of players changes.
+        /// </summary>
+        /// <param name="count"></param>
+        public void GlobalPlayerCountUpdate(int count)
+        {
+            OnGlobalPlayerCountUpdate?.Invoke(count);
         }
     }
 }

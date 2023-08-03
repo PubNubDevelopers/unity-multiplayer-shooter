@@ -89,8 +89,8 @@ namespace Visyde
 
             //Add Listeners
             pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
-            listener.onPresence += OnPnPresence;
+            Connector.instance.onPubNubMessage += OnPnMessage;
+            Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
             listener.onObject += OnPnObject;
 
             _privateChannel += pubnub.GetCurrentUserId(); //Private channels in form of "presence-<UserId>". Necessary for buddy list tracking.
@@ -109,7 +109,6 @@ namespace Visyde
             pubnub.Subscribe<string>()
                .Channels(new string[]
                {
-                   _publicChannel,
                    _privateChannel,
                    _leaderboardChannelSub
                })
@@ -117,7 +116,7 @@ namespace Visyde
                {
                    _cgFriendList + "-pnpres" // Watch friends come online/go offline by watching presence events of this channel group and not message of users.
                })
-               .WithPresence()
+               //.WithPresence()
                .Execute();
 
             //Loads the Initial Online Occupants and Populate Friend List.
@@ -142,9 +141,8 @@ namespace Visyde
         /// <summary>
         /// Event listener to handle PubNub Message events
         /// </summary>
-        /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
             // Debug.Log($"Message received: {result.Message}");
 
@@ -187,35 +185,6 @@ namespace Visyde
                     namePos5.text = usernames[4];
                     kdPos5.text = scores[4];
                 }
-            }
-        }
-
-        /// <summary>
-        /// Event listener to handle PubNub Presence events
-        /// </summary>
-        /// <param name="pn"></param>
-        /// <param name="result"></param>
-        private async void OnPnPresence(Pubnub pn, PNPresenceEventResult result)
-        {
-            // Debug.Log(result.Event);
-            if (result.Channel.Equals(_publicChannel))
-            {
-                totalCountPlayers.text = result.Occupancy.ToString();
-
-                //When user joins, check their UUID in cached players to determine if they are a new player.                 
-                if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Uuid))
-                {
-                    await PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
-                }
-            }
-
-            //Friend List - Detect current friend online status. Ignore self.
-            else if (result.Subscription.Equals(_cgFriendList) && !pubnub.GetCurrentUserId().Equals(result.Uuid))
-            {
-                //Friend is offline when they leave or timeout.
-                bool isOnline = !(result.Event.Equals("leave") || result.Event.Equals("timeout"));
-                //Search for the friend and update status
-                UpdateCachedPlayerOnlineStatus(result.Uuid, isOnline);
             }
         }
 
@@ -297,8 +266,8 @@ namespace Visyde
         /// </summary>
         void OnDestroy()
         {
-            listener.onMessage -= OnPnMessage;
-            listener.onPresence -= OnPnPresence;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
+            Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
             listener.onObject -= OnPnObject;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
@@ -571,117 +540,6 @@ namespace Visyde
             //  Matchmaking has been removed for simplicity
         }
    
-        /// <summary>
-        /// Open a search window that lets users search for other players.
-        /// </summary>
-        public void OpenSearchWindow()
-        {
-            //Clear list of gameobjects to manage resources.
-            ClearSearchPlayersList();
-
-            //1. Make the window active when click on button.
-            if (playerListArea.activeSelf)
-            {
-                playerListArea.SetActive(false);
-            }
-
-            else
-            {
-                playerListArea.SetActive(true);
-                LoadDefaultSearchPlayers();
-            }
-        }
-
-        /// <summary>
-        /// Gets called anytime the user is attempting to filter for players using an onchangeevent.
-        /// Once users start typing, trigger onchangedevent for the nameinput
-        /// </summary>
-        public void FilterPlayers()
-        {
-            //Once event triggers, as user starts typing, clear all other users.
-            ClearSearchPlayersList();
-
-            //If completely clear search, bring back first 20 users.
-            if (string.IsNullOrWhiteSpace(searchPlayersInput.text))
-            {
-                LoadDefaultSearchPlayers();
-            }
-
-            else
-            {
-                //Filter every cached player by name. Create gameobject for each of these players.
-                foreach (KeyValuePair<string, UserMetadata> cachedPlayer in PNManager.pubnubInstance.CachedPlayers)
-                {
-                    //If users name hit a match, then add to list.
-                    //Don't add own user to the list.
-                    if (cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
-                        && !cachedPlayer.Value.Uuid.Equals(pubnub.GetCurrentUserId()) //lower case the text to allow for case insensitivity
-                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.Uuid)) == null) // don't add players to search if already friends.
-                    {
-                        Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                        duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
-                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.Uuid;
-                        duplciateContainer.gameObject.SetActive(true);
-                        filteredPlayers.Add(duplciateContainer);
-                    }
-                }
-
-                //If no users are matched, give a "couldn't find user" entry.
-                if (filteredPlayers.Count == 0)
-                {
-                    Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                    duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = "No players found...";
-                    duplciateContainer.Find("AddFriend").GetComponent<Button>().gameObject.SetActive(false);
-                    duplciateContainer.gameObject.SetActive(true);
-                    filteredPlayers.Add(duplciateContainer);
-                }
-            }        
-        }
-
-        /// <summary>
-        /// Clears the list of searched players when trying to find new players.
-        /// Used to manage resources, as well as when users are entering in new search criteria.
-        /// </summary>
-        public void ClearSearchPlayersList()
-        {
-            //Clear list of gameobjects to manage resources.
-            foreach (Transform playerItem in filteredPlayers)
-            {
-                Destroy(playerItem.gameObject);
-            }
-            filteredPlayers.Clear();
-        }
-
-        /// <summary>
-        /// Loads the first 20 players when searching for players (if no filter has been entered).
-        /// </summary>
-        public void LoadDefaultSearchPlayers()
-        {
-            int count = 0;
-            foreach (KeyValuePair<string, UserMetadata> cachedPlayer in PNManager.pubnubInstance.CachedPlayers)
-            {
-                if (count > 20)
-                {
-                    break;
-                }
-
-                else
-                {
-                    //Don't add self and friends to list.
-                    if(!cachedPlayer.Value.Uuid.Equals(pubnub.GetCurrentUserId())
-                        && filteredPlayers.Find(player => player.name.Equals("search" + cachedPlayer.Value.Uuid)) == null)                       
-                    {
-                        Transform duplciateContainer = Instantiate(searchPlayer, searchPlayerContent);
-                        duplciateContainer.Find("PlayerUsername").GetComponent<Text>().text = cachedPlayer.Value.Name;
-                        duplciateContainer.gameObject.name = "search." + cachedPlayer.Value.Uuid;
-                        duplciateContainer.gameObject.SetActive(true);
-                        filteredPlayers.Add(duplciateContainer);
-                        count++;
-                    }                 
-                }
-            }
-        }
-
         //Sets the CachedPlayer Transform's online status that is in the list with the given UserID.
         //If the IsOnline is true, then the icon will be changed to green. If false, then the icon will be changed to gray.
         public void UpdateCachedPlayerOnlineStatus(string UserID, bool IsOnline)
@@ -919,6 +777,15 @@ namespace Visyde
             {
                 SampleInventory.instance.availableHats.Add(hat);
             }
+        }
+
+        /// <summary>
+        /// Watch for any presence event changes by subscribing to Connector
+        /// </summary>
+        /// <param name="count">The global number of players in the game</param>
+        private void UpdateGlobalPlayers(int count)
+        {
+            totalCountPlayers.text = count.ToString();
         }
     }
 }
