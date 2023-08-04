@@ -3315,24 +3315,8 @@ MonoBehaviour:
   characterIconPresenter: {fileID: 509976686}
   loadingPanel: {fileID: 104141495}
   totalCountPlayers: {fileID: 1285134632}
-  searchPlayers: {fileID: 0}
-  searchPlayersInput: {fileID: 0}
-  playerListArea: {fileID: 0}
-  searchPlayerContent: {fileID: 0}
-  searchPlayer: {fileID: 0}
   onlineStatus: {fileID: 0}
   chat: {fileID: 912922045}
-  leaderboardText: {fileID: 0}
-  namePos1: {fileID: 82773666}
-  namePos2: {fileID: 1678524372}
-  namePos3: {fileID: 964586650}
-  namePos4: {fileID: 765361084}
-  namePos5: {fileID: 753780444}
-  kdPos1: {fileID: 1766222534}
-  kdPos2: {fileID: 1580499163}
-  kdPos3: {fileID: 1240631177}
-  kdPos4: {fileID: 1836574619}
-  kdPos5: {fileID: 1294845866}
   friendListBtn: {fileID: 1590882559}
   totalFriendCountText: {fileID: 815029264}
   onlineFriendsCountText: {fileID: 743645679}
@@ -15499,6 +15483,7 @@ GameObject:
   - component: {fileID: 1338784519}
   - component: {fileID: 1338784521}
   - component: {fileID: 1338784520}
+  - component: {fileID: 1338784522}
   m_Layer: 5
   m_Name: Leaderboard
   m_TagString: Untagged
@@ -15566,6 +15551,28 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1338784518}
   m_CullTransparentMesh: 0
+--- !u!114 &1338784522
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1338784518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c7d3c83b290fea44b5fd72c8607f1ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  namePos1: {fileID: 82773666}
+  namePos2: {fileID: 1678524372}
+  namePos3: {fileID: 964586650}
+  namePos4: {fileID: 765361084}
+  namePos5: {fileID: 753780444}
+  kdPos1: {fileID: 1766222534}
+  kdPos2: {fileID: 1580499163}
+  kdPos3: {fileID: 1240631177}
+  kdPos4: {fileID: 1836574619}
+  kdPos5: {fileID: 1294845866}
 --- !u!1 &1341047193
 GameObject:
   m_ObjectHideFlags: 0
@@ -22940,8 +22947,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 278.22485, y: 0}
-  m_SizeDelta: {x: 548.4497, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2138168473
 MonoBehaviour:

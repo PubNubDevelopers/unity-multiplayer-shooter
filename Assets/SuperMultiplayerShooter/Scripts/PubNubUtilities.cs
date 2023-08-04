@@ -47,6 +47,8 @@ namespace PubNubUnityShowcase
         static public string chanChatLobby = "chat.lobby.";
         static public string chanChatTranslate = "translate.";
         static public string chanChat = "chat.";
+        static public string chanLeaderboardPub = "score.leaderboard";
+        static public string chanLeaderboardSub = "leaderboard_scores";
         //  --  Channels specific for chat messages
         static public string chanChatAll = "chat.all";
         static public string chanFriendList = "friends-";

@@ -99,6 +99,7 @@ namespace Visyde
         private long roomCounter = 0;
         //  End PubNub properties
 
+        // Events and Actions
         public delegate void IntEvent(int i);
         public IntEvent onRoomListChange;
         public UnityAction onCreateRoomFailed;
@@ -114,14 +115,16 @@ namespace Visyde
         public PNMessageEvent onPubNubMessage;  //  Send chat messages to e.g. the lobby chat pane
         public delegate void PNPresenceEvent(PNPresenceEventResult result);
         public PNPresenceEvent onPubNubPresence;  // Receive online/offline updates
-
+        public event Action OnConnectorReady; // Signals listeners that the Connector.instance is ready to go.
+        public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
+        public PNObjectEvent onPubNubObject;
+        
         // Internal variables:
         private Bot[] curBots;
         private int bnp;
         private bool startCustomGameNow;
         private bool loadNow;                       // if true, the game scene will be loaded. 
         private bool isLoadingGameScene;
-        private int globalPlayerCount = 0;           // tracks the global number of players
 
         //  The local definition of a bot
         public class Bot
@@ -140,6 +143,7 @@ namespace Visyde
         {
             listener.onMessage -= OnPnMessage;
             listener.onPresence -= OnPnPresence;
+            listener.onObject -= OnPnObject;
             try
             {
                 pubnub.Unsubscribe<string>()
@@ -152,16 +156,18 @@ namespace Visyde
         async void Start()
         {
             //  PubNub initialization
+            pubnub = PNManager.pubnubInstance.InitializePubNub();
+            //await RemoveUserIDMetdata();
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
             UserLanguage = GetUserLanguage();
             IsFPSSettingEnabled = GetFPSSetting();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onPresence += OnPnPresence;
+            listener.onObject += OnPnObject;
 
             // Handle channel specific changes.
             PubNubUtilities.chanFriendList += Connector.instance.GetPubNubObject().GetCurrentUserId();
@@ -176,7 +182,8 @@ namespace Visyde
                     PubNubUtilities.chanRoomStatus,
                     PubNubUtilities.chanChatAll,
                     PubNubUtilities.chanPrivateChat,
-                    PubNubUtilities.chanChatTranslate + "*"
+                    PubNubUtilities.chanChatTranslate + "*",
+                    PubNubUtilities.chanLeaderboardSub
                 })
                 .ChannelGroups(new List<string>() {
                     PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat
@@ -184,9 +191,11 @@ namespace Visyde
                 .Execute();
             await PubNubGetRooms();
             await GetActiveGlobalPlayers();
+            await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
             //  Everything is configured, allow users to create or join a room
             mainMenu = GetComponent<SampleMainMenu>();
             mainMenu.customMatchBTN.interactable = true;
+            ConnectorReady();
         }
 
         void Update()
@@ -982,6 +991,17 @@ namespace Visyde
             }
         }
 
+        //  Handler for PubNub Object events
+        private async void OnPnObject(Pubnub pubnub, PNObjectEventResult result)
+        {
+            //  Notify other listeners
+            try
+            {
+                onPubNubObject(result);
+            }
+            catch (System.Exception) { }
+        }
+
         //  User wants to join a rom.  Notify everyone by sending a PubNub message
         private async void PNJoinCustomRoom(Pubnub pubnub, string channel, string myUserId, string myNickname, string ownerId)
         {
@@ -1067,6 +1087,10 @@ namespace Visyde
             return setting;
         }
 
+        /// <summary>
+        /// Gets all the active global players in the game
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> GetActiveGlobalPlayers()
         {
             //  Determine who is present based on who is subscribed to the global channel.
@@ -1099,6 +1123,45 @@ namespace Visyde
         public void GlobalPlayerCountUpdate(int count)
         {
             OnGlobalPlayerCountUpdate?.Invoke(count);
+        }
+
+        /// <summary>
+        /// Signals other classes that the connector is ready to go.
+        /// </summary>
+        public void ConnectorReady()
+        {
+            OnConnectorReady?.Invoke();
+        }
+
+        //  When the player is first created, they are assigned some random hats 
+        public List<int> GenerateRandomHats()
+        {
+            System.Random rnd = new System.Random();
+            List<int> myHats = Enumerable.Range(0, 7).OrderBy(x => rnd.Next()).Take(4).ToList();
+            return myHats;
+        }
+
+        //  Update the player hat inventory (shown on the customize screen)
+        public void UpdateAvailableHats(List<int> availableHats)
+        {
+            SampleInventory.instance.availableHats.Clear();
+            foreach (int hat in availableHats)
+            {
+                SampleInventory.instance.availableHats.Add(hat);
+            }
+        }
+
+        // Test cases
+        public async Task<bool> RemoveUserIDMetdata()
+        {
+            // Remove Metadata for UUID set in the pubnub instance
+            PNResult<PNRemoveUuidMetadataResult> removeUuidMetadataResponse = await pubnub.RemoveUuidMetadata()
+                .Uuid(userId)
+                .ExecuteAsync();
+            PNRemoveUuidMetadataResult removeUuidMetadataResult = removeUuidMetadataResponse.Result;
+            PNStatus status = removeUuidMetadataResponse.Status;
+
+            return true;
         }
     }
 }

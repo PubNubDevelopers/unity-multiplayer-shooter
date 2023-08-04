@@ -35,47 +35,8 @@ namespace Visyde
         public Image characterIconPresenter;
         public GameObject loadingPanel;
         public Text totalCountPlayers;
-        public Button searchPlayers;
-        public InputField searchPlayersInput;
-        public GameObject playerListArea;
-        public Transform searchPlayerContent;
-        public Transform searchPlayer;
         public Image onlineStatus;
         public GameObject chat;
-
-        // leaderboard
-        public Text leaderboardText;
-        public Text namePos1;
-        public Text namePos2;
-        public Text namePos3;
-        public Text namePos4;
-        public Text namePos5;
-
-        public Text kdPos1;
-        public Text kdPos2;
-        public Text kdPos3;
-        public Text kdPos4;
-        public Text kdPos5;
-        
-        private string _leaderboardChannelPub = "score.leaderboard";
-        private string _leaderboardChannelSub = "leaderboard_scores";
-
-        //Friend List
-        public Button friendListBtn;
-        public Text totalFriendCountText; //total number of friends user has, both online/offline.
-        public Text onlineFriendsCountText; //number of friends that are currently online.
-        public GameObject friendListArea;
-        public Transform playerContainer;
-        public Transform player;
-        private List<Transform> friendList = new List<Transform>();
-        private List<Transform> filteredPlayers = new List<Transform>();
-
-        //Helper properties
-        private string _privateChannel = "presence-";
-        private string _publicChannel = "chat.public"; // Used for global presence, all chat, etc.
-        private string _cgFriendList = "friends-"; //Used to track presence events for friends. Used to determine when friends come online/offline.
-        private Pubnub pubnub;
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         void Awake(){
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
@@ -84,121 +45,41 @@ namespace Visyde
         // Use this for initialization
         void Start()
         {
-            //Initializes the PubNub Connection.
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
-
             //Add Listeners
-            pubnub.AddListener(listener);
-            Connector.instance.onPubNubMessage += OnPnMessage;
             Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
-            listener.onObject += OnPnObject;
-
-            _privateChannel += pubnub.GetCurrentUserId(); //Private channels in form of "presence-<UserId>". Necessary for buddy list tracking.
-            _cgFriendList += pubnub.GetCurrentUserId(); //Manages the friend lists.
-         
-            //Obtain and cache user metadata.
-            //  todo I think we should await this but it seems unreliable (I suspect because SampleMenu.cs and Connector use different instances of pubnub)
-            GetAllUserMetadata();
-
-            //Add client to Channel Group just in case first time load. Will not add if already present.
-            AddChannelsToGroup(_cgFriendList, new string[] { _privateChannel });
-           
-            //Subscribe to the list of Channels
-            //Currently listening on a public channel (for presence and all chat for all users)
-            //and a buddylist channel for personal user to listen for any buddy list events.
-            pubnub.Subscribe<string>()
-               .Channels(new string[]
-               {
-                   _privateChannel,
-                   _leaderboardChannelSub
-               })
-               .ChannelGroups(new string[]
-               {
-                   _cgFriendList + "-pnpres" // Watch friends come online/go offline by watching presence events of this channel group and not message of users.
-               })
-               //.WithPresence()
-               .Execute();
-
-            //Loads the Initial Online Occupants and Populate Friend List.
-            InitialPresenceFriendListLoad();
-
-            //fire a refresh command to the pubnub function to get the leaderboard to update
-            PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", _leaderboardChannelPub);   
+            Connector.instance.OnConnectorReady += ConnectorReady;
+            Connector.instance.onPubNubObject += OnPnObject;
         }
 
         /// <summary>
-        /// Publishes a Message to the PubNub Network
+        /// Watch for any presence event changes by subscribing to Connector
         /// </summary>
-        /// <param name="text"></param>
-        private async void PublishMessage(string text, string channel)
+        /// <param name="count">The global number of players in the game</param>
+        private void UpdateGlobalPlayers(int count)
         {
-            await pubnub.Publish()
-             .Channel(channel)
-             .Message(text)
-             .ExecuteAsync();
+            totalCountPlayers.text = count.ToString();
         }
 
         /// <summary>
-        /// Event listener to handle PubNub Message events
+        /// Watch for when the connector is ready.
         /// </summary>
-        /// <param name="result"></param>
-        private void OnPnMessage(PNMessageResult<object> result)
+        private void ConnectorReady()
         {
-            // Debug.Log($"Message received: {result.Message}");
-
-            // Enable the button once we have established connection to PubNub, todo it is better to use a status listener here. 
-            // Leaderboard Updates
-            if (result.Channel.Equals(_leaderboardChannelSub))
-            {
-                Debug.Log(result.Message);
-                Dictionary<string, object> msg = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());// as Dictionary<string, object>;
-                //Dictionary<string, object> msg = result.Message
-                var usernames = (msg["username"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
-                var scores = (msg["score"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
-
-                if (usernames[0] != null)
-                {
-                    namePos1.text = usernames[0];
-                    kdPos1.text = scores[0];
-                }
-
-                if (usernames[1] != null)
-                {
-                    namePos2.text = usernames[1];
-                    kdPos2.text = scores[1];
-                }
-
-                if (usernames[2] != null)
-                {
-                    namePos3.text = usernames[2];
-                    kdPos3.text = scores[2];
-                }
-
-                if (usernames[3] != null)
-                {
-                    namePos4.text = usernames[3];
-                    kdPos4.text = scores[3];
-                }
-
-                if (usernames[4] != null)
-                {
-                    namePos5.text = usernames[4];
-                    kdPos5.text = scores[4];
-                }
-            }
+            //Sets up the Main Menu based on player cached information.
+            MainMenuSetup();
         }
-
+    
         /// <summary>
         /// Event listener to handle PubNub Object events
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnObject(Pubnub pn, PNObjectEventResult result)
+        private void OnPnObject(PNObjectEventResult result)
         {
             //Catch other player updates (when their name changes, etc)
             if (result != null)
             {
-                //User Metadata Update from another player, such as a name change. Update chached players, as well as friend list.
+                //User Metadata Update from another player, such as a name change. Update chached player
                 if (result.Type.Equals("uuid"))
                 {
                     UserMetadata meta = new UserMetadata
@@ -211,17 +92,27 @@ namespace Visyde
                         Custom = result.UuidMetadata.Custom,
                         Updated = result.UuidMetadata.Updated
                     };
-                    PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
 
-                    //Update friend list if the update user has updates to make.
-                    //No need to update player search, as it pulls from cached players.
-                    Transform updateFriend = friendList.Find(player => player.name.Equals(result.UuidMetadata.Uuid));
-                    if (updateFriend != null)
+                    // Update existing player
+                    if(result.Event.Equals("set") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                     {
-                        updateFriend.Find("PlayerUsername").GetComponent<Text>().text = result.UuidMetadata.Name;
+                        PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
+                    }
+
+                    // Remove player from cache
+                    else if (result.Event.Equals("delete") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
+                    {
+                        PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
+                    }
+
+                    // Add new player
+                    else
+                    {
+                        PNManager.pubnubInstance.CachedPlayers.Add(result.UuidMetadata.Uuid, meta);
                     }
                 }
-                //Friend List - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
+                /*
+                // TODO: Handle Friend List Changes - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
                 else if (result.Type.Equals("membership"))
                 {
                     //Another player has added client as a friend
@@ -236,9 +127,10 @@ namespace Visyde
                         RemoveFriend(result.UuidMetadata.Uuid);
                     }
                 }
+                */
             }
         }
-        
+      
         // Update is called once per frame
         void Update()
         {
@@ -266,9 +158,9 @@ namespace Visyde
         /// </summary>
         void OnDestroy()
         {
-            Connector.instance.onPubNubMessage -= OnPnMessage;
             Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
-            listener.onObject -= OnPnObject;
+            Connector.instance.OnConnectorReady -= ConnectorReady;
+            Connector.instance.onPubNubObject -= OnPnObject;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
             //there are new players.
@@ -276,120 +168,50 @@ namespace Visyde
         }
 
         /// <summary>
-        /// Obtains all player metadata from this PubNub Keyset to cache.
+        /// Extracts metadata for active user and performs menu setup.
         /// </summary>
-        private async Task GetAllUserMetadata()
-        {
-            PNResult<PNGetAllUuidMetadataResult> getAllUuidMetadataResponse = await pubnub.GetAllUuidMetadata()
-                .IncludeCustom(true)
-                .IncludeCount(true)
-                .ExecuteAsync();
-
-            PNGetAllUuidMetadataResult getAllUuidMetadataResult = getAllUuidMetadataResponse.Result;
-            PNStatus status = getAllUuidMetadataResponse.Status;
-
-            //Populate Cached Players Dictionary only if they have been set previously
-            if (!status.Error && getAllUuidMetadataResult.TotalCount > 0)
-            {
-                foreach (PNUuidMetadataResult pnUUIDMetadataResult in getAllUuidMetadataResult.Uuids)
-                {
-                    UserMetadata meta = new UserMetadata
-                    {
-                        Uuid = pnUUIDMetadataResult.Uuid,
-                        Name = pnUUIDMetadataResult.Name,
-                        Email = pnUUIDMetadataResult.Email,
-                        ExternalId = pnUUIDMetadataResult.ExternalId,
-                        ProfileUrl = pnUUIDMetadataResult.ProfileUrl,
-                        Custom = pnUUIDMetadataResult.Custom,
-                        Updated = pnUUIDMetadataResult.Updated
-                    };
-
-                    try
-                    {
-                        PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
-                    }
-                    catch (System.Exception) { }
-                }
-            }
-
+        private void MainMenuSetup()
+        {          
             //Change playerInput name to be set to username of the user as long as the name was originally set.
-            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
+            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(Connector.instance.GetPubNubObject().GetCurrentUserId()))
             {
-                playerNameInput.text = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-                Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-                //  Populate the available hat inventory, read from PubNub App Context
-                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+                playerNameInput.text = Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name;
+                //  Populate the available hat inventory and other settings, read from PubNub App Context
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom;
                 if (customData != null)
                 {
-                    if(customData.ContainsKey("hats"))
+                    List<int> availableHats = new List<int>();
+                    if (customData.ContainsKey("hats"))
                     {
-                        List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
-                        UpdateAvailableHats(availableHats);
+                        availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
                     }
-                    
-                    if(customData.ContainsKey("language"))
+
+                    // Users should always have hats should never be null - catch legacy user situations.
+                    else
+                    {
+                        availableHats = Connector.instance.GenerateRandomHats();
+                        customData.Add("hats", availableHats);
+                        PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom = customData;
+                    }
+
+                    Connector.instance.UpdateAvailableHats(availableHats);
+
+                    if (customData.ContainsKey("language"))
                     {
                         Connector.UserLanguage = customData["language"].ToString();
                     }
-                    
-                    if(customData.ContainsKey("60fps"))
+
+                    if (customData.ContainsKey("60fps"))
                     {
                         bool result = false;
                         bool.TryParse(customData["60fps"].ToString(), out result);
                         Connector.IsFPSSettingEnabled = result;
                     }
                 }
-            }
-            //If current user cannot be found in cached players, then a new user is logged in. Set the metadata and add.
-            else
-            {
-                //  Generate some random starting hats for this player
-                Dictionary<string, object> customData = new Dictionary<string, object>();
-                customData["hats"] = JsonConvert.SerializeObject(GenerateRandomHats());
-                customData["language"] = LocalizationSettings.SelectedLocale;
-                customData["60fps"] = false;
-                // Set Metadata for UUID set in the pubnub instance
-                PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
-                    .Uuid(pubnub.GetCurrentUserId())
-                    .Name(pubnub.GetCurrentUserId())
-                    .Custom(customData)
-                    .IncludeCustom(true)
-                    .ExecuteAsync();
-                PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
-                PNStatus setUUIDResponseStatus = setUuidMetadataResponse.Status;
-
-                if (!setUUIDResponseStatus.Error)
-                {
-                    UserMetadata meta = new UserMetadata
-                    {
-                        Uuid = setUuidMetadataResult.Uuid,
-                        Name = setUuidMetadataResult.Name,
-                        Email = setUuidMetadataResult.Email,
-                        ExternalId = setUuidMetadataResult.ExternalId,
-                        ProfileUrl = setUuidMetadataResult.ProfileUrl,
-                        Custom = setUuidMetadataResult.Custom,
-                        Updated = setUuidMetadataResult.Updated
-                    };
-                    if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
-                    {
-                        PNManager.pubnubInstance.CachedPlayers.Remove(setUuidMetadataResult.Uuid);
-                    }
-                    if (setUuidMetadataResult.Custom != null && setUuidMetadataResult.Custom.ContainsKey("hats"))
-                    {
-                        List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(setUuidMetadataResult.Custom["hats"].ToString());
-                        UpdateAvailableHats(availableHats);
-                    }
-                    PNManager.pubnubInstance.CachedPlayers.Add(setUuidMetadataResult.Uuid, meta);
-                    playerNameInput.text = setUuidMetadataResult.Uuid;
-                }
-
-                else
-                {
-                    Debug.Log($"An error has occurred: {setUUIDResponseStatus.Error}");
-                }
-            }
+            }                        
         }
 
+        /*
         /// <summary>
         /// Initial presence request for the channel name. Used for the initial total count, as well as to
         /// construct the client's friend list.
@@ -417,10 +239,9 @@ namespace Visyde
                 //Initial count of players in the game
                 if (herenowResult.Channels.Count > 0)
                 {
-                    totalCountPlayers.text = herenowResult.Channels[_publicChannel].Occupants.Count.ToString();
 
                     //Use this list to construct the friend list for the client.
-                    GetFriendList(herenowResult.Channels[_publicChannel].Occupants);
+                    //GetFriendList(herenowResult.Channels[_publicChannel].Occupants);
                 }
             }
         }
@@ -507,30 +328,12 @@ namespace Visyde
             onlineFriendsCountText.text = onlineFriendCount.ToString(); // dont include self.
             totalFriendCountText.text = totalFriendCount.ToString(); //Update at same time  
         }
-
+        */
         // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
         public async void SetPlayerName()
         {
-            // Set Metadata for UUID set in the pubnub instance
-            PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
-                .Uuid(pubnub.GetCurrentUserId())
-                .Name(playerNameInput.text)
-                .ExecuteAsync();
-            PNSetUuidMetadataResult setUuidMetadataResult = setUuidMetadataResponse.Result;
-            PNStatus status = setUuidMetadataResponse.Status;
-            if (!status.Error && setUuidMetadataResult != null)
-            {
-                //Update cached players name.
-                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
-                Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
-            }
-
-            //Update specific gameobject if user updates while the filter list is open.          
-            GameObject playerContainer = GameObject.Find(pubnub.GetCurrentUserId());
-            if(playerContainer != null)
-            {
-                playerContainer.transform.GetChild(1).GetComponent<Text>().text = playerNameInput.text; // Update the text field
-            }
+            await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom);
+            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name = playerNameInput.text;     
         }
 
         // Main:
@@ -539,7 +342,7 @@ namespace Visyde
             findingMatchPanel.SetActive(true);
             //  Matchmaking has been removed for simplicity
         }
-   
+        /*
         //Sets the CachedPlayer Transform's online status that is in the list with the given UserID.
         //If the IsOnline is true, then the icon will be changed to green. If false, then the icon will be changed to gray.
         public void UpdateCachedPlayerOnlineStatus(string UserID, bool IsOnline)
@@ -760,32 +563,8 @@ namespace Visyde
                 Debug.Log(string.Format("Error: statuscode: {0}, ErrorData: {1}, Category: {2}", rmChFromCgResponse.Status.StatusCode, rmChFromCgResponse.Status.ErrorData, rmChFromCgResponse.Status.Category));
             }
         }
-
-        //  When the player is first created, they are assigned some random hats 
-        private List<int> GenerateRandomHats()
-        {
-            System.Random rnd = new System.Random();
-            List<int> myHats = Enumerable.Range(0, 7).OrderBy(x => rnd.Next()).Take(4).ToList();
-            return myHats;
-        }
-
-        //  Update the player hat inventory (shown on the customize screen)
-        private void UpdateAvailableHats(List<int> availableHats)
-        {
-            SampleInventory.instance.availableHats.Clear();
-            foreach (int hat in availableHats)
-            {
-                SampleInventory.instance.availableHats.Add(hat);
-            }
-        }
-
-        /// <summary>
-        /// Watch for any presence event changes by subscribing to Connector
-        /// </summary>
-        /// <param name="count">The global number of players in the game</param>
-        private void UpdateGlobalPlayers(int count)
-        {
-            totalCountPlayers.text = count.ToString();
-        }
+        */
+    
+  
     }
 }
