@@ -122,7 +122,7 @@ namespace Visyde
             {
                 Connector.instance.LeaveRoom();
                 //Send updates to Chat.cs
-                Connector.instance.PlayerSelected(false, "Lobby");                  
+                Connector.instance.PlayerSelected("chat-remove", "Lobby");
             }
         }
         public async void Create(){
@@ -180,7 +180,7 @@ namespace Visyde
             if (Connector.instance.CurrentRoom.AllowBots) enableBotsText.text = Connector.instance.CurrentRoom.AllowBots ? "Yes" : "No";
 
             //Send updates to Chat.cs
-            Connector.instance.PlayerSelected(true,"Lobby");      
+            Connector.instance.PlayerSelected("chat-add","Lobby");      
         }
     }
 }

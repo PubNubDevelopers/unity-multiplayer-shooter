@@ -106,7 +106,7 @@ namespace Visyde
         public UnityAction onJoinRoom;
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
-        public event Action<bool, string> OnPlayerSelect;
+        public event Action<string, string> OnPlayerSelect;
         public event Action<int> OnGlobalPlayerCountUpdate;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
@@ -157,7 +157,8 @@ namespace Visyde
         {
             //  PubNub initialization
             pubnub = PNManager.pubnubInstance.InitializePubNub();
-            //await RemoveUserIDMetdata();
+
+            //await RemoveUserIDMetdata("673a0038-de6f-4e34-a376-b6b2303bb463"); Testing user metadata
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
@@ -991,8 +992,8 @@ namespace Visyde
             }
         }
 
-        //  Handler for PubNub Object events
-        private async void OnPnObject(Pubnub pubnub, PNObjectEventResult result)
+        //  Handler for PubNub Object event
+        private void OnPnObject(Pubnub pubnub, PNObjectEventResult result)
         {
             //  Notify other listeners
             try
@@ -1042,10 +1043,12 @@ namespace Visyde
         /// <summary>
         /// Update the calling class when selecting a player in the list.
         /// </summary>
+        /// <param name="action">The action that is occurring (adding a friend, creating private message option, etc)</param>
+
         /// <param name="id"></param>
-        public void PlayerSelected(bool add, string id)
+        public void PlayerSelected(string action, string id)
         {
-            OnPlayerSelect?.Invoke(add, id);
+            OnPlayerSelect?.Invoke(action, id);
         }
 
         /// <summary>
@@ -1151,12 +1154,12 @@ namespace Visyde
             }
         }
 
-        // Test cases
-        public async Task<bool> RemoveUserIDMetdata()
+        // Test case
+        public async Task<bool> RemoveUserIDMetdata(string id)
         {
             // Remove Metadata for UUID set in the pubnub instance
             PNResult<PNRemoveUuidMetadataResult> removeUuidMetadataResponse = await pubnub.RemoveUuidMetadata()
-                .Uuid(userId)
+                .Uuid(id)
                 .ExecuteAsync();
             PNRemoveUuidMetadataResult removeUuidMetadataResult = removeUuidMetadataResponse.Result;
             PNStatus status = removeUuidMetadataResponse.Status;

@@ -34,6 +34,7 @@ public class Chat : MonoBehaviour
     public Text chatOpenText;
     public Button chatButton;
     public EventSystem eventSystem;
+    public GameObject friendsListPanel;
 
     //Internals
     private string targetChatChannel = PubNubUtilities.chanChatAll; // intended target when sending chat messages
@@ -132,6 +133,13 @@ public class Chat : MonoBehaviour
         {
             ClosePrivateMessagePopup();
         }
+
+        //If chat window is not open, force it open.
+        if (!chatTargetDropdown.gameObject.activeSelf)
+        {
+            OpenChatWindow();
+        }
+
         string selectedText = dropdown.options[dropdown.value].text;
         switch(selectedText)
         {
@@ -202,7 +210,12 @@ public class Chat : MonoBehaviour
     public void ClosePrivateMessagePopup()
     {
         privateMessagePopupPanel.SetActive(false);
-        inputField.gameObject.SetActive(true);
+
+        //Don't force inputfield active if looking to add friends via Friends List.
+        if(!friendsListPanel.activeSelf)
+        {
+            inputField.gameObject.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -429,8 +442,14 @@ public class Chat : MonoBehaviour
     /// Update the dropdown with the new option received.
     /// </summary>
     /// <param name="id"></param>
-    public void UpdateDropdown(bool add, string id)
+    public void UpdateDropdown(string action, string id)
     {
+        // Immediately exit if the event is triggered when selecting friends.
+        if(friendsListPanel.activeSelf && action.Equals("selected")) 
+        {
+            return;
+        }
+
         string displayName = id;
         bool privateMessage = PNManager.pubnubInstance.CachedPlayers.ContainsKey(id);
         //Get the username of the ID which will represent the dropdown option.
@@ -440,16 +459,10 @@ public class Chat : MonoBehaviour
             displayName = PNManager.pubnubInstance.CachedPlayers[id].Name;
         }
 
-        //If chat window is not open, force it open.
-        if(!chatTargetDropdown.gameObject.activeSelf)
-        {
-            OpenChatWindow();
-        }
-
         int index = chatTargetDropdown.options.FindIndex((options) => options.text == displayName);
 
         //Add the new option
-        if (add)
+        if (action.Equals("chat-add") || action.Equals("selected")) 
         {
             //If the option is from a private message, then check to see if the option already exists.
             //If it does, then overwrite the dropdown with the new private message player. Otherwise create it.
@@ -475,17 +488,20 @@ public class Chat : MonoBehaviour
             }
 
             //Change the target to trigger the on change event in Chat.cs.
-            chatTargetDropdown.value = index;          
+            chatTargetDropdown.value = index;     
         }
 
         //Remove the specific option
-        else
+        else if(action.Equals("chat-remove"))
         {
-            //Finds the index of the id in the dropdown list.
-            chatTargetDropdown.options.RemoveAt(index);
+            //Finds the index of the id in the dropdown list if it exists.
+            if(chatTargetDropdown.options[index] != null)
+            {
+                chatTargetDropdown.options.RemoveAt(index);
 
-            //Change to All chat.
-            chatTargetDropdown.value = 0;
+                //Change to All chat.
+                chatTargetDropdown.value = 0;
+            }          
         }
     } 
 }

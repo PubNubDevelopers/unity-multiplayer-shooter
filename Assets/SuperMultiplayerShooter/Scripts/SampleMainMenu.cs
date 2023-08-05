@@ -93,23 +93,25 @@ namespace Visyde
                         Updated = result.UuidMetadata.Updated
                     };
 
-                    // Update existing player
-                    if(result.Event.Equals("set") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
+                    // Add new or update existing player
+                    if(result.Event.Equals("set"))
                     {
-                        PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
+                        if(PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
+                        {
+                            PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
+                        }
+
+                        else
+                        {
+                            PNManager.pubnubInstance.CachedPlayers.Add(result.UuidMetadata.Uuid, meta);
+                        }
                     }
 
                     // Remove player from cache
                     else if (result.Event.Equals("delete") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                     {
                         PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
-                    }
-
-                    // Add new player
-                    else
-                    {
-                        PNManager.pubnubInstance.CachedPlayers.Add(result.UuidMetadata.Uuid, meta);
-                    }
+                    }      
                 }
                 /*
                 // TODO: Handle Friend List Changes - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)
