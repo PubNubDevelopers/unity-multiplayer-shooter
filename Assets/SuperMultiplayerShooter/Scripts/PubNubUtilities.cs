@@ -54,6 +54,11 @@ namespace PubNubUnityShowcase
         static public string chanFriendList = "friends-";
         static public string chanFriendChat = "presence-";
         static public string chanPrivateChat = "chat.private.*";
+        
+        //Testing Friend Changes
+        //static public string chan
+
+        /// </summary>
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.

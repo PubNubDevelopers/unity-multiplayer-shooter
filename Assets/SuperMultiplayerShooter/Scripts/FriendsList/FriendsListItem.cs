@@ -1,4 +1,6 @@
 ﻿using PubNubUnityShowcase;
+using UnityEditor.Localization.Plugins.XLIFF.V20;
+using UnityEditor.VersionControl;
 //using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 using UnityEngine.Experimental.AI;
@@ -32,6 +34,8 @@ namespace Visyde
         {           
             nameText.text = name;
             userId = uuid;
+            //onlineStatus.color = status ? Color.green : Color.gray;
+
             //For now, leaving the default profile Image. In the future, can grab the cached profile image when the ability to add profile images to is done.
             messageButton.onClick.AddListener(() => OnMessageClick());
             //tradeBtn.onClick.AddListener(() => OnTradeClick());

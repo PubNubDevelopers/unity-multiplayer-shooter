@@ -36,8 +36,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 208, y: 0.0009558201}
-  m_SizeDelta: {x: 254.8185, y: 54.608}
+  m_AnchoredPosition: {x: 201.45, y: 0.0009558201}
+  m_SizeDelta: {x: 267.92, y: 54.608}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222535944502758906
 CanvasRenderer:
@@ -74,7 +74,7 @@ MonoBehaviour:
     m_BestFit: 1
     m_MinSize: 3
     m_MaxSize: 52
-    m_Alignment: 3
+    m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 1
@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1518819ccb33a349a63c67540f2feed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  onlineStatus: {fileID: 0}
+  onlineStatus: {fileID: 5061823390611225687}
   nameText: {fileID: 114814066085714264}
   messageButton: {fileID: 114385280161473698}
   tradeButton: {fileID: 3744954753109316055}
@@ -423,7 +423,7 @@ GameObject:
   - component: {fileID: 5061823390611225687}
   - component: {fileID: 4939464312348645322}
   m_Layer: 5
-  m_Name: ProfileImage
+  m_Name: OnlineStatusImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -446,8 +446,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 7, y: 0}
-  m_SizeDelta: {x: 56.764496, y: 48.6696}
+  m_AnchoredPosition: {x: 9, y: 1.4851}
+  m_SizeDelta: {x: 51.4891, y: 51.64}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &2589245652412991658
 CanvasRenderer:
@@ -477,7 +477,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 80d71e51ab82d4f7b8e853e821549edf, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a069fab0d56fd25499de45d1769a43e1, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
