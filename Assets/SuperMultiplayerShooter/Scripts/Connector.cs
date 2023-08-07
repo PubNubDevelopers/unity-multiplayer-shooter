@@ -157,8 +157,6 @@ namespace Visyde
         {
             //  PubNub initialization
             pubnub = PNManager.pubnubInstance.InitializePubNub();
-
-            //await RemoveUserIDMetdata("673a0038-de6f-4e34-a376-b6b2303bb463"); Testing user metadata
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
@@ -170,24 +168,22 @@ namespace Visyde
             listener.onPresence += OnPnPresence;
             listener.onObject += OnPnObject;
 
-            // Handle channel specific changes.
-            PubNubUtilities.chanFriendList += Connector.instance.GetPubNubObject().GetCurrentUserId();
-            PubNubUtilities.chanFriendChat += Connector.instance.GetPubNubObject().GetCurrentUserId();
-
             pubnub.Subscribe<string>()
-                .Channels(new List<string>() { 
+                .Channels(new List<string>() {
                     PubNubUtilities.chanChatLobby + "*",
-                    PubNubUtilities.chanGlobal, 
+                    PubNubUtilities.chanGlobal,
                     PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
-                    PubNubUtilities.chanPrefixLobbyRooms + "*", 
+                    PubNubUtilities.chanPrefixLobbyRooms + "*",
                     PubNubUtilities.chanRoomStatus,
                     PubNubUtilities.chanChatAll,
                     PubNubUtilities.chanPrivateChat,
                     PubNubUtilities.chanChatTranslate + "*",
-                    PubNubUtilities.chanLeaderboardSub
+                    PubNubUtilities.chanLeaderboardSub,
+                    PubNubUtilities.chanFriendRequest + userId
                 })
                 .ChannelGroups(new List<string>() {
-                    PubNubUtilities.chanFriendList // Used for Friend Lists & Friend Chat
+                    PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
+                    PubNubUtilities.chanFriendChanGroupFeed + userId
                 })
                 .Execute();
             await PubNubGetRooms();

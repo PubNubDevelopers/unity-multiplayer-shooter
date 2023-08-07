@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Visyde;
 using System.Linq;
 using PubNubUnityShowcase;
+using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -242,6 +243,65 @@ public class PNManager : PNManagerBehaviour
         else
         {
             Debug.Log($"Error setting Data ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds the channels to the channel group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <param name="channels"></param>
+    /// <returns></returns>
+    public async Task<bool> AddChannelsToChannelGroup(string channelGroup, string[] channels)
+    {
+        PNResult<PNChannelGroupsAddChannelResult> cgAddChResponse = await pubnub.AddChannelsToChannelGroup()
+            .ChannelGroup(channelGroup)
+            .Channels(channels)
+            .ExecuteAsync();
+        if (!cgAddChResponse.Status.Error)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Removes the channels from the channel group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <param name="channels"></param>
+    /// <returns></returns>
+    public async Task<bool> RemoveChannelsFromChannelGroup(string channelGroup, string[] channels)
+    {
+        PNResult<PNChannelGroupsRemoveChannelResult> cgAddChResponse = await pubnub.RemoveChannelsFromChannelGroup()
+            .ChannelGroup(channelGroup)
+            .Channels(channels)
+            .ExecuteAsync();
+        if (!cgAddChResponse.Status.Error)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Testing purposes. Deletes the Channel Group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <returns></returns>
+    public async Task<bool> DeleteChannelGroup(string channelGroup)
+    {
+        PNResult<PNChannelGroupsDeleteGroupResult> delCgResponse = await pubnub.DeleteChannelGroup()
+        .ChannelGroup("family")
+        .ExecuteAsync();
+
+        if(delCgResponse.Status != null && !delCgResponse.Status.Error)
+        {
+            return true;
         }
 
         return false;

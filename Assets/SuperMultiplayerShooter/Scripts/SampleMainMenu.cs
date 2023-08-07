@@ -111,7 +111,7 @@ namespace Visyde
                     else if (result.Event.Equals("delete") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                     {
                         PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
-                    }      
+                    }
                 }
                 /*
                 // TODO: Handle Friend List Changes - Triggerred whenever channel membership is updated (client gets added/removed from another player's friend list)

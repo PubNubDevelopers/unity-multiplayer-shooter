@@ -1,25 +1,19 @@
-﻿using PubNubUnityShowcase;
-using UnityEditor.Localization.Plugins.XLIFF.V20;
-using UnityEditor.VersionControl;
-//using UnityEditorInternal.Profiling.Memory.Experimental;
+﻿using PubnubApi;
+using PubNubUnityShowcase;
+using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Experimental.AI;
 using UnityEngine.UI;
 
 namespace Visyde
 {
-    /// <summary>
-    /// Room Item
-    /// - The script for the selectable and populated item in the game browser list that shows a game's info
-    /// </summary>
-
     public class FriendsListItem : MonoBehaviour
     {
         [Header("References:")]
-        public Image onlineStatus; //TODO?
+        public Image onlineStatus;
         public Text nameText;
         public Button messageButton;
         public Button tradeButton;
+        public Button acceptButton;
         public Button removeButton;
 
         private string userId;
@@ -34,12 +28,10 @@ namespace Visyde
         {           
             nameText.text = name;
             userId = uuid;
-            //onlineStatus.color = status ? Color.green : Color.gray;
-
-            //For now, leaving the default profile Image. In the future, can grab the cached profile image when the ability to add profile images to is done.
             messageButton.onClick.AddListener(() => OnMessageClick());
-            //tradeBtn.onClick.AddListener(() => OnTradeClick());
-            removeButton.onClick.AddListener(() => OnRemoveClick());
+            //tradeBtn.onClick.AddListener(() => OnTradeClick()); To update when trade is implemented.
+            acceptButton.onClick.AddListener(async () => await OnAcceptFriendClick());
+            removeButton.onClick.AddListener(async () => await OnRemoveClick());
         }
 
         /// <summary>
@@ -54,15 +46,58 @@ namespace Visyde
         /// </summary>
         public void OnTradeClick()
         {
-            //TODO, once plauyer trading is integrated.
+            //TODO, once player trading is integrated.
         }
         /// <summary>
         /// Remove friend
         /// </summary>
-        public void OnRemoveClick()
+        public async Task<bool> OnRemoveClick()
         {
             Destroy(gameObject);
-            //TODO: Remove player from Friend Group using userId
+
+            //Determine if need to remove player from friend group.
+            //remove = added to friend group, reject = yet to add friend to friend group.
+            if(removeButton.name.Equals("remove"))
+            {
+                await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + userId });
+                await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + userId });
+            }
+
+            //Send reject request.
+            string message = "reject";
+            // Send Message to indicate request has been made.
+            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+               .Channel(PubNubUtilities.chanFriendRequest + userId) //chanFriendRequest channel reserved for handling friend requests.
+               .Message(message)
+               .ExecuteAsync();
+
+            return true;
         }
+
+        /// <summary>
+        /// When you accept a pending friend invite.
+        /// </summary>
+        public async Task<bool> OnAcceptFriendClick()
+        {
+            //Hide accept and reject buttons. Allow for trade and remove friend.
+            tradeButton.gameObject.SetActive(true);
+            acceptButton.gameObject.SetActive(false);
+            removeButton.name = "remove"; // Used to determine whether or not to remove from friend groups
+            gameObject.GetComponent<Image>().color = Color.white; // change color to show accepted friend.
+
+            //Add to channel group.
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + userId });
+            // Add friend to status feed group
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + userId });
+
+            string message = "accept"; // message will be one of four things: request, accept, reject, remove
+            // Send Message to indicate request has been made.
+            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+               .Channel(PubNubUtilities.chanFriendRequest + userId) //chanFriendRequest channel reserved for handling friend requests.
+               .Message(message)
+               .ExecuteAsync();
+
+            return true;
+        }   
     }
 }

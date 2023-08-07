@@ -159,7 +159,7 @@ public class Chat : MonoBehaviour
                 inputField.gameObject.SetActive(false);
                 break;
             case "Friends":
-                targetChatChannel = PubNubUtilities.chanFriendChat;
+                //targetChatChannel = PubNubUtilities.chanChat + PubNubUtilities.chanFriendFeed + Connector.instance.GetPubNubObject().GetCurrentUserId();
                 Debug.Log("You selected Friends");
                 // Include the logic you want to happen when "FRIENDS" is selected
                 break;
@@ -256,13 +256,13 @@ public class Chat : MonoBehaviour
                     chatTargetDropdown.options.Add(newOption);
                }
             }
-
+            /*
             //Friends
-            else if(channel.StartsWith("presence"))
+            else if(channel.Contains(PubNubUtilities.chanFriendFeed + Connector.instance.GetPubNubObject().GetCurrentUserId()))
             {
                 color = friendsChatColor;
             }
-
+            */
             //Lobby
             else if(channel.StartsWith(PubNubUtilities.chanChatLobby)) 
             {
