@@ -44,14 +44,23 @@ namespace PubNubUnityShowcase
         //  --  Channels global to all games / lobbies  --
         static public string chanPrefixLobbyRooms = "rooms.";
         static public string chanGlobal = "global";
-        static public string chanChatLobby = "chat.lobby.";
         static public string chanChatTranslate = "translate.";
         static public string chanChat = "chat.";
+        static public string chanLeaderboardPub = "score.leaderboard";
+        static public string chanLeaderboardSub = "leaderboard_scores";
         //  --  Channels specific for chat messages
         static public string chanChatAll = "chat.all";
-        static public string chanFriendList = "friends-";
-        static public string chanFriendChat = "presence-";
         static public string chanPrivateChat = "chat.private.*";
+        static public string chanChatLobby = "chat.lobby.";
+
+        //  --  Friend List
+        static public string chanFriendRequest = "friend_request.";
+        static public string chanPresence = "friends_presence_";
+        static public string chanFriendFeed = "friends_feed_";
+        static public string chanFriendChanGroupStatus = "friendsCG_status_";
+        static public string chanFriendChanGroupFeed = "friendsCG_feed_";
+
+        /// </summary>
 
         //  Some values, such as player position or cursor location will not change
         //  between update intervals, only send out date if it changes.

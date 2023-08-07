@@ -5,6 +5,11 @@ using PubnubApi.Unity;
 using System.Threading.Tasks;
 using UnityEngine.Localization.Settings;
 using System;
+using Newtonsoft.Json;
+using Visyde;
+using System.Linq;
+using PubNubUnityShowcase;
+using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -19,8 +24,6 @@ public class PNManager : PNManagerBehaviour
 
     //The list of private message connections a user can quickly connect to.
     private static string privateMessageUUID = "";
-
-    private static string lobbyRoomName = "";
 
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
@@ -93,7 +96,8 @@ public class PNManager : PNManagerBehaviour
     }
 
     /// <summary>
-    /// Get the User Metadata given the UserId.
+    /// Get the User Metadata given the UserId. Create and set user metadata when opening app for the
+    /// first time.
     /// </summary>
     /// <param name="Uuid">UserId of the Player</param>
     public async Task<bool> GetUserMetadata(string Uuid)
@@ -108,6 +112,7 @@ public class PNManager : PNManagerBehaviour
         PNStatus status = getUuidMetadataResponse.Status;
         if (!status.Error && getUuidMetadataResult != null)
         {
+
             UserMetadata meta = new UserMetadata
             {
                 Uuid = getUuidMetadataResult.Uuid,
@@ -118,9 +123,63 @@ public class PNManager : PNManagerBehaviour
                 Custom = getUuidMetadataResult.Custom,
                 Updated = getUuidMetadataResult.Updated
             };
+
             if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(getUuidMetadataResult.Uuid))
             {
                 PNManager.pubnubInstance.CachedPlayers.Add(getUuidMetadataResult.Uuid, meta);
+            }
+        }
+
+        //User has logged into the app for the first time. Set-up Metadata and register.
+        else
+        {
+            // Setup metadata.
+            Dictionary<string, object> customData = new Dictionary<string, object>();
+            customData["hats"] = JsonConvert.SerializeObject(Connector.instance.GenerateRandomHats());
+            customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
+            customData["60fps"] = false;
+            // Update
+            await UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), Connector.instance.GetPubNubObject().GetCurrentUserId(), customData);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets all of the user metadata. 
+    /// Note: you'll need to ensure "Disallow Get All User Metadata" is unchecked for App Context in your PubNub Keys.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<bool> GetAllUserMetadata()
+    {
+        PNResult<PNGetAllUuidMetadataResult> getAllUuidMetadataResponse = await pubnub.GetAllUuidMetadata()
+            .IncludeCustom(true)
+            .IncludeCount(true)
+            .ExecuteAsync();
+
+        PNGetAllUuidMetadataResult getAllUuidMetadataResult = getAllUuidMetadataResponse.Result;
+        PNStatus status = getAllUuidMetadataResponse.Status;
+
+        //Populate Cached Players Dictionary only if they have been set previously
+        if (!status.Error && getAllUuidMetadataResult.TotalCount > 0)
+        {
+            foreach (PNUuidMetadataResult pnUUIDMetadataResult in getAllUuidMetadataResult.Uuids)
+            {
+                UserMetadata meta = new UserMetadata
+                {
+                    Uuid = pnUUIDMetadataResult.Uuid,
+                    Name = pnUUIDMetadataResult.Name,
+                    Email = pnUUIDMetadataResult.Email,
+                    ExternalId = pnUUIDMetadataResult.ExternalId,
+                    ProfileUrl = pnUUIDMetadataResult.ProfileUrl,
+                    Custom = pnUUIDMetadataResult.Custom,
+                    Updated = pnUUIDMetadataResult.Updated
+                };
+
+                if(!PNManager.pubnubInstance.CachedPlayers.ContainsKey(pnUUIDMetadataResult.Uuid))
+                {
+                    PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
+                }
             }
             return true;
         }
@@ -129,9 +188,11 @@ public class PNManager : PNManagerBehaviour
     }
 
     /// <summary>
-    /// Update the User Metadata given the UserId.
+    /// Update the User Metadata given the userid and name.
     /// </summary>
-    /// <param name="Uuid">UserId of the Player</param>
+    /// <param name="Uuid">UserId of the player</param>
+    /// <param name="name">The nickname of the player</param>
+    /// <param name="metadata">The metadata to update</param>
     public async Task<bool> UpdateUserMetadata(string uuid, string name, Dictionary<string, object> metadata)
     {        
         PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
@@ -157,10 +218,89 @@ public class PNManager : PNManagerBehaviour
                 Custom = setUuidMetadataResult.Custom,
                 Updated = setUuidMetadataResult.Updated
             };
+
+            //Update hat inventory.
+            if (setUuidMetadataResult.Custom != null && setUuidMetadataResult.Custom.ContainsKey("hats"))
+            {
+                List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(setUuidMetadataResult.Custom["hats"].ToString());
+                Connector.instance.UpdateAvailableHats(availableHats);
+            }
+
+            //Existing player
             if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
             {
                 PNManager.pubnubInstance.CachedPlayers[setUuidMetadataResult.Uuid] = meta;
             }
+
+            // New Player
+            else
+            {
+                PNManager.pubnubInstance.CachedPlayers.Add(setUuidMetadataResult.Uuid, meta);
+            }
+            return true;
+        }
+
+        else
+        {
+            Debug.Log($"Error setting Data ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds the channels to the channel group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <param name="channels"></param>
+    /// <returns></returns>
+    public async Task<bool> AddChannelsToChannelGroup(string channelGroup, string[] channels)
+    {
+        PNResult<PNChannelGroupsAddChannelResult> cgAddChResponse = await pubnub.AddChannelsToChannelGroup()
+            .ChannelGroup(channelGroup)
+            .Channels(channels)
+            .ExecuteAsync();
+        if (!cgAddChResponse.Status.Error)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Removes the channels from the channel group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <param name="channels"></param>
+    /// <returns></returns>
+    public async Task<bool> RemoveChannelsFromChannelGroup(string channelGroup, string[] channels)
+    {
+        PNResult<PNChannelGroupsRemoveChannelResult> cgAddChResponse = await pubnub.RemoveChannelsFromChannelGroup()
+            .ChannelGroup(channelGroup)
+            .Channels(channels)
+            .ExecuteAsync();
+        if (!cgAddChResponse.Status.Error)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Testing purposes. Deletes the Channel Group.
+    /// </summary>
+    /// <param name="channelGroup"></param>
+    /// <returns></returns>
+    public async Task<bool> DeleteChannelGroup(string channelGroup)
+    {
+        PNResult<PNChannelGroupsDeleteGroupResult> delCgResponse = await pubnub.DeleteChannelGroup()
+        .ChannelGroup("family")
+        .ExecuteAsync();
+
+        if(delCgResponse.Status != null && !delCgResponse.Status.Error)
+        {
             return true;
         }
 

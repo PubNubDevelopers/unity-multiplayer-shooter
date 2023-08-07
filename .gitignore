@@ -59,6 +59,10 @@ crashlytics-build.properties
 /[Aa]ssets/Photon/PhotonLibs/netstandard2.0/Photon3Unity3D.dll
 /[Aa]ssets/Photon/PhotonLibs/netstandard2.0/Photon3Unity3D.dll.meta
 
+# Custom Package Ignores
+/[Aa]ssets/ParrelSync.meta
+/[Aa]ssets/ParrelSync/
+
 # ===================================== #
 # Visual Studio / MonoDevelop generated #
 # ===================================== #

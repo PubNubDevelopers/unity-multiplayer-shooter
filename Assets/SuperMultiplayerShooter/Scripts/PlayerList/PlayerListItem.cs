@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace Visyde
 {
     /// <summary>
-    /// Room Item
-    /// - The script for the selectable and populated item in the game browser list that shows a game's info
+    /// Player List Item Item
+    /// - The script for the populated item in the player search list
     /// </summary>
 
     public class PlayerListItem : MonoBehaviour
@@ -25,7 +25,6 @@ namespace Visyde
         /// </summary>
         /// <param name="uuid"></param>
         /// <param name="name"></param>
-        /// <param name="image"></param>
         public void Set(string uuid, string name)
         {           
             nameText.text = name;
@@ -37,11 +36,10 @@ namespace Visyde
         /// <summary>
         /// Called when the user clicks on a player
         /// </summary>
-        /// <param name="id">The UserID of the clicked player</param>
         public void OnPlayerClick()
         {       
             //Use the dropdown from Chat.cs to trigger event handlers.
-            Connector.instance.PlayerSelected(true, userId);
+            Connector.instance.PlayerSelected("selected", userId);
         }
     }
 }

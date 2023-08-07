@@ -10,9 +10,9 @@ public class PlayerListUI : MonoBehaviour
 {
     //UI Fields
     public InputField searchPlayersInput;
-    public Transform playerListItemHandler;       // this is where the room item prefabs will be spawned
-    public PlayerListItem playerListItemPrefab;         // the room item prefab (represents a game session in the lobby list)
-    public Text listStatusText;             // displays the current status of the lobby browser (eg. "No games available", "Fetching game list...")
+    public Transform playerListItemHandler;       // this is where the player list item prefabs will be spawned
+    public PlayerListItem playerListItemPrefab;         // the player list item prefab (represents a player in the list of players)
+    public Text listStatusText;             // displays if there are no players found when attempting to filter for them.
     public EventSystem eventSystem;
 
     void Start()
