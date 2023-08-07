@@ -22,12 +22,9 @@ namespace Visyde
     {
         [Header("Main:")]
         public Text connectionStatusText;
-        public Button findMatchBTN;
         public Button customMatchBTN;
-        public GameObject findMatchCancelButtonObj;
-        public GameObject findingMatchPanel;
         public GameObject customGameRoomPanel;
-        public Text matchmakingPlayerCountText;
+        public Button customizeCharacterButton;
         public InputField playerNameInput;
         public GameObject messagePopupObj;
         public Text messagePopupText;
@@ -338,12 +335,6 @@ namespace Visyde
             Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name = playerNameInput.text;     
         }
 
-        // Main:
-        public void FindMatch(){
-            // Enable the "finding match" panel:
-            findingMatchPanel.SetActive(true);
-            //  Matchmaking has been removed for simplicity
-        }
         /*
         //Sets the CachedPlayer Transform's online status that is in the list with the given UserID.
         //If the IsOnline is true, then the icon will be changed to green. If false, then the icon will be changed to gray.

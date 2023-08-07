@@ -192,6 +192,7 @@ namespace Visyde
             //  Everything is configured, allow users to create or join a room
             mainMenu = GetComponent<SampleMainMenu>();
             mainMenu.customMatchBTN.interactable = true;
+            mainMenu.customizeCharacterButton.interactable = true;
             ConnectorReady();
         }
 
@@ -281,6 +282,16 @@ namespace Visyde
         }
 
         //  Create a room / game (by definition, the creator is the master)
+        //  Implementation note: Rooms are defined using PubNub's presence system -
+        //  Each player (UUID) is able to create a room and when they do so, all other players are notified
+        //  that the channel's presence state has changed (through the state-change event).  Other players can then join
+        //  a room by sending a PubNub message to the room owner, or are free to create their own rooms which others can join.
+        //  The current implementation allows each player to create up to 1 room at a time, but this is not a limitation
+        //  of PubNub, it is a limitation of this game's implementation.
+        //  One advangate of using the presence system to define rooms is you also get notified when a player's presence
+        //  changes (e.g. they go offline) on the same channel but there are other ways to implement a lobby and
+        //  room system with PubNub.  Alternatively you could use PubNub's message history
+        //  to store a created room, then others could read a channel's history to decide which room to join.
         public async Task<bool> CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots)
         {
             if (pubnub != null)

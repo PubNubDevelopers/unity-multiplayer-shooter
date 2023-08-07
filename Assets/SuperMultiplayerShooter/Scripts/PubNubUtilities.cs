@@ -447,7 +447,7 @@ namespace PubNubUnityShowcase
         public static string ToGameChannel(PNRoomInfo roomInfo, string channelName)
         {
             if (roomInfo == null) return channelName;
-            return "" + roomInfo.ID + "_" + channelName;
+            return "" + roomInfo.OwnerId + "_" + channelName;
         }
     }
 }

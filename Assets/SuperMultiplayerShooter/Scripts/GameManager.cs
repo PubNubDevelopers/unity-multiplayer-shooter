@@ -737,13 +737,16 @@ namespace Visyde
 
         public void OnDisconnected(bool bWasOwner, string playerName)
         {
-            if (bWasOwner)
+            if (!isGameOver)
             {
-                DataCarrier.message = "The owner of the game (" + playerName + ") disconnected";
-            }
-            else
-            {
-                DataCarrier.message = "" + playerName + " left the game, please start another game";
+                if (bWasOwner)
+                {
+                    DataCarrier.message = "The owner of the game (" + playerName + ") disconnected";
+                }
+                else
+                {
+                    DataCarrier.message = "" + playerName + " left the game, please start another game";
+                }
             }
             SceneManager.LoadScene("MainMenu");
         }
