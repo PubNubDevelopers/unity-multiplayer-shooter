@@ -53,12 +53,12 @@ namespace PubNubUnityShowcase
         static public string chanPrivateChat = "chat.private.*";
         static public string chanChatLobby = "chat.lobby.";
 
-        //  --  Friend List
+        //  --  Friend List --
         static public string chanFriendRequest = "friend_request.";
         static public string chanPresence = "friends_presence_";
-        static public string chanFriendFeed = "friends_feed_";
+        static public string chanFriendChat = "chat.friends.";
         static public string chanFriendChanGroupStatus = "friendsCG_status_";
-        static public string chanFriendChanGroupFeed = "friendsCG_feed_";
+        static public string chanFriendChanGroupChat = "friendsCG_feed_";
 
         /// </summary>
 

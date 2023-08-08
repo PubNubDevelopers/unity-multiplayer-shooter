@@ -157,6 +157,7 @@ namespace Visyde
         {
             //  PubNub initialization
             pubnub = PNManager.pubnubInstance.InitializePubNub();
+            pubnub.PNConfig.SecretKey = "SECRET_KEY_HERE"; //DO NOT SHARE THE SECRET KEY WITH ANYONE. This is used for
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
@@ -183,7 +184,7 @@ namespace Visyde
                 })
                 .ChannelGroups(new List<string>() {
                     PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
-                    PubNubUtilities.chanFriendChanGroupFeed + userId
+                    PubNubUtilities.chanFriendChanGroupChat + userId
                 })
                 .Execute();
             await PubNubGetRooms();
