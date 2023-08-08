@@ -115,9 +115,9 @@ public class MyClass
         void Start()
         {
 
-            notPublished = true; 
+            notPublished = true;
 
-            curCountdown = gm.preparationTime;              // used for tracking starting countdown
+            curCountdown = 0; /* gm.preparationTime;*/
             curRemainingTimeTick = tickWhenRemainingTimeIs; // used for tracking last second countdown
 
             // Initialize things:

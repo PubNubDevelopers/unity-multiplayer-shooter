@@ -37,7 +37,7 @@ namespace Visyde
         public bool useMobileControls;              	// if set to true, joysticks and on-screen buttons will be enabled
         public int respawnTime = 5;             		// delay before respawning after death
         public float invulnerabilityDuration = 3;		// how long players stay invulnerable after spawn
-        public int preparationTime = 3;                 // the starting countdown before the game starts
+        private int preparationTime = 0;                // the starting countdown before the game starts
         public int gameLength = 120;                    // time in seconds
         public bool showEnemyHealth = true;
         public bool damagePopups = true;
@@ -276,7 +276,6 @@ namespace Visyde
                             doneGameStart = true;
                             gameStarted = true;
                         }
-
                     }
                 }
 
