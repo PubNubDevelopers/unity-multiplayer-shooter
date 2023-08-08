@@ -294,6 +294,7 @@ namespace Visyde
                         Spawn(Connector.instance.GetMyId(), true);
                         //  Tell everyone else in the Game to respawn me
                         Dictionary<string, object> props = new Dictionary<string, object>();
+                        Debug.Log("Sending Respawn message");
                         props.Add("respawn", Connector.instance.GetMyId());
                         pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
                     }
@@ -776,12 +777,14 @@ namespace Visyde
         //  Handler for PubNub Messages
         private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
+            Debug.Log("Received PN Message on Channel " + result.Channel);
             if (result != null && result.Channel.Equals(PubNubUtilities.chanRoomStatus))
             {
                 //  Messages to update the current room state
                 Dictionary<string, object> payload = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());
                 if (payload != null)
                 {
+                    Debug.Log("Received Payload with keys count " + payload.Keys.Count);
                     if (payload.ContainsKey("started"))
                     {
                         gameStarted = (bool)payload["started"];
@@ -850,9 +853,11 @@ namespace Visyde
                     }
                     if (payload.ContainsKey("respawn"))
                     {
+                        Debug.Log("Received Respawn Message");
                         int playerId = System.Convert.ToInt32(payload["respawn"]);
                         if (playerId != Connector.instance.LocalPlayer.ID)
                         {
+                            Debug.Log("Respawning Player ID " + playerId);
                             //  Respawn the remote player asking to be respawned
                             Spawn(playerId, false);
                         }

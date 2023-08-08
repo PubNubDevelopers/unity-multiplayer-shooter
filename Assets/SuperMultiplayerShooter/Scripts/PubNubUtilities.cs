@@ -419,10 +419,11 @@ namespace PubNubUnityShowcase
 
         public async void PubNubSendRoomProperties(Pubnub pubnub, Dictionary<string, object> payload)
         {
-            await pubnub.Publish()
+            PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                 .Channel(PubNubUtilities.chanRoomStatus)
                 .Message(payload)
                 .ExecuteAsync();
+            Debug.Log("Publish Response: " + publishResponse.Status.StatusCode);
         }
 
         public void PubNubSendRoomProperties(Pubnub pubnub, string property, object value)
