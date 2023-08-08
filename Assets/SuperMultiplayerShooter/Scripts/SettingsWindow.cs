@@ -111,7 +111,6 @@ public class SettingsWindow : MonoBehaviour
                     customData.Add("60fps", fpsToggled);
                 }
                 
-                //Acceptable to not need to await for this call to finish.
                 await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name, customData);
             }
             

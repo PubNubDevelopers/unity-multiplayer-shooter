@@ -179,6 +179,12 @@ public class Chat : MonoBehaviour
                 Debug.Log("You selected Private");
                 targetChatChannel = PubNubUtilities.chanPrivateChat;
 
+                // Close Friend List panel to not interfere with sending private message.
+                if(friendsListPanel.activeSelf)
+                {
+                    friendsListPanel.SetActive(false);
+                }
+
                 //Opens the panels.          
                 privateMessagePopupPanel.SetActive(true);
 
@@ -388,8 +394,6 @@ public class Chat : MonoBehaviour
     {
         //Forat color to be read in an HTML string.
         string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
-        //Filter message for profanity
-        //string filteredMessage = FilterMessageProfanity(message);
         string finalMessage = $"<color=#{colorHex}>{recipient}:{message}</color>\n";
         messageDisplay.text += finalMessage;
     }

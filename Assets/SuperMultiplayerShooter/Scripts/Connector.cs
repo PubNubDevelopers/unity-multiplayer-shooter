@@ -157,7 +157,6 @@ namespace Visyde
         {
             //  PubNub initialization
             pubnub = PNManager.pubnubInstance.InitializePubNub();
-            pubnub.PNConfig.SecretKey = "SECRET_KEY_HERE"; //DO NOT SHARE THE SECRET KEY WITH ANYONE. This is used for
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();

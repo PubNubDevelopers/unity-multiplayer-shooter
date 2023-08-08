@@ -139,6 +139,17 @@ namespace Visyde
                     chat.SetActive(true);
                 }           
             }
+
+            //Don't allow chatting while searching for games.
+            if(lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
+            {
+                chat.SetActive(false);
+            }
+
+            else
+            {
+                chat.SetActive(true);
+            }
         }
 
         /// <summary>

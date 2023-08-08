@@ -25,11 +25,6 @@ public class FriendsList : MonoBehaviour
         Connector.instance.onPubNubPresence += OnPnPresence;
         Connector.instance.onPubNubObject += OnPnObject;
 
-        // Testing - add self presence channel to channel group. presence channel to each channel group (online status and messages)
-        //await PNManager.pubnubInstance.DeleteChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId());
-        //await PNManager.pubnubInstance.DeleteChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId());
-        //await PNManager.pubnubInstance.AddChannelsToChannelGroup("cg_user124", new string[] { "chats.room1", "chats.room2", "alerts.system" });
-
         // Since both online status and message channel groups are in conjunction, doesn't matter which to use.
         //Populate friend group
         await PopulateFriendList(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId());
@@ -72,7 +67,10 @@ public class FriendsList : MonoBehaviour
                     friendItem.removeButton.name = "reject"; // Used to determine whether or not to remove from friend groups
                     friendItem.gameObject.GetComponent<Image>().color = Color.yellow; // change color to show pending friend.
                     friendItem.Set(result.Publisher, PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name);
-                    
+
+                    // Get Online Status of Friends by referencing who's currently online.
+                    await GetCurrentFriendOnlineStatus();
+
                     break;
                 //Another user has accepted your friend request. Unblock buttons.
                 case "accept":
@@ -80,6 +78,7 @@ public class FriendsList : MonoBehaviour
                     if(acceptFriend != null)
                     {
                         acceptFriend.tradeButton.gameObject.SetActive(true);
+                        acceptFriend.tradeButton.interactable = false; //To be removed once trading is fully integrated.
                         acceptFriend.acceptButton.gameObject.SetActive(false);
                         acceptFriend.removeButton.name = "remove"; // Used to determine whether or not to remove from friend groups
                         acceptFriend.gameObject.GetComponent<Image>().color = Color.white; // change color to show accepted friend.
@@ -240,7 +239,8 @@ public class FriendsList : MonoBehaviour
                 }                  
             }
 
-            //Obtain history of messages from the friend request channel to determine if there are any pending invites.
+            // Obtain history of messages from the friend request channel to determine if there are any pending invites.
+            // Please Note that this will cap out on 100 friend requests.
             PNResult<PNFetchHistoryResult> fetchHistoryResponse = await Connector.instance.GetPubNubObject().FetchHistory()
                 .Channels(new string[] { PubNubUtilities.chanFriendRequest + Connector.instance.GetPubNubObject().GetCurrentUserId() })
                 .ExecuteAsync();
