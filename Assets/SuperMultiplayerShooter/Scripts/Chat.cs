@@ -514,9 +514,13 @@ public class Chat : MonoBehaviour
             //The option exists, change the private message target.
             else
             {
-                string previousPrivateMessageName = PNManager.pubnubInstance.CachedPlayers[PNManager.pubnubInstance.PrivateMessageUUID].Name;
-                index = chatTargetDropdown.options.FindIndex((options) => options.text == previousPrivateMessageName);
-                chatTargetDropdown.options[index].text = displayName;
+                if (!PNManager.pubnubInstance.PrivateMessageUUID.Equals("") &&
+                    PNManager.pubnubInstance.CachedPlayers.ContainsKey(PNManager.pubnubInstance.PrivateMessageUUID))
+                {
+                    string previousPrivateMessageName = PNManager.pubnubInstance.CachedPlayers[PNManager.pubnubInstance.PrivateMessageUUID].Name;
+                    index = chatTargetDropdown.options.FindIndex((options) => options.text == previousPrivateMessageName);
+                    chatTargetDropdown.options[index].text = displayName;
+                }
             }
 
             if (privateMessage)
