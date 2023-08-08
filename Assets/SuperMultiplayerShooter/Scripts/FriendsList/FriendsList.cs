@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using PubnubApi;
 using PubNubUnityShowcase;
 using System;
@@ -23,10 +24,6 @@ public class FriendsList : MonoBehaviour
         Connector.instance.onPubNubMessage += OnPnMessage;
         Connector.instance.onPubNubPresence += OnPnPresence;
         Connector.instance.onPubNubObject += OnPnObject;
-
-        // Testing - add self presence channel to channel group. presence channel to each channel group (online status and messages)
-        //await PNManager.pubnubInstance.DeleteChannelGroup(PubNubUtilities.chanFriendChanGroupStatus);
-        //await PNManager.pubnubInstance.DeleteChannelGroup(PubNubUtilities.chanFriendChanGroupFeed);
 
         // Since both online status and message channel groups are in conjunction, doesn't matter which to use.
         //Populate friend group
@@ -59,6 +56,8 @@ public class FriendsList : MonoBehaviour
             switch(result.Message)
             {
                 //Another user has initiated a friend request. Display user as temporary friend until you accept/deny.
+                // Friend Request Cycle: request -> accept -> become friends (add to channel group) -> cycle complete (delete messages)
+                //                               -> reject -> remove from list (remove from channel group) -> cycle comeplete (delete messages)
                 case "request":
                     //Instantiate friend if they are a valid user.
                     FriendsListItem friendItem = Instantiate(friendsListItemPrefab, friendsListItemHandler);
@@ -68,6 +67,10 @@ public class FriendsList : MonoBehaviour
                     friendItem.removeButton.name = "reject"; // Used to determine whether or not to remove from friend groups
                     friendItem.gameObject.GetComponent<Image>().color = Color.yellow; // change color to show pending friend.
                     friendItem.Set(result.Publisher, PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name);
+
+                    // Get Online Status of Friends by referencing who's currently online.
+                    await GetCurrentFriendOnlineStatus();
+
                     break;
                 //Another user has accepted your friend request. Unblock buttons.
                 case "accept":
@@ -75,10 +78,15 @@ public class FriendsList : MonoBehaviour
                     if(acceptFriend != null)
                     {
                         acceptFriend.tradeButton.gameObject.SetActive(true);
+                        acceptFriend.tradeButton.interactable = false; //To be removed once trading is fully integrated.
                         acceptFriend.acceptButton.gameObject.SetActive(false);
                         acceptFriend.removeButton.name = "remove"; // Used to determine whether or not to remove from friend groups
                         acceptFriend.gameObject.GetComponent<Image>().color = Color.white; // change color to show accepted friend.
                     }
+
+                    // Wipe Message History, as the friend request cycle has finished.
+                    await PNManager.pubnubInstance.DeleteMessages(result.Channel);
+
                     break;
                 //Another user has rejected or removed your friend request. Remove them from channel group. Rejecting and removing do same thing.
                 case "reject":
@@ -87,6 +95,10 @@ public class FriendsList : MonoBehaviour
                     {
                         await removeFriend.OnRemoveClick();                        
                     }
+
+                    // Wipe Message History, as the friend request cycle has finished.
+                    await PNManager.pubnubInstance.DeleteMessages(result.Channel);
+
                     break;             
                 default:
                     Debug.Log("Not a valid friend request option.");
@@ -177,7 +189,7 @@ public class FriendsList : MonoBehaviour
             friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
             await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
             // Add friend to status feed group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + id });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
             string message = "request"; //initiates a friend request.
             // Send Message to indicate request has been made.
             PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
@@ -188,6 +200,9 @@ public class FriendsList : MonoBehaviour
             {
                 Debug.Log("Error when sending message");
             }
+
+            // Update friends list to get online status of new friend.
+            await GetCurrentFriendOnlineStatus();
         }
     }
 
@@ -197,7 +212,7 @@ public class FriendsList : MonoBehaviour
     /// <param name="channelGroup"></param>
     /// <returns></returns>
     public async Task<bool> PopulateFriendList(string channelGroup)
-    {
+    {    
         PNResult<PNChannelGroupsAllChannelsResult> cgListChResponse = await Connector.instance.GetPubNubObject().ListChannelsForChannelGroup()
             .ChannelGroup(channelGroup)
             .ExecuteAsync();
@@ -223,6 +238,41 @@ public class FriendsList : MonoBehaviour
                     friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
                 }                  
             }
+
+            // Obtain history of messages from the friend request channel to determine if there are any pending invites.
+            // Please Note that this will cap out on 100 friend requests.
+            PNResult<PNFetchHistoryResult> fetchHistoryResponse = await Connector.instance.GetPubNubObject().FetchHistory()
+                .Channels(new string[] { PubNubUtilities.chanFriendRequest + Connector.instance.GetPubNubObject().GetCurrentUserId() })
+                .ExecuteAsync();
+           if(fetchHistoryResponse != null && fetchHistoryResponse.Result != null && fetchHistoryResponse.Result.Messages != null && !fetchHistoryResponse.Status.Error)
+            {
+                foreach (KeyValuePair<string, List<PNHistoryItemResult>> channel in fetchHistoryResponse.Result.Messages)
+                {
+                    foreach (PNHistoryItemResult item in channel.Value)
+                    {
+                        string entryAsString = (string)item.Entry;
+
+                        // If a message with "request" is found, determine if it exists in the Friend List.
+                        if (entryAsString.Equals("request"))
+                        {
+                            FriendsListItem potentialPendingFriend = GetFriend(item.Uuid);
+
+                            //If so, ignore. Already friends.
+                            //If not, that means the friend request is still pending. Find friend in list, mark as pending.
+                            if (potentialPendingFriend == null)
+                            {
+                                potentialPendingFriend = Instantiate(friendsListItemPrefab, friendsListItemHandler);
+                                potentialPendingFriend.name = item.Uuid; // set the name to be able to access later for updates.
+                                potentialPendingFriend.tradeButton.gameObject.SetActive(false);
+                                potentialPendingFriend.acceptButton.gameObject.SetActive(true);
+                                potentialPendingFriend.removeButton.name = "reject"; // Used to determine whether or not to remove from friend groups
+                                potentialPendingFriend.gameObject.GetComponent<Image>().color = Color.yellow; // change color to show pending friend.
+                                potentialPendingFriend.Set(item.Uuid, PNManager.pubnubInstance.CachedPlayers[item.Uuid].Name);
+                            }
+                        }
+                    }
+                }
+            }                      
             return true;          
         }
 
@@ -233,7 +283,7 @@ public class FriendsList : MonoBehaviour
             await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + Connector.instance.GetPubNubObject().GetCurrentUserId() });
 
             //Add self mpresene channel to status feed channel group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + Connector.instance.GetPubNubObject().GetCurrentUserId() });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + Connector.instance.GetPubNubObject().GetCurrentUserId() });
             return true;
         }
     }
@@ -285,5 +335,5 @@ public class FriendsList : MonoBehaviour
             }
             return true;
         }
-    }
+    } 
 }

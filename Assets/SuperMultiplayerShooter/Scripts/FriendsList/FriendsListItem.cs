@@ -23,11 +23,11 @@ namespace Visyde
         /// </summary>
         /// <param name="uuid"></param>
         /// <param name="name"></param>
-        /// <param name="image"></param>
         public void Set(string uuid, string name)
         {           
             nameText.text = name;
             userId = uuid;
+            onlineStatus.color = Color.gray;
             messageButton.onClick.AddListener(() => OnMessageClick());
             //tradeBtn.onClick.AddListener(() => OnTradeClick()); To update when trade is implemented.
             acceptButton.onClick.AddListener(async () => await OnAcceptFriendClick());
@@ -60,7 +60,7 @@ namespace Visyde
             if(removeButton.name.Equals("remove"))
             {
                 await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + userId });
-                await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + userId });
+                await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + userId });
             }
 
             //Send reject request.
@@ -88,7 +88,7 @@ namespace Visyde
             //Add to channel group.
             await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + userId });
             // Add friend to status feed group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupFeed + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendFeed + userId });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + userId });
 
             string message = "accept"; // message will be one of four things: request, accept, reject, remove
             // Send Message to indicate request has been made.

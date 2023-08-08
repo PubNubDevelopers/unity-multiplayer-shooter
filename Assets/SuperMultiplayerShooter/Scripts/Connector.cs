@@ -183,7 +183,7 @@ namespace Visyde
                 })
                 .ChannelGroups(new List<string>() {
                     PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
-                    PubNubUtilities.chanFriendChanGroupFeed + userId
+                    PubNubUtilities.chanFriendChanGroupChat + userId
                 })
                 .Execute();
             await PubNubGetRooms();

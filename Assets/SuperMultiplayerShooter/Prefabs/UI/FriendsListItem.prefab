@@ -36,8 +36,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.09, y: 0.21}
   m_AnchorMax: {x: 0.53, y: 0.82}
-  m_AnchoredPosition: {x: 0.42144775, y: 0.00095558167}
-  m_SizeDelta: {x: -2.137085, y: 14.608002}
+  m_AnchoredPosition: {x: 0.73080444, y: 0.00095558167}
+  m_SizeDelta: {x: -31.2137, y: 14.608}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222535944502758906
 CanvasRenderer:
@@ -131,10 +131,10 @@ RectTransform:
   m_Father: {fileID: 224181034889932184}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.55, y: 0.12}
-  m_AnchorMax: {x: 0.68, y: 0.85}
-  m_AnchoredPosition: {x: 1, y: 0}
-  m_SizeDelta: {x: 5.1901855, y: 4.6100006}
+  m_AnchorMin: {x: 0.535, y: 0.12}
+  m_AnchorMax: {x: 0.675, y: 0.85}
+  m_AnchoredPosition: {x: -0.017501831, y: 0.66601944}
+  m_SizeDelta: {x: 1.8334961, y: 5.942}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222445235433900166
 CanvasRenderer:
@@ -195,10 +195,10 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.41960788, g: 1, b: 0.46261618, a: 1}
-    m_HighlightedColor: {r: 0, g: 1, b: 0.026485443, a: 1}
-    m_PressedColor: {r: 0.03243241, g: 0.6117647, b: 0, a: 1}
-    m_SelectedColor: {r: 0, g: 1, b: 0.026485443, a: 1}
+    m_NormalColor: {r: 0.03137255, g: 0.48235294, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.03137255, g: 0.48235294, b: 1, a: 1}
+    m_PressedColor: {r: 0.4198113, g: 0.6899397, b: 1, a: 1}
+    m_SelectedColor: {r: 0.03137255, g: 0.48235294, b: 1, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
@@ -266,8 +266,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0, y: 0}
-  m_SizeDelta: {x: -10.7249, y: 0}
+  m_AnchoredPosition: {x: 0.6325, y: 0}
+  m_SizeDelta: {x: -11.99, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222104765068171356
 CanvasRenderer:
@@ -446,10 +446,10 @@ RectTransform:
   m_Father: {fileID: 224181034889932184}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.01, y: 0.18}
-  m_AnchorMax: {x: 0.08, y: 0.87}
-  m_AnchoredPosition: {x: 1, y: 0.4850998}
-  m_SizeDelta: {x: 1.4891052, y: 5.6399994}
+  m_AnchorMin: {x: 0.025, y: 0.24}
+  m_AnchorMax: {x: 0.085, y: 0.78}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0.2792015, y: -3.5252}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &2589245652412991658
 CanvasRenderer:
@@ -479,8 +479,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a069fab0d56fd25499de45d1769a43e1, type: 3}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: b4fde96d89322ff4dafe3d20e376522c, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -539,10 +539,10 @@ RectTransform:
   m_Father: {fileID: 224181034889932184}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.86, y: 0.17}
-  m_AnchorMax: {x: 0.97, y: 0.86}
-  m_AnchoredPosition: {x: 1.7363892, y: -1}
-  m_SizeDelta: {x: 11.717529, y: 8.610001}
+  m_AnchorMin: {x: 0.855, y: 0.17}
+  m_AnchorMax: {x: 0.98, y: 0.86}
+  m_AnchoredPosition: {x: -0.26361084, y: -1}
+  m_SizeDelta: {x: 1.7175293, y: 8.610001}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2474900214142497237
 CanvasRenderer:
@@ -674,8 +674,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.6325989, y: 0}
+  m_SizeDelta: {x: -16.4463, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3939470883688102885
 CanvasRenderer:
@@ -707,7 +707,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: 6eeb36072a0153d48adb93deb4708cdf, type: 3}
-    m_FontSize: 32
+    m_FontSize: 30
     m_FontStyle: 0
     m_BestFit: 1
     m_MinSize: 2
@@ -754,10 +754,10 @@ RectTransform:
   m_Father: {fileID: 224181034889932184}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.71, y: 0.21}
-  m_AnchorMax: {x: 0.83, y: 0.85}
-  m_AnchoredPosition: {x: -0.5, y: -2}
-  m_SizeDelta: {x: 8.190186, y: 12.610001}
+  m_AnchorMin: {x: 0.705, y: 0.21}
+  m_AnchorMax: {x: 0.835, y: 0.85}
+  m_AnchoredPosition: {x: -1, y: -2}
+  m_SizeDelta: {x: 1.1901855, y: 12.610001}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8016269295091719942
 CanvasRenderer:
@@ -818,10 +818,10 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.41960788, g: 1, b: 0.46261618, a: 1}
-    m_HighlightedColor: {r: 0, g: 1, b: 0.026485443, a: 1}
-    m_PressedColor: {r: 0.03243241, g: 0.6117647, b: 0, a: 1}
-    m_SelectedColor: {r: 0, g: 1, b: 0.026485443, a: 1}
+    m_NormalColor: {r: 1, g: 0.41960788, b: 0.79690737, a: 1}
+    m_HighlightedColor: {r: 1, g: 0.42352942, b: 0.8, a: 1}
+    m_PressedColor: {r: 0.990566, g: 0.71488965, b: 0.8949232, a: 1}
+    m_SelectedColor: {r: 1, g: 0.42352942, b: 0.8, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
@@ -889,8 +889,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0.00009918213, y: 0}
+  m_SizeDelta: {x: -20.2417, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6288126841167647287
 CanvasRenderer:
@@ -922,10 +922,10 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: 6eeb36072a0153d48adb93deb4708cdf, type: 3}
-    m_FontSize: 32
+    m_FontSize: 0
     m_FontStyle: 0
     m_BestFit: 1
-    m_MinSize: 2
+    m_MinSize: 0
     m_MaxSize: 40
     m_Alignment: 4
     m_AlignByGeometry: 1
@@ -1033,10 +1033,10 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 0.72211117, b: 0, a: 1}
-    m_HighlightedColor: {r: 1, g: 0.6964086, b: 0, a: 1}
-    m_PressedColor: {r: 1, g: 0.67027533, b: 0, a: 1}
-    m_SelectedColor: {r: 1, g: 0.7167984, b: 0, a: 1}
+    m_NormalColor: {r: 0.41960785, g: 1, b: 0.4627451, a: 1}
+    m_HighlightedColor: {r: 0.41960785, g: 1, b: 0.4627451, a: 1}
+    m_PressedColor: {r: 0.03137255, g: 0.6117647, b: 0, a: 1}
+    m_SelectedColor: {r: 0.41960785, g: 1, b: 0.4627451, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
@@ -1104,8 +1104,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -1, y: 0}
-  m_SizeDelta: {x: -9.3843, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0}
+  m_SizeDelta: {x: -12.6511, y: -11.4465}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2325995262369403360
 CanvasRenderer:

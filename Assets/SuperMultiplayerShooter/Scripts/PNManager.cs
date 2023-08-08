@@ -44,6 +44,8 @@ public class PNManager : PNManagerBehaviour
         {
             Debug.LogError("Please set your PubNub keys in the PNConfigAsset.");
         }
+
+
         //Randomly generates a username. SystemInfo.deviceUniqueIdentifier does not work on WebGL Builds.
         //string uuid = "User#" + Random.Range(0, 9999).ToString();
         string uuid = System.Guid.NewGuid().ToString();
@@ -305,6 +307,32 @@ public class PNManager : PNManagerBehaviour
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Deletes all of the messages from the provided channel.
+    /// Note: This requires three features to be fully functional:
+    /// 1. Message Persistence is enabled for your key
+    /// 2. There is a setting to accept delete from history requests for a key, which you must enable by checking the Enable Delete-From-History checkbox in the key settings for your key in the Admin Portal.
+    /// </summary>
+    /// <param name="channel"></param>
+    /// <returns></returns>
+    public async Task<bool> DeleteMessages(string channel)
+    {
+        PNResult<PNDeleteMessageResult> delMsgResponse = await Connector.instance.GetPubNubObject().DeleteMessages()
+            .Channel(channel)
+            .ExecuteAsync();
+
+        PNDeleteMessageResult delMsgResult = delMsgResponse.Result;
+        PNStatus status = delMsgResponse.Status;
+
+        if (status != null && status.Error)
+        {
+            //Check for any error
+            Debug.Log(status.ErrorData.Information);
+            return false;
+        }
+        return true;
     }
 
     /// <summary>

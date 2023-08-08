@@ -34,6 +34,7 @@ namespace Visyde
         public Text enableBotsText;
         public Text currentNumberOfPlayersInRoomText;
         public Button startBTN;
+        public UnityEngine.Color lobbyColor;
 
         // Internals:
         string randomRoomName;
@@ -150,7 +151,9 @@ namespace Visyde
             RefreshPlayerList();
 
             // Notify other players through chat:
-            string message = $"<color=blue>[{player.NickName}: joined the room]</color>\n";
+            //Format color to be read in an HTML string.
+            string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(lobbyColor);
+            string message = $"<color={colorHex}>[{player.NickName}: joined the room]</color>\n";
             messageDisplay.text += message;
         }
         // Subscribed to Connector's "onPlayerLeave" event:
@@ -160,7 +163,9 @@ namespace Visyde
             RefreshPlayerList();
 
             // Notify other players through chat:
-            string message = $"<color=blue>[{player.NickName}: left the room]</color>\n";
+            //Format color to be read in an HTML string.
+            string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(lobbyColor);
+            string message = $"<color={colorHex}>[{player.NickName}: left the room]</color>\n";
             messageDisplay.text += message;
         }
         // Subscribed to Connector's "onCreateRoomFailed" event:

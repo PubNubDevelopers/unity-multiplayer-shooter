@@ -29,6 +29,7 @@ public class SettingsWindow : MonoBehaviour
     {
         StartCoroutine(LoadDropdownOptions());
         fpsToggled = frameRateSetting.isOn = Connector.IsFPSSettingEnabled;
+        saveButton.onClick.AddListener(async () => await SaveOptions());
     }
 
     private IEnumerator LoadDropdownOptions()
@@ -63,7 +64,7 @@ public class SettingsWindow : MonoBehaviour
     /// <summary>
     /// Save any changes, if there are any, and close the settings window.
     /// </summary>
-    public void SaveOptions()
+    public async Task<bool> SaveOptions()
     {
         bool changesMade = false;
 
@@ -110,13 +111,14 @@ public class SettingsWindow : MonoBehaviour
                     customData.Add("60fps", fpsToggled);
                 }
                 
-                //Acceptable to not need to await for this call to finish.
-                PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name, customData);
+                await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name, customData);
             }
             
         }
         //Close the Chat Window.
         CloseWindow();
+
+        return true;
     }
 
     /// <summary>

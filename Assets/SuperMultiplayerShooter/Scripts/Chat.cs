@@ -85,6 +85,33 @@ public class Chat : MonoBehaviour
                     translateMessage.source = LocalizationSettings.SelectedLocale.Identifier.Code;
                     translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
                     translateMessage.publisher = Connector.instance.GetPubNubObject().GetCurrentUserId();
+                    //Determine color of message based on channel. Default to all chat.
+                    Color color = allChatColor;
+
+                    //Private Chat
+                    if (targetChatChannel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
+                    {
+                        color = privateChatColor;
+                    }
+
+                    //Friends
+                    else if (targetChatChannel.StartsWith(PubNubUtilities.chanFriendChat))
+                    {
+                        color = friendsChatColor;
+                    }
+
+                    //Lobby
+                    else if (targetChatChannel.StartsWith(PubNubUtilities.chanChatLobby))
+                    {
+                        if (Connector.instance.CurrentRoom != null && targetChatChannel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
+                        {
+                            color = lobbyChatColor;
+                        }
+                    }
+
+                    // Display your nickname as the recipient.
+                    DisplayChat(translateMessage.text, Connector.PNNickName, color);
+
                     SendChatMessage(translateMessage, targetChatChannel);
                 }
 
@@ -152,6 +179,12 @@ public class Chat : MonoBehaviour
                 Debug.Log("You selected Private");
                 targetChatChannel = PubNubUtilities.chanPrivateChat;
 
+                // Close Friend List panel to not interfere with sending private message.
+                if(friendsListPanel.activeSelf)
+                {
+                    friendsListPanel.SetActive(false);
+                }
+
                 //Opens the panels.          
                 privateMessagePopupPanel.SetActive(true);
 
@@ -159,7 +192,7 @@ public class Chat : MonoBehaviour
                 inputField.gameObject.SetActive(false);
                 break;
             case "Friends":
-                //targetChatChannel = PubNubUtilities.chanChat + PubNubUtilities.chanFriendFeed + Connector.instance.GetPubNubObject().GetCurrentUserId();
+                targetChatChannel = PubNubUtilities.chanFriendChat + Connector.instance.GetPubNubObject().GetCurrentUserId();
                 Debug.Log("You selected Friends");
                 // Include the logic you want to happen when "FRIENDS" is selected
                 break;
@@ -225,9 +258,10 @@ public class Chat : MonoBehaviour
     /// <param name="result"></param>
     private void OnPnMessage(PNMessageResult<object> result)
     {
-        //all chat messages start with "chat" or "translate"
+        //all chat messages start with "chat" or "translate". Ignore messages from self (they are not translated/ran through profanity filter).
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
-            && !string.IsNullOrWhiteSpace(result.Channel) && (result.Channel.StartsWith(PubNubUtilities.chanChat)
+            && !string.IsNullOrWhiteSpace(result.Channel) 
+            && ((result.Channel.StartsWith(PubNubUtilities.chanChat) && !result.Publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
             || result.Channel.StartsWith(PubNubUtilities.chanChatTranslate)))
         {
             Color color = new Color(0, 0, 0, 0);
@@ -256,13 +290,13 @@ public class Chat : MonoBehaviour
                     chatTargetDropdown.options.Add(newOption);
                }
             }
-            /*
+            
             //Friends
-            else if(channel.Contains(PubNubUtilities.chanFriendFeed + Connector.instance.GetPubNubObject().GetCurrentUserId()))
+            else if (channel.StartsWith(PubNubUtilities.chanFriendChat))
             {
                 color = friendsChatColor;
             }
-            */
+            
             //Lobby
             else if(channel.StartsWith(PubNubUtilities.chanChatLobby)) 
             {
@@ -336,15 +370,15 @@ public class Chat : MonoBehaviour
     /// </summary>
     public async void SendChatMessage(MessageModeration message, string channel)
     {
-        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
-            .Channel(channel)
-            .Message(message)
-            .ExecuteAsync();
-        
         //clear input field.
         inputField.text = string.Empty;
 
-        if (publishResponse.Status.Error)
+        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+            .Channel(channel)
+            .Message(message)
+            .ExecuteAsync();     
+        
+        if (publishResponse != null && publishResponse.Status != null && publishResponse.Status.Error)
         {
             Debug.Log($"Error when attempting to send publish message: {publishResponse.Status.ErrorData}");
         }
@@ -360,8 +394,6 @@ public class Chat : MonoBehaviour
     {
         //Forat color to be read in an HTML string.
         string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
-        //Filter message for profanity
-        //string filteredMessage = FilterMessageProfanity(message);
         string finalMessage = $"<color=#{colorHex}>{recipient}:{message}</color>\n";
         messageDisplay.text += finalMessage;
     }
@@ -428,6 +460,11 @@ public class Chat : MonoBehaviour
         ChangeAlphaValue(chatViewImage, 0f);
     }
 
+    /// <summary>
+    /// Changes the transparancy give the value of the provided image
+    /// </summary>
+    /// <param name="image"></param>
+    /// <param name="value"></param>
     private void ChangeAlphaValue(Image image, float value)
     {
         if (image != null)
