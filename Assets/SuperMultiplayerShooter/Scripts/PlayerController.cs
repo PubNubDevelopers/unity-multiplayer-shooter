@@ -16,7 +16,6 @@ namespace Visyde
     {
         //  PubNub variables
         private PubNubUtilities pubNubUtilities;
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         public PubNubPlayerProps pubNubPlayerProps { get; set; }
         private bool initialPosition = true;
@@ -145,9 +144,8 @@ namespace Visyde
 
             pubNubUtilities = new PubNubUtilities();
             //Add Listeners
-            gm.pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
-            listener.onSignal += OnPnSignal;
+            Connector.instance.onPubNubMessage += OnPnMessage;
+            Connector.instance.onPubNubSignal += OnPnSignal;
 
             if (gm.players.Length + gm.bots.Length <= 3)
             {
@@ -160,7 +158,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
             if (result.Message != null &&
                 (result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)) ||
@@ -265,7 +263,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
+        private void OnPnSignal(PNSignalResult<object> result)
         {
             if (result.Message != null &&
                 (result.Channel.StartsWith(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerActions))) ||
@@ -859,8 +857,8 @@ namespace Visyde
                 catch (System.Exception) { }
 
                 // and then destroy (give a time for the death animation):
-                listener.onMessage -= OnPnMessage;
-                listener.onSignal -= OnPnSignal;
+                Connector.instance.onPubNubMessage -= OnPnMessage;
+                Connector.instance.onPubNubSignal -= OnPnSignal;
                 Invoke("PlayerDestroy", 1f);
             }
 
@@ -876,8 +874,8 @@ namespace Visyde
             invulnerabilityIndicator.SetActive(false);
 
             // PubNub
-            listener.onMessage -= OnPnMessage;
-            listener.onSignal -= OnPnSignal;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
+            Connector.instance.onPubNubSignal -= OnPnSignal;
         }
 
         public void Teleport(Vector3 newPos)
@@ -1077,8 +1075,8 @@ namespace Visyde
         void OnDestroy()
         {
             if (forPreview) return;
-            listener.onMessage -= OnPnMessage;
-            listener.onSignal -= OnPnSignal;
+            Connector.instance.onPubNubMessage += OnPnMessage;
+            Connector.instance.onPubNubSignal += OnPnSignal;
             OnDisable();
             Destroy(cosmeticsManager);
         }

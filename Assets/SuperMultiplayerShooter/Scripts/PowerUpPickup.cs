@@ -28,7 +28,6 @@ namespace Visyde
         int index;
 
         PubNubUtilities pubNubUtilities;
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         // Use this for initialization
         void Start()
@@ -40,8 +39,7 @@ namespace Visyde
             PubNubItemProps initProps = GetComponent<PubNubItemProps>();
 
             //Listeners
-            gm.pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
+            Connector.instance.onPubNubMessage += OnPnMessage;
 
             if (initProps)
             {
@@ -78,7 +76,7 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            listener.onMessage -= OnPnMessage;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
         }
 
         void Allow()
@@ -120,7 +118,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
             //  There is one subscribe handler per character
             if (result.Message != null && result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))

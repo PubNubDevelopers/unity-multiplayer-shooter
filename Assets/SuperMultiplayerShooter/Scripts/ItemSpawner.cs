@@ -32,7 +32,6 @@ namespace Visyde
         [HideInInspector] public Transform[] currentPowerUpSpawns;                      // used for checking if a certain spawn point still has a power-up pickup
 
         private PubNubUtilities pubNubUtilities;
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
 
         void Start()
         {
@@ -46,8 +45,7 @@ namespace Visyde
             pubNubUtilities = new PubNubUtilities();
 
             //Add Listeners
-            gm.pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
+            Connector.instance.onPubNubMessage += OnPnMessage;
         }
 
         // Update is called once per frame
@@ -82,7 +80,7 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            listener.onMessage -= OnPnMessage;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
         }
 
         /// <summary>
@@ -90,7 +88,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
             //  There is one subscribe handler per character
             try {

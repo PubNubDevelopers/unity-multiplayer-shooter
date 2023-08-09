@@ -20,7 +20,7 @@ namespace Visyde
         public static GameManager instance;
 
         //  PubNub Properties
-        public Pubnub pubnub = null;
+        public Pubnub pubnub = Connector.instance.GetPubNubObject();
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
@@ -128,6 +128,7 @@ namespace Visyde
         // Others:
         List<PNPlayer> playersAll;
         public bool spawnComplete = false;
+        List<string> channels = new List<string>();
 
         void Awake()
         {
@@ -156,9 +157,6 @@ namespace Visyde
             // Don't allow the device to sleep while in game:
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
-            //  Initialize PubNub and subscribe to the appropriate channels
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
-            List<string> channels = new List<string>();
             //  Room status updates, such as bot attributes or game started?
             channels.Add(PubNubUtilities.chanRoomStatus);  
             channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems));
@@ -183,9 +181,8 @@ namespace Visyde
                     channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor + bot.playerID));
                 }
             }
-            pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
-            listener.onPresence += OnPnPresence;
+            Connector.instance.onPubNubMessage += OnPnMessage;
+            Connector.instance.onPubNubPresence += OnPnPresence;
             //Subscribe to the list of Channels
             pubnub.Subscribe<string>()
                .Channels(channels)
@@ -222,9 +219,9 @@ namespace Visyde
         void OnDestroy()
         {
             //  Unsubscribe only for this PubNub instance (which is unique per game)
-            pubnub.UnsubscribeAll();    
-            listener.onMessage -= OnPnMessage;
-            listener.onPresence -= OnPnPresence;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
+            Connector.instance.onPubNubPresence -= OnPnPresence;
+            pubnub.Unsubscribe<string>().Channels(channels.ToArray()).Execute();
         }
 
         //  The master of the game will wait for all the players to report that they are ready before
@@ -774,7 +771,7 @@ namespace Visyde
         }
 
         //  Handler for PubNub Messages
-        private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private void OnPnMessage(PNMessageResult<object> result)
         {
             if (result != null && result.Channel.Equals(PubNubUtilities.chanRoomStatus))
             {
@@ -785,6 +782,7 @@ namespace Visyde
                     if (payload.ContainsKey("started"))
                     {
                         gameStarted = (bool)payload["started"];
+                        Connector.instance.AddPresenceListener();
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
@@ -795,7 +793,6 @@ namespace Visyde
                     {
                         startTime = System.Convert.ToSingle(payload["gameStartTime"]);
                         CheckTime();
-                        
                     }
                     if (payload.ContainsKey("rankings"))
                     {
@@ -895,7 +892,7 @@ namespace Visyde
         }
 
         //  PubNub Presence event handler
-        private void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
+        private void OnPnPresence(PNPresenceEventResult result)
         {
             if (result.Channel.Equals(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems)))
             {
