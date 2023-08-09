@@ -6592,6 +6592,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: RefreshLobbyButton
       objectReference: {fileID: 0}
+    - target: {fileID: 1250100938129686, guid: d18077347beaaf9488dcb354122342ec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_Colors.m_NormalColor.b
@@ -7978,7 +7982,7 @@ PrefabInstance:
     - target: {fileID: 224152535264682104, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -7.1456
+      value: -7.14563
       objectReference: {fileID: 0}
     - target: {fileID: 224152535264682104, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
@@ -20057,7 +20061,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 4.4164124}
+  m_AnchoredPosition: {x: 0, y: 4.416382}
   m_SizeDelta: {x: -3.8445, y: -91.3018}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1927178524
@@ -21905,7 +21909,7 @@ PrefabInstance:
     - target: {fileID: 224152535264682104, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000061035156
+      value: 0.00012207031
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d18077347beaaf9488dcb354122342ec, type: 3}
@@ -22304,7 +22308,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 60.492188, y: -25.322601}
+  m_AnchoredPosition: {x: 60.492188, y: -25.322632}
   m_SizeDelta: {x: -120.9847, y: 50.6461}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7273959242105391047
