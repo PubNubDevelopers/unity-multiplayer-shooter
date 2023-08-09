@@ -979,7 +979,7 @@ namespace Visyde
                             {
                                 if (room.OwnerId.Equals(roomOwnerId) && !room.OwnerId.Equals(requestorId))
                                 {
-                                    if (!currentRoomContains(remotePlayer))
+                                    if (!RoomContains(room, remotePlayer))
                                     {
                                         Debug.Log("Adding Player to Room: " + remotePlayer.NickName);
                                         room.PlayerList.Add(remotePlayer);
@@ -994,14 +994,14 @@ namespace Visyde
             }
         }
 
-        private bool currentRoomContains(PNPlayer remotePlayer)
+        private bool RoomContains(PNRoomInfo room, PNPlayer remotePlayer)
         {
             bool ret = false;
-            if (CurrentRoom != null)
+            if (room != null)
             {
-                for (int j = 0; j < CurrentRoom.PlayerList.Count; j++)
+                for (int j = 0; j < room.PlayerList.Count; j++)
                 {
-                    if (CurrentRoom.PlayerList[j].UserId.Equals(remotePlayer.UserId))
+                    if (room.PlayerList[j].UserId.Equals(remotePlayer.UserId))
                     {
                         ret = true;
                         break;

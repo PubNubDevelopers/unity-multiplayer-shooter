@@ -34,6 +34,7 @@ namespace Visyde
         public Text enableBotsText;
         public Text currentNumberOfPlayersInRoomText;
         public Button startBTN;
+        public Button refreshLobbyBTN;
         public UnityEngine.Color lobbyColor;
 
         // Internals:
@@ -118,6 +119,7 @@ namespace Visyde
             // Enable/disable start button:
             bool allowBots = Connector.instance.CurrentRoom.AllowBots;
             startBTN.interactable = Connector.instance.isMasterClient && ((Connector.instance.CurrentRoom.PlayerList.Count > 1 && !allowBots) || (allowBots));
+            refreshLobbyBTN.interactable = !Connector.instance.isMasterClient;
         }
         public void Join(PNRoomInfo room){
             Connector.instance.JoinCustomGame(room);
