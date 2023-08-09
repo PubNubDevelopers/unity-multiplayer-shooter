@@ -1075,8 +1075,8 @@ namespace Visyde
         void OnDestroy()
         {
             if (forPreview) return;
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubSignal += OnPnSignal;
+            Connector.instance.onPubNubMessage -= OnPnMessage;
+            Connector.instance.onPubNubSignal -= OnPnSignal;
             OnDisable();
             Destroy(cosmeticsManager);
         }
