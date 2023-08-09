@@ -6594,7 +6594,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1250100938129686, guid: d18077347beaaf9488dcb354122342ec, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
@@ -6689,7 +6689,7 @@ PrefabInstance:
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: RefreshRooms
+      value: RefreshCurrentLobby
       objectReference: {fileID: 0}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
@@ -15127,7 +15127,7 @@ PrefabInstance:
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_Target
       value: 
-      objectReference: {fileID: 232236242}
+      objectReference: {fileID: 232236246}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
@@ -15151,7 +15151,12 @@ PrefabInstance:
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_MethodName
-      value: CloseLobbyCountNotif
+      value: RefreshRooms
+      objectReference: {fileID: 0}
+    - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_TargetAssemblyTypeName
+      value: Visyde.LobbyBrowserUI, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 114361736765703588, guid: d18077347beaaf9488dcb354122342ec,
         type: 3}
@@ -21967,8 +21972,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 287.90094, y: 0}
-  m_SizeDelta: {x: 567.8019, y: 0}
+  m_AnchoredPosition: {x: 246.434, y: 0}
+  m_SizeDelta: {x: 484.868, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2138168473
 MonoBehaviour:
