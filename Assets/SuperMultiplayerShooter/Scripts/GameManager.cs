@@ -782,7 +782,7 @@ namespace Visyde
                     if (payload.ContainsKey("started"))
                     {
                         gameStarted = (bool)payload["started"];
-                        Connector.instance.AddPresenceListener();
+                        Invoke("AddPresenceListener", 1.0f);
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
@@ -889,6 +889,11 @@ namespace Visyde
                     }
                 }
             }
+        }
+
+        private void AddPresenceListener()
+        {
+            Connector.instance.AddPresenceListener();
         }
 
         //  PubNub Presence event handler
