@@ -113,6 +113,8 @@ namespace Visyde
         public PlayerEvent onPlayerLeave;
         public delegate void PNMessageEvent(PNMessageResult<object> message);
         public PNMessageEvent onPubNubMessage;  //  Send chat messages to e.g. the lobby chat pane
+        public delegate void PNSignalEvent(PNSignalResult<object> message);
+        public PNSignalEvent onPubNubSignal;
         public delegate void PNPresenceEvent(PNPresenceEventResult result);
         public PNPresenceEvent onPubNubPresence;  // Receive online/offline updates
         public event Action OnConnectorReady; // Signals listeners that the Connector.instance is ready to go.
@@ -141,7 +143,9 @@ namespace Visyde
 
         private void OnDestroy()
         {
+            /*
             listener.onMessage -= OnPnMessage;
+            listener.onSignal -= OnPnSignal;
             listener.onPresence -= OnPnPresence;
             listener.onObject -= OnPnObject;
             try
@@ -151,6 +155,7 @@ namespace Visyde
                 .Execute();
             }
             catch (System.Exception) { }
+            */
         }
 
         async void Start()
@@ -165,7 +170,8 @@ namespace Visyde
             IsFPSSettingEnabled = GetFPSSetting();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
-            listener.onPresence += OnPnPresence;
+            listener.onSignal += OnPnSignal;
+            AddPresenceListener();
             listener.onObject += OnPnObject;
 
             pubnub.Subscribe<string>()
@@ -218,6 +224,9 @@ namespace Visyde
                         CurrentRoom.SortPlayerListAndAssignIds();
                         SynchronizePlayerCharacteristics(); //  Exchange info about human players
                         PubNubGameInProgress();
+                        //  Loading the game scene will generate presence events (since we subscribe to new channels).
+                        //  Temporarily unregister from presence events
+                        RemovePresenceListener();   
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
 
                         //  Notify other participants to load their own scene and provide the required info to allow
@@ -754,6 +763,18 @@ namespace Visyde
             }
         }
 
+        private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
+        {
+            if (result.Message != null)
+            {
+                try
+                {
+                    onPubNubSignal(result);
+                }
+                catch (System.Exception) { }
+            }
+        }
+
         //  Handler for PubNub Message event
         private async void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
         {
@@ -804,6 +825,9 @@ namespace Visyde
 
                                 UpdatePlayerCount();
                                 CurrentRoom.SortPlayerListAndAssignIds();
+                                //  Loading the game scene will generate presence events (since we subscribe to new channels).
+                                //  Temporarily unregister from presence events
+                                RemovePresenceListener();
                                 SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
                                 loadNow = false;
                                 isLoadingGameScene = true;
@@ -871,7 +895,7 @@ namespace Visyde
                             }
                         }
                         OnPlayerEnteredRoom(newPlayer);
-                        onRoomListChange(pubNubRooms.Count);
+                        try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception) { }
                     }
                     else if (payload[0].Equals("LEAVE_CUSTOM_ROOM"))
                     {
@@ -901,7 +925,7 @@ namespace Visyde
                                 }
                             }
                         }
-                        onRoomListChange(pubNubRooms.Count);
+                        try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception) { }
                         if (requestorId == roomOwnerId)
                         {
                             try { onLeaveRoom(); } catch (System.Exception) { }
@@ -1159,6 +1183,16 @@ namespace Visyde
             {
                 SampleInventory.instance.availableHats.Add(hat);
             }
+        }
+
+        public void AddPresenceListener()
+        {
+            listener.onPresence += OnPnPresence;
+        }
+
+        public void RemovePresenceListener()
+        {
+            listener.onPresence -= OnPnPresence;
         }
 
         // Test case
