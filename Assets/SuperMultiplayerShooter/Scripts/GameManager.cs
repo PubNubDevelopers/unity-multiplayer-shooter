@@ -20,7 +20,7 @@ namespace Visyde
         public static GameManager instance;
 
         //  PubNub Properties
-        public Pubnub pubnub = Connector.instance.GetPubNubObject();
+        public Pubnub pubnub = null;
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
@@ -133,6 +133,7 @@ namespace Visyde
         void Awake()
         {
             instance = this;
+            pubnub = Connector.instance.GetPubNubObject();
 
             // Prepare player instance arrays:
             bots = new PlayerInstance[0];
@@ -266,7 +267,6 @@ namespace Visyde
                         {
                             doneGameStart = true;
                             gameStarted = true;
-                            CancelInvoke("CheckIfAllPlayersReady");
                         }
                         else
                         {
@@ -724,6 +724,10 @@ namespace Visyde
 
         void StartGamePrepare()
         {
+            if (Connector.instance.isMasterClient)
+            {
+                CancelInvoke("CheckIfAllPlayersReady");
+            }
             Dictionary<string, object> startGameProps = new Dictionary<string, object>();
             startGameProps.Add("gameStartTime", epochTime());
             startGameProps.Add("gameStartsIn", (epochTime() + preparationTime));
