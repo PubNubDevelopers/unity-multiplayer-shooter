@@ -981,7 +981,6 @@ namespace Visyde
                                 {
                                     if (!RoomContains(room, remotePlayer))
                                     {
-                                        Debug.Log("Adding Player to Room: " + remotePlayer.NickName);
                                         room.PlayerList.Add(remotePlayer);
                                     }
                                     break;
