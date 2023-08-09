@@ -595,7 +595,7 @@ namespace Visyde
             return true;
         }
 
-        private async Task<bool> PopulateRoomMembers()
+        public async Task<bool> PopulateRoomMembers()
         {
             //  Send a message to each room and the owner will reply with the current room occupants
             //  Called when we first launch, after we know what rooms exist
@@ -979,15 +979,36 @@ namespace Visyde
                             {
                                 if (room.OwnerId.Equals(roomOwnerId) && !room.OwnerId.Equals(requestorId))
                                 {
-                                    room.PlayerList.Add(remotePlayer);
+                                    if (!currentRoomContains(remotePlayer))
+                                    {
+                                        Debug.Log("Adding Player to Room: " + remotePlayer.NickName);
+                                        room.PlayerList.Add(remotePlayer);
+                                    }
                                     break;
                                 }
                             }
-                            onRoomListChange(pubNubRooms.Count);
+                            try { onRoomListChange(pubNubRooms.Count); } catch (System.Exception) { }
                         }
                     }
                 }
             }
+        }
+
+        private bool currentRoomContains(PNPlayer remotePlayer)
+        {
+            bool ret = false;
+            if (CurrentRoom != null)
+            {
+                for (int j = 0; j < CurrentRoom.PlayerList.Count; j++)
+                {
+                    if (CurrentRoom.PlayerList[j].UserId.Equals(remotePlayer.UserId))
+                    {
+                        ret = true;
+                        break;
+                    }
+                }
+            }
+            return ret;
         }
 
         //  Handler for PubNub Presence events

@@ -88,6 +88,11 @@ namespace Visyde
                 listStatusText.text = "No games are currently available";
             }
         }
+        public async void RefreshCurrentLobby()
+        {
+            //  Should work if not the master?
+            await Connector.instance.PopulateRoomMembers();
+        }
         public void RefreshPlayerList()
         {
             // Clear list first:
