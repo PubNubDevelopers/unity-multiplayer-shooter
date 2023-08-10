@@ -159,7 +159,7 @@ namespace Visyde
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             //  Room status updates, such as bot attributes or game started?
-            channels.Add(PubNubUtilities.chanRoomStatus);  
+            //channels.Add(PubNubUtilities.chanRoomStatus);  
             channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems));
             channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems) + "-pnpres");  //  We are only interested in presence events for this channel
             //  Every player will send their updates on a unique channel, so subscribe to those
@@ -737,6 +737,7 @@ namespace Visyde
 
         public void OnDisconnected(bool bWasOwner, string playerName)
         {
+            Debug.Log("OnDisconnect was received");
             if (!isGameOver)
             {
                 if (bWasOwner)
@@ -875,6 +876,7 @@ namespace Visyde
                                 {
                                     Connector.instance.LeaveRoom();
                                 }
+                                Debug.Log("Calling OnDisconnected from playerLeft PnMessage.  Player name: " + playerName);
                                 OnDisconnected(bWasOwner, playerName);
                             }
                             catch (System.Exception) { }
@@ -926,6 +928,7 @@ namespace Visyde
                         Connector.instance.PubNubRemoveRoom(result.Uuid, true);
                     }
                     Connector.instance.LeaveRoom();
+                    Debug.Log("Calling OnDisconnected from OnPnPresence event.  Player name " + playerName);
                     OnDisconnected(bWasOwner, playerName);
                 }
                 else if (result.Event.Equals("join"))
