@@ -261,7 +261,8 @@ public class Chat : MonoBehaviour
     private void OnPnMessage(PNMessageResult<object> result)
     {
         //all chat messages start with "chat" or "translate".
-        if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString()) && !string.IsNullOrWhiteSpace(result.Channel))         
+        if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString()) && !string.IsNullOrWhiteSpace(result.Channel)
+            && (result.Channel.StartsWith(PubNubUtilities.chanChat) || result.Channel.Equals(PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId())))     
         {
 
             // Determine if the message needs to be translated by checking the source/target languages
