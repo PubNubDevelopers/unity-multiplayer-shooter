@@ -7,5 +7,6 @@ public class MessageModeration
 	public string source;
 	public string target;
 	public string publisher;
+	public string chatType;
 }
 

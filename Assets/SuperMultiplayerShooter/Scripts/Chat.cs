@@ -13,6 +13,7 @@ using System;
 using System.Linq;
 using UnityEngine.Localization.Settings;
 using Unity.VisualScripting;
+using Unity.Burst.Intrinsics;
 
 public class Chat : MonoBehaviour
 {
@@ -110,8 +111,9 @@ public class Chat : MonoBehaviour
                     }
 
                     // Display your nickname as the recipient.
-                    DisplayChat(translateMessage.text, Connector.PNNickName, color);
-
+                    string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
+                    translateMessage.chatType = colorHex;
+                    DisplayChat(translateMessage.text, Connector.PNNickName, colorHex);
                     SendChatMessage(translateMessage, targetChatChannel);
                 }
 
@@ -258,110 +260,110 @@ public class Chat : MonoBehaviour
     /// <param name="result"></param>
     private void OnPnMessage(PNMessageResult<object> result)
     {
-        //all chat messages start with "chat" or "translate". Ignore messages from self (they are not translated/ran through profanity filter).
-        if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
-            && !string.IsNullOrWhiteSpace(result.Channel) 
-            && ((result.Channel.StartsWith(PubNubUtilities.chanChat) && !result.Publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
-            || result.Channel.StartsWith(PubNubUtilities.chanChatTranslate)))
+        //all chat messages start with "chat" or "translate".
+        if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString()) && !string.IsNullOrWhiteSpace(result.Channel))         
         {
-            Color color = new Color(0, 0, 0, 0);
-            string channel = result.Channel;
-            //Replace channel name with chat. to determine the color of the chat.
-            if(result.Channel.StartsWith(PubNubUtilities.chanChatTranslate))
+
+            // Determine if the message needs to be translated by checking the source/target languages
+            try
             {
-                channel = PubNubUtilities.chanChat + result.Channel.Substring(PubNubUtilities.chanChatTranslate.Length);
-            }
-            //Private Chat
-            if (channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
-            {
-                if (channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                //Message is already filtered for profanity at this point.
+                //Determine if we need to translate the language before we display the chat.
+                var moderatedMessage = JsonConvert.DeserializeObject<MessageModeration>(result.Message.ToString());
+                if (moderatedMessage != null)
                 {
-                    color = privateChatColor;
-                }
-
-                //Automatically add an option to the dropdown from the recipient if a private message
-                //option has not been added before. Don't actually switch dropdown selection,
-                //simply provide as an option.
-               if(string.IsNullOrEmpty(PNManager.pubnubInstance.PrivateMessageUUID))
-               {
-                    string displayName = PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name;
-                    Dropdown.OptionData newOption = new Dropdown.OptionData(displayName);
-                    PNManager.pubnubInstance.PrivateMessageUUID = result.Publisher;
-                    chatTargetDropdown.options.Add(newOption);
-               }
-            }
-            
-            //Friends
-            else if (channel.StartsWith(PubNubUtilities.chanFriendChat))
-            {
-                color = friendsChatColor;
-            }
-            
-            //Lobby
-            else if(channel.StartsWith(PubNubUtilities.chanChatLobby)) 
-            {
-                if (Connector.instance.CurrentRoom != null && channel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
-                {
-                    color = lobbyChatColor;
-
-                }
-            }
-
-            //All Chat
-            else
-            {
-                color = allChatColor;
-            }
-
-            //If color wasn't set, then it means the message isn't meant for us to display.
-            if(color != default(Color))
-            {
-                try
-                {                  
-                    string message = "";
-
-                    //Message is already filtered for profanity at this point.
-                    //Determine if we need to translate the language before we display the chat.
-                    var moderatedMessage = JsonConvert.DeserializeObject<MessageModeration>(result.Message.ToString());
-                    if(moderatedMessage != null)
+                    //Ignore messages from self (they are not translated / ran through profanity filter).
+                    if (result.Channel.StartsWith(PubNubUtilities.chanChat) && !result.Publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                     {
-                        message = moderatedMessage.text;
-
-                        //If the languages match and  (don't want to display chat twice), it's already been translated or is
-                        //already in the same language, no need to do any more work. Just display the chat.
-                        if (LocalizationSettings.SelectedLocale.Identifier.Code.Equals(moderatedMessage.source))
+                        Color color = new Color(0, 0, 0, 0);
+                        //Private Chat
+                        if (result.Channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
                         {
-                            string username = GetUsername(moderatedMessage.publisher);
-                            //Did not come from translate, display it.
-                            if (result.Channel.StartsWith(PubNubUtilities.chanChat) 
-                                || (result.Channel.StartsWith(PubNubUtilities.chanChatTranslate) && !moderatedMessage.publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId())))
+                            if (result.Channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
                             {
-                                DisplayChat(message, username, color);
+                                color = privateChatColor;
+                            }
+
+                            //Automatically add an option to the dropdown from the recipient if a private message
+                            //option has not been added before. Don't actually switch dropdown selection,
+                            //simply provide as an option.
+                            if (string.IsNullOrEmpty(PNManager.pubnubInstance.PrivateMessageUUID))
+                            {
+                                string displayName = PNManager.pubnubInstance.CachedPlayers[result.Publisher].Name;
+                                Dropdown.OptionData newOption = new Dropdown.OptionData(displayName);
+                                PNManager.pubnubInstance.PrivateMessageUUID = result.Publisher;
+                                chatTargetDropdown.options.Add(newOption);
                             }
                         }
 
-                        //If they don't match, translate language. Ignore messages coming from translate language, to avoid duplicating message.
-                        else if(!result.Channel.StartsWith(PubNubUtilities.chanChatTranslate))
+                        //Friends
+                        else if (result.Channel.StartsWith(PubNubUtilities.chanFriendChat))
                         {
-                            //Prep the channel name to send to the PubNub Function. Replace "chat" with "translate" as we already know it's a chat message.
-                            string translateChannel = PubNubUtilities.chanChatTranslate + channel.Substring(PubNubUtilities.chanChat.Length);
+                            color = friendsChatColor;
+                        }
 
-                            //Include the selected locale language whenever you are sending messages.
-                            MessageModeration translateMessage = new MessageModeration();
-                            translateMessage.text = message;
-                            translateMessage.source = moderatedMessage.source;
-                            translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
-                            translateMessage.publisher = result.Publisher; //used to display the original name of hte user who published message.
-                            SendChatMessage(translateMessage, translateChannel);
+                        //Lobby
+                        else if (result.Channel.StartsWith(PubNubUtilities.chanChatLobby))
+                        {
+                            if (Connector.instance.CurrentRoom != null && result.Channel.Equals(PubNubUtilities.chanChatLobby + Connector.instance.CurrentRoom.ID))
+                            {
+                                color = lobbyChatColor;
+                            }
+                        }
+
+                        //All Chat
+                        else
+                        {
+                            color = allChatColor;
+                        }
+
+                        //If color wasn't set, then it means the message isn't meant for us to display.
+                        if (color != default(Color))
+                        {
+                            string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
+
+                            //If they don't match, translate language. Ignore messages coming from translate language, to avoid duplicating message.
+                            if (!LocalizationSettings.SelectedLocale.Identifier.Code.Equals(moderatedMessage.source))
+                            {
+                                //Prep the channel name to send to the PubNub Function. Replace "chat" with "translate" as we already know it's a chat message.
+                                string translateChannel = PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId();
+
+                                //Include the selected locale language whenever you are sending messages.
+                                MessageModeration translateMessage = new MessageModeration();
+                                translateMessage.text = moderatedMessage.text;
+                                translateMessage.source = moderatedMessage.source;
+                                translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
+                                translateMessage.publisher = result.Publisher; //used to display the original name of hte user who published message.
+                                translateMessage.chatType = colorHex;
+                                SendChatMessage(translateMessage, translateChannel);
+                                return;
+                            }
+
+                            //Languages match. Display.
+                            else
+                            {
+                                string username = GetUsername(moderatedMessage.publisher);
+                                //Did not come from translate, display it.                           
+                                DisplayChat(moderatedMessage.text, username, colorHex);
+                            }
                         }                      
-                    }                 
-                }
+                    }
 
-                catch(Exception e)
-                {
-                    Debug.Log($"Error when attempting to extract information from message: {e.Message}");
-                }                    
-            }     
+                    // Translated message. Already ran through profanity filter and language translation.
+                    else if (result.Channel.Equals(PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                    {
+                        // Already know type from chat call. Display message.
+                        // moderatedMessage
+                        string username = GetUsername(moderatedMessage.publisher);                       
+                        DisplayChat(moderatedMessage.text, username, moderatedMessage.chatType);
+                    }                   
+                }
+            }
+
+            catch (Exception e)
+            {
+                Debug.Log($"Error when attempting to extract information from message: {e.Message}");
+            }                      
         }
     }
 
@@ -390,10 +392,9 @@ public class Chat : MonoBehaviour
     /// <param name="message">The message from the user</param>
     /// <param name="recipient">The user who the sent the message</param>
     /// <param name="color">The color of the chat, representing whom it came from</param>
-    void DisplayChat(string message, string recipient, Color color)
+    void DisplayChat(string message, string recipient, string colorHex)
     {
         //Forat color to be read in an HTML string.
-        string colorHex = UnityEngine.ColorUtility.ToHtmlStringRGB(color);
         string finalMessage = $"<color=#{colorHex}>{recipient}:{message}</color>\n";
         messageDisplay.text += finalMessage;
     }
