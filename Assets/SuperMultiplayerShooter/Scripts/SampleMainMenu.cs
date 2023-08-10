@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
+using PubNubUnityShowcase;
 
 namespace Visyde
 {
@@ -47,6 +48,7 @@ namespace Visyde
             //Add Listeners
             Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
             Connector.instance.OnConnectorReady += ConnectorReady;
+            Connector.instance.onPubNubPresence += OnPnPresence;
             Connector.instance.onPubNubObject += OnPnObject;
         }
 
@@ -67,7 +69,22 @@ namespace Visyde
             //Sets up the Main Menu based on player cached information.
             MainMenuSetup();
         }
-    
+
+        /// Listen for status updates to update metadata cache
+        /// </summary>
+        /// <param name="result"></param>
+        private async void OnPnPresence(PNPresenceEventResult result)
+        {
+            // Determine if a player comes online that has yet to be cached.
+            if (result != null && result.Uuid != null && result.Event.Equals("join")
+                && result.Channel.Equals(PubNubUtilities.chanGlobal)
+                && !PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Uuid))
+            {
+                //If not, obtain and cache the user.
+                await PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
+            }
+        }
+
         /// <summary>
         /// Event listener to handle PubNub Object events
         /// </summary>
@@ -159,6 +176,7 @@ namespace Visyde
         {
             Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
             Connector.instance.OnConnectorReady -= ConnectorReady;
+            Connector.instance.onPubNubPresence -= OnPnPresence;
             Connector.instance.onPubNubObject -= OnPnObject;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case

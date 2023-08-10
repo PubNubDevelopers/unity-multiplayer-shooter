@@ -183,7 +183,7 @@ namespace Visyde
                     PubNubUtilities.chanRoomStatus,
                     PubNubUtilities.chanChatAll,
                     PubNubUtilities.chanPrivateChat,
-                    PubNubUtilities.chanChatTranslate + "*",
+                    PubNubUtilities.chanChatTranslate + userId,
                     PubNubUtilities.chanLeaderboardSub,
                     PubNubUtilities.chanFriendRequest + userId
                 })
