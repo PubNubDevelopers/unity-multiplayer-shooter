@@ -247,7 +247,8 @@ namespace Visyde
                     if (allPlayersReady)
                     {
                         //  All players are now ready, tell them to start
-                        StartGamePrepare();
+                        //StartGamePrepare();
+                        Invoke("StartGamePrepare", 2.0f);
                     }
                 }
             }
