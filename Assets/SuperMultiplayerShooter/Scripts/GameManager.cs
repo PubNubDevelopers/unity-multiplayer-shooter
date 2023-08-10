@@ -787,7 +787,7 @@ namespace Visyde
                     if (payload.ContainsKey("started"))
                     {
                         gameStarted = (bool)payload["started"];
-                        Invoke("AddPresenceListener", 1.0f);
+                        Invoke("AddPresenceListener", 4.0f);
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
