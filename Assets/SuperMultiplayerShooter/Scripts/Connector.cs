@@ -85,7 +85,7 @@ namespace Visyde
         //  PubNub properties
         private Pubnub pubnub = null;   //  Connection to PubNub used for all network comms apart from game-specific comms
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
+        private SubscribeCallbackListener listener = null;
         private static string userId = null;    //  The PubNub user ID for the current instance
         private SampleMainMenu mainMenu;    //  Used to enable the join room button when PubNub is ready
         public PNRoomInfo CurrentRoom = null;
@@ -139,10 +139,12 @@ namespace Visyde
         
         void Awake(){
             instance = this;
+            Debug.Log("Connector: Awake");
         }
 
         private void OnDestroy()
         {
+            Debug.Log("Connector Destroy");
             /*
             listener.onMessage -= OnPnMessage;
             listener.onSignal -= OnPnSignal;
@@ -161,6 +163,7 @@ namespace Visyde
         async void Start()
         {
             //  PubNub initialization
+            Debug.Log("Connector: PubNub user id is: " + PNManager.pubnubInstance.userId);
             pubnub = PNManager.pubnubInstance.InitializePubNub();
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
@@ -168,6 +171,7 @@ namespace Visyde
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
             UserLanguage = GetUserLanguage();
             IsFPSSettingEnabled = GetFPSSetting();
+            listener = new SubscribeCallbackListener();
             pubnub.AddListener(listener);
             listener.onMessage += OnPnMessage;
             listener.onSignal += OnPnSignal;
@@ -663,6 +667,7 @@ namespace Visyde
                         if (userId.Equals(ownerId))
                         {
                             //  We created the room, so join it.
+                            Debug.Log("Joining our own game");
                             CurrentRoom = roomInfo;
                             JoinCustomGame(roomInfo);
                         }
@@ -1207,11 +1212,13 @@ namespace Visyde
 
         public void AddPresenceListener()
         {
+            Debug.Log("Connector: Adding Presence Listener");
             listener.onPresence += OnPnPresence;
         }
 
         public void RemovePresenceListener()
         {
+            Debug.Log("Connector: Removing Presence Listener");
             listener.onPresence -= OnPnPresence;
         }
 
