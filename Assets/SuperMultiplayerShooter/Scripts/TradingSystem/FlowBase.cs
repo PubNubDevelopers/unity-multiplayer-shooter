@@ -2,6 +2,7 @@ using PubNubUnityShowcase;
 using PubNubUnityShowcase.UIComponents;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using UnityEngine;
 using static PubNubUnityShowcase.UIComponents.TradingView;
 
@@ -25,7 +26,9 @@ public abstract class FlowBase
     protected UIComponents UI => _ui;
     protected Services Services => _services;
     public bool TradeInviteResponceReceived { get; set; }
-    public bool ReceivedCounterofferResponse { get; set; }
+    public bool ReceivedOfferResponse { get; set; }
+
+    
 
     protected FlowBase(TradeSessionData sessionData, TradingViewStateBase stateBase, UIComponents ui, Services services)
     {
@@ -42,12 +45,17 @@ public abstract class FlowBase
 
     protected void InitializeUIElements()
     {
+        if (StateBase.UIElementsInitialized)
+            return;
+
         //Initialize UI Elements
         UI.OfferPanel.Construct();
         UI.InventoryInitiator.Construct(Services.HatsLibrary, 8);
         UI.InventoryRespondent.Construct(Services.HatsLibrary, 8);
         UI.AvatarInitiator.Construct(Services.Avatars, Services.HatsLibrary, UI.OfferPanel.ResponderSlot, UI.InventoryInitiator, SessionData.Initiator.EquippedCosmetic);
         UI.AvatarRespondent.Construct(Services.Avatars, Services.HatsLibrary, UI.OfferPanel.InitiatorSlot, UI.InventoryRespondent, SessionData.Respondent.EquippedCosmetic);
+
+        StateBase.UIElementsInitialized = true;
     }
 
     protected void RefreshAvatars(TraderData initiator, TraderData respondent)
@@ -86,7 +94,7 @@ public abstract class FlowBase
         UI.OfferPanel.ResponderSlot.SetItem(Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorReceives));
     }
 
-    protected void SetOfferTransfersEnabled(bool enabled)
+    protected void BindOfferTransfers(bool enabled)
     {
         if (enabled)
         {
@@ -104,25 +112,28 @@ public abstract class FlowBase
         }
     }
 
-    protected void SetOfferLocked(bool locked)
+    protected void OfferSetLocked(bool locked)
     {
         UI.OfferPanel.SetLocked(locked);
-        UI.InventoryInitiator.SetVisibility(!locked);
-        UI.InventoryRespondent.SetVisibility(!locked);
+    }
+
+    protected void InventoriesVisibility(bool visible)
+    {
+        UI.InventoryInitiator.SetVisibility(visible);
+        UI.InventoryRespondent.SetVisibility(visible);
     }
 
     protected void OnOfferPanelInitiatorTaken(CosmeticItem item)
     {
+
         UI.InventoryInitiator.PutAnywhere(item);
-        UI.InventoryInitiator.SetVisibility(true);
-        UI.InventoryRespondent.SetVisibility(true);
+        InventoriesVisibility(true);
     }
 
     protected void OnOfferPanelRespondentTaken(CosmeticItem item)
     {
         UI.InventoryRespondent.PutAnywhere(item);
-        UI.InventoryInitiator.SetVisibility(true);
-        UI.InventoryRespondent.SetVisibility(true);
+        InventoriesVisibility(true);
     }
     protected void OnInitiatorInventoryTake(CosmeticItem cosmeticItem)
     {
@@ -159,13 +170,12 @@ public abstract class FlowBase
         UI.Actions.RemoveAll();
         UI.Actions.AddButton(cmdOK, "OK", OnBtnClose);
         UI.Actions.SetButtonInteractable(cmdOK, true);
-        UI.InventoryInitiator.SetVisibility(false);
-        UI.InventoryRespondent.SetVisibility(false);
+        InventoriesVisibility(false);
         UI.OfferPanel.SetLocked(true);
         UI.OfferPanel.SetSessionStatus(message);
     }
 
-    private void OnBtnClose(string _)
+    protected void OnBtnClose(string _)
     {
         StateBase.InvokeCloseViewRequest();
     }

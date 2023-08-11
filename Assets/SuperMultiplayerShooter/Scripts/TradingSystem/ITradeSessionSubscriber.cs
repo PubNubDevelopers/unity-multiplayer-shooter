@@ -10,7 +10,7 @@ public interface ITradeSessionSubscriber
     /// <summary>
     /// Should only happen when the other participant leaves
     /// </summary>
-    void OnParticipantGoodbye(LeaveSessionData leaveData);    
+    void OnParticipantGoodbyeAsync(LeaveSessionData leaveData);    
 
     void OnTradingCompleted(OfferData offerData);
 

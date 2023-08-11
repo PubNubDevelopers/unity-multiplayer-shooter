@@ -22,6 +22,7 @@ namespace PubNubUnityShowcase.UIComponents
         public override void Load()
         {
             InitializeUIElements();
+            BindOfferTransfers(true);
 
             RefreshAvatars(SessionData.Initiator, SessionData.Respondent);
             RefreshInventories(SessionData.Initiator.Inventory, SessionData.Respondent.Inventory);
@@ -32,22 +33,25 @@ namespace PubNubUnityShowcase.UIComponents
 
             UI.OfferPanel.AnyChange += OnAnyOfferChange;
 
-            //hide inventories
-            UI.InventoryInitiator.SetVisibility(false);
-            UI.InventoryRespondent.SetVisibility(false);
-
             //Add buttons
             UI.Actions.AddButton(cmdAccept, "Accept", OnBtnAccept);
             UI.Actions.AddButton(cmdRefuse, "Refuse", OnBtnRefuse);
-            //UI.Actions.AddButton(cmdCounter, "Counter", OnBtnRefuse);
             SortButtons();
 
-            SetOfferTransfersEnabled(!ReceivedOffer.FinalOffer);
+            if (ReceivedOffer.Version > 0)
+                UI.OfferPanel.SetLabel("Counteroffer");
+            else
+                UI.OfferPanel.SetLabel("Offer");
+
+            bool canEdit = ReceivedOffer.Version > 2 || ReceivedOffer.FinalOffer;
+
+            OfferSetLocked(canEdit);
+            InventoriesVisibility(canEdit);
         }
 
         public override void Unload()
         {
-            SetOfferTransfersEnabled(false);
+            BindOfferTransfers(false);
             UI.Actions.RemoveAll();
 
             UI.OfferPanel.AnyChange -= OnAnyOfferChange;
@@ -55,38 +59,37 @@ namespace PubNubUnityShowcase.UIComponents
 
         private void OnAnyOfferChange()
         {
-            UI.Actions.SetButtonInteractable(cmdAccept, UI.OfferPanel.HaveValidOffer);
-
-            if (UI.OfferPanel.HaveValidOffer)
+            if (SameOffer)
             {
-                if (SameOffer)
-                {
-                    UI.Actions.RemoveButton(cmdCounter);
-                    UI.Actions.AddButton(cmdAccept, "Accept", OnBtnAccept);
-                }
-                else
-                {
-                    UI.Actions.RemoveButton(cmdAccept);
-                    UI.Actions.AddButton(cmdCounter, "Counter", OnBtnCounteroffer);
-                }
-
-                SortButtons();
+                UI.Actions.RemoveButton(cmdCounter);
+                UI.Actions.AddButton(cmdAccept, "Accept", OnBtnAccept);
+                UI.Actions.SetButtonInteractable(cmdAccept, UI.OfferPanel.HaveValidOffer);
             }
+            else
+            {
+                UI.Actions.RemoveButton(cmdAccept);
+                UI.Actions.AddButton(cmdCounter, "Counter", OnBtnCounteroffer);
+                UI.Actions.SetButtonInteractable(cmdCounter, UI.OfferPanel.HaveValidOffer); //this shoudn't be possible
+            }
+
+            SortButtons();
         }
 
         #region Button Actions
         private void OnBtnAccept(string _)
         {
-            Debug.Log("----->>OnBtnAccept");
-
             var offer = OfferData.GetAcceptedOffer(ReceivedOffer);
             Services.Trading.SendOfferAsync(offer);
+
+            UI.Actions.RemoveAll();
         }
 
         private void OnBtnRefuse(string _)
         {
             var offer = OfferData.GetRejectedOffer(ReceivedOffer);
             Services.Trading.SendOfferAsync(offer);
+
+            UI.Actions.RemoveAll();
         }
 
         private async void OnBtnCounteroffer(string _)
@@ -94,30 +97,32 @@ namespace PubNubUnityShowcase.UIComponents
             Debug.Log("----->>OnBtnCounter");
 
             var offer = OfferData.GenerateCounterlOffer(ReceivedOffer, UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false);
+            Debug.Log($"send: ---> offer");
             await Services.Trading.SendOfferAsync(offer);
 
             UI.Actions.RemoveAll();
             UI.Actions.AddButton(cmdWitdraw, "Withdraw", OnBtnWithdrawCounter);
-            UI.Actions.SetButtonInteractable(cmdWitdraw, false);
+            //UI.Actions.SetButtonInteractable(cmdWitdraw, false);
 
-            SetOfferLocked(true);
+            OfferSetLocked(true);
+            InventoriesVisibility(false);
 
-            ReceivedCounterofferResponse = false;
+            ReceivedOfferResponse = false;
 
             var cts = new CancellationTokenSource(30000); //30 sec hardcode timeout
             int time = 0;
             try
             {
-                while (ReceivedCounterofferResponse == false)
+                while (ReceivedOfferResponse == false)
                 {
+                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
-                    time += 100;
-                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
+                    time += 100;                    
                     await Task.Yield();
                 }
 
-                UI.Actions.SetButtonInteractable(cmdWitdraw, true);
+                //UI.Actions.SetButtonInteractable(cmdWitdraw, true);
             }
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
@@ -127,9 +132,15 @@ namespace PubNubUnityShowcase.UIComponents
             }
         }
 
-        private void OnBtnWithdrawCounter(string _)
+        private async void OnBtnWithdrawCounter(string _)
         {
+            ReceivedOfferResponse = true;
+            UI.Actions.RemoveButton(cmdWitdraw);
+            ShowSessionResult($"offer withdrawn");
 
+            var thisParticipant = SessionData.GetParticipant(ReceivedOffer.Target);
+            LeaveSessionData leaveData = new LeaveSessionData(thisParticipant, LeaveReason.withdrawOffer);
+            await Services.Trading.LeaveSessionAsync(leaveData);
         }
 
         #endregion

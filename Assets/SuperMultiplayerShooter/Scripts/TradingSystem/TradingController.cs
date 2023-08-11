@@ -198,8 +198,11 @@ namespace PubNubUnityShowcase
             switch (offer.State)
             {
                 case OfferData.OfferState.open:
-                    foreach (var sub in sessionSubscribers)
-                        sub.OnCounterOffer(offer);
+                    if (!target.Equals(You))
+                    {
+                        foreach (var sub in sessionSubscribers)
+                            sub.OnCounterOffer(offer);
+                    }                    
                     break;
                 case OfferData.OfferState.accepted:
                     if (target.Equals(You))
@@ -225,7 +228,7 @@ namespace PubNubUnityShowcase
                 return;
 
             foreach (var sub in sessionSubscribers)
-                sub.OnParticipantGoodbye(leaveData);
+                sub.OnParticipantGoodbyeAsync(leaveData);
         }
 
         private void OnSessionOccupancyChanged(string user, string eventType)

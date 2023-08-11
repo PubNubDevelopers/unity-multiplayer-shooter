@@ -44,9 +44,23 @@ namespace PubNubUnityShowcase
                 case Role.Initiator:
                     return initiator.UserID;
                 case Role.Respondent:
-                    return initiator.UserID;
+                    return responder.UserID;
                 default:
                     return "ERR";
+            }
+        }
+
+        public TraderData GetParticipant(Role role)
+        {
+            switch (role)
+            {
+                case Role.Initiator:
+                    return initiator;
+                case Role.Respondent:
+                    return responder;
+                default:
+                    Debug.LogWarning($"MissingParticipant: sessionId={sessionID}");
+                    return default;
             }
         }
 

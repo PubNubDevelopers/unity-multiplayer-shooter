@@ -32,9 +32,19 @@ namespace PubNubUnityShowcase
 
         }
 
-        void ITradeSessionSubscriber.OnParticipantGoodbye(LeaveSessionData leaveData)
+        async void ITradeSessionSubscriber.OnParticipantGoodbyeAsync(LeaveSessionData leaveData)
         {
-            Debug.Log($"{leaveData.Participant.DisplayName} Left the trade: {leaveData.Reason}");
+            Debug.LogError($"{leaveData.Participant.DisplayName} Left the trade: {leaveData.Reason}");
+
+            if (leaveData.Reason == LeaveReason.withdrawOffer)
+            {
+                LeaveSessionData myLeave = new LeaveSessionData(SessionData.Initiator, LeaveReason.withdrawOffer);
+                await Services.Trading.LeaveSessionAsync(myLeave); //You leave too
+
+                Flow.Unload();
+                Flow = new FlowSessionClosed("Offer Withdraw", SessionData, this, UI, Services);
+                Flow.Load();
+            }
         }
 
         void ITradeSessionSubscriber.OnLeftUnknownReason(TraderData participant)
@@ -44,6 +54,8 @@ namespace PubNubUnityShowcase
 
         async void ITradeSessionSubscriber.OnTradingCompleted(OfferData offerData)
         {
+            Flow.ReceivedOfferResponse = true;
+
             await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.transactionComplete));
 
             if (offerData.State == OfferData.OfferState.accepted)
@@ -55,7 +67,7 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
-            Debug.LogWarning($"------------>Received Counteroffer target: {offerData.Target}");
+            Flow.ReceivedOfferResponse = true;
 
             Flow.Unload();
             Flow = new FlowOfferReceived(offerData, SessionData, this, UI, Services);
@@ -99,8 +111,7 @@ namespace PubNubUnityShowcase
             }
             else
             {
-                offerPanel.SetSessionStatus($"{SessionData.Respondent.DisplayName} checking your offer");
-
+                UI.OfferPanel.SetSessionStatus($"{SessionData.Respondent.DisplayName} checking your offer");
             }
         }
         #endregion

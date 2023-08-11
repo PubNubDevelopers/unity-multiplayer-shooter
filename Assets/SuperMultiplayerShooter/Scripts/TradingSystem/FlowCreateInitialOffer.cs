@@ -14,6 +14,7 @@ namespace PubNubUnityShowcase.UIComponents
         public override void Load()
         {
             InitializeUIElements();
+            BindOfferTransfers(true);
 
             RefreshAvatars(SessionData.Initiator, SessionData.Respondent);
             RefreshInventories(SessionData.Initiator.Inventory, SessionData.Respondent.Inventory);
@@ -21,24 +22,19 @@ namespace PubNubUnityShowcase.UIComponents
 
             UI.OfferPanel.SetSessionStatus("Make your offer");
 
-            SetOfferTransfersEnabled(true);
+            
             UI.OfferPanel.AnyChange += OnAnyOfferChange;
 
             //Add buttons
-            UI.Actions.AddButton(cmdCancel, "Cancel", OnCloseRequest);
+            UI.Actions.AddButton(cmdCancel, "Cancel", OnBtnClose);
         }
 
         public override void Unload()
         {
-            SetOfferTransfersEnabled(false);
+            BindOfferTransfers(false);
             UI.Actions.RemoveAll();
 
             UI.OfferPanel.AnyChange -= OnAnyOfferChange;
-        }
-
-        private void OnCloseRequest(string _)
-        {
-            StateBase.InvokeCloseViewRequest();
         }
 
         private void OnAnyOfferChange()
@@ -61,9 +57,13 @@ namespace PubNubUnityShowcase.UIComponents
             UI.Actions.AddButton(cmdWitdraw, "Withdraw", OnWitdraw);
             UI.Actions.SetButtonInteractable(cmdWitdraw, false);
 
-            SetOfferLocked(true);
+            OfferSetLocked(true);
+            InventoriesVisibility(false);
 
             var cts = new CancellationTokenSource(10000);
+
+
+
             await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false));
             
             TradeInviteResponceReceived = false;
@@ -92,9 +92,10 @@ namespace PubNubUnityShowcase.UIComponents
         private async void OnWitdraw(string _)
         {
             UI.Actions.RemoveButton(cmdWitdraw);
+            ShowSessionResult($"offer withdrawn");
+
             LeaveSessionData leaveData = new LeaveSessionData(SessionData.Initiator, LeaveReason.withdrawOffer);
-            await Services.Trading.LeaveSessionAsync(leaveData);
-            StateBase.InvokeCloseViewRequest();
+            await Services.Trading.LeaveSessionAsync(leaveData);            
         }
 
         private void SortButtons()

@@ -29,15 +29,18 @@ namespace PubNubUnityShowcase
             Debug.LogWarning("Respondent should always join second. Something went wrong");
         }
 
-        async void ITradeSessionSubscriber.OnParticipantGoodbye(LeaveSessionData leaveData)
+        async void ITradeSessionSubscriber.OnParticipantGoodbyeAsync(LeaveSessionData leaveData)
         {
-            Debug.Log($"{leaveData.Participant.DisplayName} Left the trade: {leaveData.Reason}");
+            //Debug.LogError($"{leaveData.Participant.DisplayName} Left the trade: {leaveData.Reason}");
 
             if (leaveData.Reason == LeaveReason.withdrawOffer)
             {
                 LeaveSessionData myLeave = new LeaveSessionData(SessionData.Initiator, LeaveReason.withdrawOffer);
                 await Services.Trading.LeaveSessionAsync(myLeave); //You leave too
-                StateSessionComplete($"Offer Withdraw");
+                
+                Flow.Unload();
+                Flow = new FlowSessionClosed("Offer Withdraw", SessionData, this, UI, Services);
+                Flow.Load();
             }
         }
 
@@ -48,6 +51,8 @@ namespace PubNubUnityShowcase
 
         async void ITradeSessionSubscriber.OnTradingCompleted(OfferData offerData)
         {
+            Flow.ReceivedOfferResponse = true;
+
             await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.transactionComplete));
             if (offerData.State == OfferData.OfferState.accepted)
                 StateSessionComplete($"Trade successfull");
@@ -58,9 +63,11 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
-            Debug.LogWarning("------------>Received Counteroffer");
+            Flow.ReceivedOfferResponse = true;
 
-            offerPanel.SetLabel("counter offer");
+            Debug.LogWarning("------------>Received Counteroffer: ");            
+
+            UI.OfferPanel.SetLabel("counter offer");
         }
         #endregion
 

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using Visyde;
+using static System.Collections.Specialized.BitVector32;
 
 namespace PubNubUnityShowcase
 {
@@ -31,7 +32,8 @@ namespace PubNubUnityShowcase
         public event Action<OfferData> ReceivedOffer;
         public event Action<TradeInvite> ReceivedInvite;
         public event Action<InviteResponseData> ReceivedInviteResponse;
-        public event Action<LeaveSessionData> ParticipantGoodbye;   //If least with explicid SendLeaveMessage()
+        public event Action<LeaveSessionData> ParticipantGoodbye;   //If left with explicid SendLeaveMessage()
+        public event Action<string> CommanReceived;
         public event Action<string, string> SessionPresenceChanged; //uuid, event
 
         #region PubNub Requests
@@ -78,6 +80,16 @@ namespace PubNubUnityShowcase
                 .Message(leaveData)
                 .Channel(session.Channel)
                 .Meta(MessageNormalilzation.GetMeta<LeaveSessionData>())
+                .ShouldStore(true)
+                .ExecuteAsync();
+        }
+
+        public async Task SendCommand(TradeSessionData session, string cmd)
+        {
+            await PNApi.Publish()
+                .Message(cmd)
+                .Channel(session.Channel)
+                .Meta(MessageNormalilzation.GetCommandMeta())
                 .ShouldStore(true)
                 .ExecuteAsync();
         }
@@ -247,7 +259,8 @@ namespace PubNubUnityShowcase
 
         private void OnMsgPayloadCommand(string str)
         {
-            throw new NotImplementedException();
+            CommanReceived?.Invoke(str);
+            Debug.Log($"{DebugTag} Command received: <{str}>");
         }
 
         private static string GetInbox(UserId userId)

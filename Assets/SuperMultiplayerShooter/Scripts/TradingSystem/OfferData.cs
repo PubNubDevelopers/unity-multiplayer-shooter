@@ -1,5 +1,7 @@
 using Unity.VisualScripting;
+using UnityEditor.Tilemaps;
 using UnityEngine;
+using static UnityEngine.UI.Image;
 
 namespace PubNubUnityShowcase
 {
@@ -46,11 +48,8 @@ namespace PubNubUnityShowcase
 
         public static OfferData GetAcceptedOffer(OfferData original)
         {
-            //swap targets
-            var target = original.Target == TradeSessionData.Role.Initiator ? TradeSessionData.Role.Initiator : TradeSessionData.Role.Respondent;
-
             return new OfferData(
-                target,
+                Flip(original.Target),
                 original.InitiatorGives,
                 original.InitiatorReceives,
                 true,
@@ -60,11 +59,8 @@ namespace PubNubUnityShowcase
 
         public static OfferData GetRejectedOffer(OfferData original)
         {
-            //swap targets
-            var target = original.Target == TradeSessionData.Role.Initiator ? TradeSessionData.Role.Initiator : TradeSessionData.Role.Respondent;
-
             return new OfferData(
-                target,
+                Flip(original.Target),
                 original.InitiatorGives,
                 original.InitiatorReceives,
                 true,
@@ -74,18 +70,22 @@ namespace PubNubUnityShowcase
 
         public static OfferData GenerateCounterlOffer(OfferData original, int initiatorGives, int initiatorReceives, bool final)
         {
-            //swap targets
-            var target = original.Target == TradeSessionData.Role.Initiator ? TradeSessionData.Role.Initiator : TradeSessionData.Role.Respondent;
-
-            //add counter
-
             return new OfferData(
-                target,
+                Flip(original.Target),
                 initiatorGives,
                 initiatorReceives,
                 final,
                 OfferState.open,
                 original.version += 1);
+        }
+
+
+        public static TradeSessionData.Role Flip(TradeSessionData.Role role)
+        {
+            if (role == TradeSessionData.Role.Initiator)
+                return TradeSessionData.Role.Respondent;
+            else
+                return TradeSessionData.Role.Initiator;
         }
 
         public enum OfferState
@@ -95,11 +95,11 @@ namespace PubNubUnityShowcase
             rejected
         }
 
-        //public override bool Equals(object obj)
-        //{
-        //    return obj is OfferData data &&
-        //           initiatorGives == data.initiatorGives &&
-        //           initiatorReceives == data.initiatorReceives;
-        //}
+        public override bool Equals(object obj)
+        {
+            return obj is OfferData data &&
+                   initiatorGives == data.initiatorGives &&
+                   initiatorReceives == data.initiatorReceives;
+        }
     }
 }
