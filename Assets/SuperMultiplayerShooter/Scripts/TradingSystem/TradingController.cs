@@ -110,7 +110,7 @@ namespace PubNubUnityShowcase
                 await Network.SendLeaveMessage(SessionData, leaveData);
                 SessionData = default;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 throw e;
             }

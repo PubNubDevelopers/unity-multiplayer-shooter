@@ -104,7 +104,7 @@ namespace PubNubUnityShowcase
             var initiator = new TraderData(
                 initatorMetadata.Uuid,
                 initatorMetadata.Name,
-                0,//TODO: find a way to get this 
+                DataCarrier.chosenCharacter,
                 initiatorInventory,
                 initiatorInventory.CosmeticItems[0]); //TODO: find a way to get this 
 

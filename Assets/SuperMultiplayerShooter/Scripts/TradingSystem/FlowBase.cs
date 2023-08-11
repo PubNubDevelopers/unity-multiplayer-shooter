@@ -25,6 +25,7 @@ public abstract class FlowBase
     protected UIComponents UI => _ui;
     protected Services Services => _services;
     public bool TradeInviteResponceReceived { get; set; }
+    public bool ReceivedCounterofferResponse { get; set; }
 
     protected FlowBase(TradeSessionData sessionData, TradingViewStateBase stateBase, UIComponents ui, Services services)
     {

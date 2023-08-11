@@ -11,7 +11,7 @@ namespace PubNubUnityShowcase
     {
         public TradingViewStateRespondent(TradeSessionData sessionData, OfferData originalOffer, TradingView.Services services, TradingView.UIComponents ui) : base(sessionData, services, ui)
         {
-            Flow = new FlowInitialOfferReceived(originalOffer, sessionData, this, ui, services);
+            Flow = new FlowOfferReceived(originalOffer, sessionData, this, ui, services);
             Flow.Load();
             Services.Trading.SubscribeSessionEvents(this);
         }
@@ -33,7 +33,7 @@ namespace PubNubUnityShowcase
             }
         }
 
-        void ITradeSessionSubscriber.OnLeftUnknownReason(PubNubUnityShowcase.TraderData participant)
+        void ITradeSessionSubscriber.OnLeftUnknownReason(TraderData participant)
         {
             Debug.Log("LeftUnknown");
         }
@@ -50,6 +50,8 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
+            Debug.LogWarning("------------>Received Counteroffer");
+
             offerPanel.SetLabel("counter offer");
         }
 

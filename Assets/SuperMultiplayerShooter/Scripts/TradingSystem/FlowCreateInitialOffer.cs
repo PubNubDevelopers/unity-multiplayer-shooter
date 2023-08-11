@@ -50,8 +50,6 @@ namespace PubNubUnityShowcase.UIComponents
 
         private async void OnSendInitialOffer(string _)
         {
-            UI.OfferPanel.SetSessionStatus("Sending offer...");
-
             UI.Actions.RemoveButton(cmdSendInitial);
             UI.Actions.RemoveButton(cmdCancel);
             UI.Actions.AddButton(cmdWitdraw, "Withdraw", OnWitdraw);
@@ -63,12 +61,16 @@ namespace PubNubUnityShowcase.UIComponents
             await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false));
             
             TradeInviteResponceReceived = false;
+            int time = 0;
 
             try
             {              
                 while (TradeInviteResponceReceived == false)
                 {
                     cts.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(100);
+                    time += 100;
+                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
                     await Task.Yield();
                 }
                 

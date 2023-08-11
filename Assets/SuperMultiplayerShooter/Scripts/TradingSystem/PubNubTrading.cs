@@ -48,6 +48,8 @@ namespace PubNubUnityShowcase
                 .Meta(MessageNormalilzation.GetMeta<TradeInvite>())
                 .ShouldStore(true)
                 .ExecuteAsync();
+
+            Debug.Log($"{DebugTag} SendInvite ch={invite.RSVPChannel}");
         }
 
         public async Task SendInviteResponse(TradeInvite invite, InviteResponseData response)

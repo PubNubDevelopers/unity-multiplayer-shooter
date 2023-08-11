@@ -21,21 +21,6 @@ namespace PubNubUnityShowcase
             Services.Trading.SubscribeTradeInvites(this);            
         }
 
-        #region OnButtonAction Handlers
-
-        private void OnBtnAcceptCounteroffer(string _)
-        {
-            var offer = OfferData.GetAcceptedOffer(CounterOffer);
-            Services.Trading.SendOfferAsync(offer);
-        }
-
-        private void OnBtnRefuseCounteroffer(string _)
-        {
-            var offer = OfferData.GetRejectedOffer(CounterOffer);
-            Services.Trading.SendOfferAsync(offer);
-        }
-        #endregion
-
         public override void Dispose()
         {
             base.Dispose();
@@ -72,30 +57,11 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
-            Debug.LogWarning("Received Counteroffer");
+            Debug.LogWarning("------------>Received Counteroffer");
 
             Flow.Unload();
-            Flow = new FlowInitialOfferReceived(offerData, SessionData, this, UI, Services);
+            Flow = new FlowOfferReceived(offerData, SessionData, this, UI, Services);
             Flow.Load();
-
-            //{
-            //    CounterOffer = offerData;
-
-            //    offerPanel.SetSessionStatus($"{SessionData.Respondent.DisplayName}'s counter offer");
-            //    offerPanel.SetLabel("counter offer");
-            //    offerPanel.SetLocked(false);
-
-            //    FillOfferPanelFromInventories(offerData);
-
-            //    //hide inventories initially
-            //    initiatorInventory.SetVisibility(false);
-            //    respondentInventory.SetVisibility(false);
-
-            //    //Reset buttons
-            //    actions.AddButton(FlowBase.cmdAccept, "Accept", OnBtnAcceptCounteroffer);
-            //    actions.AddButton(FlowBase.cmdRefuse, "Refuse", OnBtnRefuseCounteroffer);
-            //    actions.RemoveButton(FlowBase.cmdCancel);
-            //}
         }
 
         #endregion
