@@ -7,7 +7,14 @@ using static PubNubUnityShowcase.UIComponents.TradingView;
 
 public abstract class FlowBase
 {
-    protected readonly string cmdCloseView = "action-close";
+    public static string cmdCancel = "action-close";
+    public static string cmdOK = "action-OK";
+    public static string cmdSendInitial = "action-sendInitial";
+    public static string cmdWitdraw = "action-witdraw";
+    public static string cmdAccept = "action-accept";
+    public static string cmdCounter = "action-counter";
+    public static string cmdRefuse = "action-refuse";
+    
 
     private readonly UIComponents _ui;
     private readonly Services _services;
@@ -15,12 +22,13 @@ public abstract class FlowBase
     private readonly TradeSessionData _sessionData;
     protected TradingViewStateBase StateBase => _stateBase;
     protected TradeSessionData SessionData => _sessionData;
-
     protected UIComponents UI => _ui;
     protected Services Services => _services;
+    public bool TradeInviteResponceReceived { get; set; }
 
     protected FlowBase(TradeSessionData sessionData, TradingViewStateBase stateBase, UIComponents ui, Services services)
     {
+        _sessionData = sessionData;
         _ui = ui;
         _services = services;
         _stateBase = stateBase;
@@ -65,6 +73,13 @@ public abstract class FlowBase
     {
         UI.InitiatorInventory.UpdateData(initiator);
         UI.RespondentInventory.UpdateData(respondent);
+    }
+
+    protected void SetOfferLocked(bool locked)
+    {
+        UI.OfferPanel.SetLocked(locked);
+        UI.InitiatorInventory.SetVisibility(!locked);
+        UI.RespondentInventory.SetVisibility(!locked);
     }
 
     protected void OnOfferPanelInitiatorTaken(CosmeticItem item)
@@ -113,8 +128,8 @@ public abstract class FlowBase
     public void ShowSessionResult(string message)
     {
         UI.Actions.RemoveAll();
-        UI.Actions.AddButton(cmdCloseView, "OK", OnBtnClose);
-        UI.Actions.SetButtonInteractable(cmdCloseView, true);
+        UI.Actions.AddButton(cmdOK, "OK", OnBtnClose);
+        UI.Actions.SetButtonInteractable(cmdOK, true);
         UI.InitiatorInventory.SetVisibility(false);
         UI.RespondentInventory.SetVisibility(false);
         UI.OfferPanel.SetLocked(true);

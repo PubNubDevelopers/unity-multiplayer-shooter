@@ -7,11 +7,6 @@ namespace PubNubUnityShowcase.UIComponents
 {
     public class FlowCreateInitialOffer : FlowBase
     {
-        private readonly string cmdSendOffer = "action-send";
-        private readonly string cmdWitdraw = "action-witdraw";
-
-        private OfferData _initialData;
-
         public FlowCreateInitialOffer(TradeSessionData sessionData, TradingViewStateBase stateBase, TradingView.UIComponents ui, TradingView.Services services) : base(sessionData, stateBase, ui, services)
         {
         }
@@ -20,17 +15,18 @@ namespace PubNubUnityShowcase.UIComponents
         {
             UI.OfferPanel.SetSessionStatus("Make your offer");
 
-            //Set Flow
             SetOfferTransfersEnabled(true);
             UI.OfferPanel.AnyChange += OnAnyOfferChange;
 
             //Add buttons
-            UI.Actions.AddButton(cmdCloseView, "Cancel", OnCloseRequest);
+            UI.Actions.AddButton(cmdCancel, "Cancel", OnCloseRequest);
         }
 
         public override void Unload()
         {
             SetOfferTransfersEnabled(false);
+            UI.Actions.RemoveAll();
+
             UI.OfferPanel.AnyChange -= OnAnyOfferChange;
         }
 
@@ -43,59 +39,63 @@ namespace PubNubUnityShowcase.UIComponents
         {
             if (UI.OfferPanel.HaveValidOffer)
             {
-                UI.Actions.AddButton(cmdSendOffer, "Propose", OnSendInitialOffer);
+                UI.Actions.AddButton(cmdSendInitial, "Propose", OnSendInitialOffer);
                 SortButtons();
             }
             else
             {
-                UI.Actions.RemoveButton(cmdSendOffer);
+                UI.Actions.RemoveButton(cmdSendInitial);
             }
         }
 
         private async void OnSendInitialOffer(string _)
         {
             UI.OfferPanel.SetSessionStatus("Sending offer...");
-            UI.Actions.RemoveButton(cmdSendOffer);
-            UI.Actions.RemoveButton(cmdCloseView);
-            UI.Actions.AddButton(cmdWitdraw, "Withdraw", OnWitdraw);
-            UI.Actions.SetButtonInteractable(cmdCloseView, false);
 
-            UI.OfferPanel.SetLocked(true);
-            UI.InitiatorInventory.SetVisibility(false);
-            UI.RespondentInventory.SetVisibility(false);
+            UI.Actions.RemoveButton(cmdSendInitial);
+            UI.Actions.RemoveButton(cmdCancel);
+            UI.Actions.AddButton(cmdWitdraw, "Withdraw", OnWitdraw);
+            UI.Actions.SetButtonInteractable(cmdWitdraw, false);
+
+            SetOfferLocked(true);
 
             var cts = new CancellationTokenSource(10000);
             await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false));
             
-            var _inviteResponseReceived = false;
+            TradeInviteResponceReceived = false;
 
             try
-            {
-                while (_inviteResponseReceived == false)
+            {              
+                while (TradeInviteResponceReceived == false)
                 {
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Yield();
                 }
+                
+                UI.Actions.SetButtonInteractable(cmdWitdraw, true);
             }
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
                 ShowSessionResult($"No response from {SessionData.Respondent.DisplayName}");
                 await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.otherPartyNotResponding));
-                UI.Actions.SetButtonInteractable(cmdCloseView, true);
+                UI.Actions.SetButtonInteractable(cmdWitdraw, true);
             }
         }
 
-        private void OnWitdraw(string _)
+        private async void OnWitdraw(string _)
         {
-
+            UI.Actions.RemoveButton(cmdWitdraw);
+            LeaveSessionData leaveData = new LeaveSessionData(SessionData.Initiator, LeaveReason.withdrawOffer);
+            await Services.Trading.LeaveSessionAsync(leaveData);
+            StateBase.InvokeCloseViewRequest();
         }
 
         private void SortButtons()
         {
             var priority = new List<string>
             {
-                cmdCloseView,
-                cmdSendOffer
+                cmdCancel,
+                cmdSendInitial,
             };
             UI.Actions.Arrange(priority);
         }

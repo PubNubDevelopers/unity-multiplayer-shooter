@@ -5,23 +5,27 @@ namespace PubNubUnityShowcase
 {
     public abstract class TradingViewStateBase
     {
-        protected readonly string cmdCloseView = "action-close";
-        protected readonly string cmdRefuse = "action-refuse";
 
+        private readonly TradeSessionData _sessionData;
+        private readonly TradingView.UIComponents _ui;
+        private FlowBase _flow;
         protected readonly OfferPanel offerPanel;
         protected readonly TraderInventoryPanel initiatorInventory;
         protected readonly TraderInventoryPanel respondentInventory;
         protected readonly ActionButtonsPanel actions;
         protected readonly TradingView.Services _services;
-        private readonly TradingView.UIComponents _ui;
+
+        protected FlowBase Flow { get => _flow; set => _flow = value; }
+        protected TradeSessionData SessionData => _sessionData;
 
         protected TradingView.UIComponents UI => _ui;
 
         public event Action CloseViewRequested;
 
         protected TradingView.Services Services { get => _services; }
-        protected TradingViewStateBase(TradingView.Services services, TradingView.UIComponents ui)
+        protected TradingViewStateBase(TradeSessionData sessionData, TradingView.Services services, TradingView.UIComponents ui)
         {
+            _sessionData = sessionData;
             _ui = ui;
             this.offerPanel = ui.OfferPanel;
             this.initiatorInventory = ui.InitiatorInventory;
@@ -31,7 +35,10 @@ namespace PubNubUnityShowcase
             _services = services;
         }
 
-        public abstract void ApplyState();
+        public void Join()
+        {
+            Services.Trading.JoinSessionAsync(SessionData);
+        }
 
         public void InvokeCloseViewRequest()
         {
@@ -43,21 +50,12 @@ namespace PubNubUnityShowcase
             CloseViewRequested?.Invoke();
         }
 
-        protected void SetInvenotryToOfferFlow()
-        {
-            //Set Flow
-            offerPanel.ItemTakenInitiator += OnOfferPanelInitiatorTaken;
-            offerPanel.ItemTakenResponder += OnOfferPanelRespondentTaken;
-            initiatorInventory.ItemTaken += OnInitiatorInventoryTake;
-            respondentInventory.ItemTaken += OnRespondentInventoryTake;
-        }
-
         public virtual void Dispose()
         {
-            offerPanel.ItemTakenInitiator -= OnOfferPanelInitiatorTaken;
-            offerPanel.ItemTakenResponder -= OnOfferPanelRespondentTaken;
-            initiatorInventory.ItemTaken -= OnInitiatorInventoryTake;
-            respondentInventory.ItemTaken -= OnRespondentInventoryTake;
+            //offerPanel.ItemTakenInitiator -= OnOfferPanelInitiatorTaken;
+            //offerPanel.ItemTakenResponder -= OnOfferPanelRespondentTaken;
+            //initiatorInventory.ItemTaken -= OnInitiatorInventoryTake;
+            //respondentInventory.ItemTaken -= OnRespondentInventoryTake;
         }
 
 
@@ -75,55 +73,55 @@ namespace PubNubUnityShowcase
         public void StateSessionComplete(string message)
         {
             actions.RemoveAll();
-            actions.AddButton(cmdCloseView, "OK", InvokeCloseViewRequest);
-            actions.SetButtonInteractable(cmdCloseView, true);
+            actions.AddButton(FlowBase.cmdOK, "OK", InvokeCloseViewRequest);
+            actions.SetButtonInteractable(FlowBase.cmdCancel, true);
             initiatorInventory.SetVisibility(false);
             respondentInventory.SetVisibility(false);
             offerPanel.SetLocked(true);
             offerPanel.SetSessionStatus(message);
         }
 
-        protected void OnOfferPanelInitiatorTaken(CosmeticItem item)
-        {
-            initiatorInventory.PutAnywhere(item);
-            initiatorInventory.SetVisibility(true);
-            respondentInventory.SetVisibility(true);
-        }
+        //protected void OnOfferPanelInitiatorTaken(CosmeticItem item)
+        //{
+        //    initiatorInventory.PutAnywhere(item);
+        //    initiatorInventory.SetVisibility(true);
+        //    respondentInventory.SetVisibility(true);
+        //}
 
-        protected void OnOfferPanelRespondentTaken(CosmeticItem item)
-        {
-            respondentInventory.PutAnywhere(item);
-            initiatorInventory.SetVisibility(true);
-            respondentInventory.SetVisibility(true);
-        }
-        protected void OnInitiatorInventoryTake(CosmeticItem cosmeticItem)
-        {
-            if (offerPanel.InitiatorSlot.IsFull)
-            {
-                var temp = offerPanel.InitiatorSlot.Item;
-                offerPanel.InitiatorSlot.SetEmpty();
-                offerPanel.SetInitiatorGive(cosmeticItem);
-                initiatorInventory.PutAnywhere(temp);
-            }
-            else
-            {
-                offerPanel.SetInitiatorGive(cosmeticItem);
-            }
-        }
+        //protected void OnOfferPanelRespondentTaken(CosmeticItem item)
+        //{
+        //    respondentInventory.PutAnywhere(item);
+        //    initiatorInventory.SetVisibility(true);
+        //    respondentInventory.SetVisibility(true);
+        //}
+        //protected void OnInitiatorInventoryTake(CosmeticItem cosmeticItem)
+        //{
+        //    if (offerPanel.InitiatorSlot.IsFull)
+        //    {
+        //        var temp = offerPanel.InitiatorSlot.Item;
+        //        offerPanel.InitiatorSlot.SetEmpty();
+        //        offerPanel.SetInitiatorGive(cosmeticItem);
+        //        initiatorInventory.PutAnywhere(temp);
+        //    }
+        //    else
+        //    {
+        //        offerPanel.SetInitiatorGive(cosmeticItem);
+        //    }
+        //}
 
-        protected void OnRespondentInventoryTake(CosmeticItem cosmeticItem)
-        {
-            if (offerPanel.ResponderSlot.IsFull)
-            {
-                var temp = offerPanel.ResponderSlot.Item;
-                offerPanel.ResponderSlot.SetEmpty();
-                offerPanel.SetInitiatorReceive(cosmeticItem);
-                respondentInventory.PutAnywhere(temp);
-            }
-            else
-            {
-                offerPanel.SetInitiatorReceive(cosmeticItem);
-            }
-        }
+        //protected void OnRespondentInventoryTake(CosmeticItem cosmeticItem)
+        //{
+        //    if (offerPanel.ResponderSlot.IsFull)
+        //    {
+        //        var temp = offerPanel.ResponderSlot.Item;
+        //        offerPanel.ResponderSlot.SetEmpty();
+        //        offerPanel.SetInitiatorReceive(cosmeticItem);
+        //        respondentInventory.PutAnywhere(temp);
+        //    }
+        //    else
+        //    {
+        //        offerPanel.SetInitiatorReceive(cosmeticItem);
+        //    }
+        //}
     }
 }

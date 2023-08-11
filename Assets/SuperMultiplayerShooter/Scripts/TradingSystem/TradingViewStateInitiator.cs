@@ -1,73 +1,27 @@
 using PubNubUnityShowcase.UIComponents;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace PubNubUnityShowcase
 {
+    /// <summary>
+    /// Initiator Session Controller
+    /// </summary>
     public class TradingViewStateInitiator : TradingViewStateBase,
         ITradeSessionSubscriber,
         ITradeInviteSubscriber
     {
-        private readonly string cmdSendOffer = "action-send";
-
-        private readonly TradingViewData _viewData;
-
-        private bool _inviteResponseReceived;
-
         private OfferData CounterOffer { get; set; }
 
-        public TradingViewStateInitiator(TradingViewData viewData, TradingView.UIComponents ui) : base(viewData.Services, ui)
+        public TradingViewStateInitiator(TradeSessionData sessionData, TradingView.Services services, TradingView.UIComponents ui) : base(sessionData, services, ui)
         {
-            _viewData = viewData;
-        }
+            Flow = new FlowCreateInitialOffer(sessionData, this, ui, services);
+            Flow.Load();
 
-        public override void ApplyState()
-        {
-            var session = Services.Trading.CreateSession(_viewData.Initiator, _viewData.Respondent);
-
-            var initialOfferFlow = new FlowCreateInitialOffer(session, this, UI, Services);
-            initialOfferFlow.Load();
-           
             Services.Trading.SubscribeSessionEvents(this);
-            Services.Trading.SubscribeTradeInvites(this);
-            
-            Services.Trading.JoinSessionAsync(session);
+            Services.Trading.SubscribeTradeInvites(this);            
         }
 
         #region OnButtonAction Handlers
-        //private async void OnBtnPropose(string _)
-        //{
-        //    offerPanel.SetSessionStatus("Sending offer...");
-        //    actions.RemoveButton(cmdSendOffer);
-        //    actions.ChangeButton(cmdCloseView, OnBtnClose, "Withdraw");
-        //    actions.SetButtonInteractable(cmdCloseView, false);
-
-        //    offerPanel.SetLocked(true);
-        //    initiatorInventory.SetVisibility(false);
-        //    respondentInventory.SetVisibility(false);
-
-        //    var cts = new CancellationTokenSource(10000);
-        //    await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(offerPanel.InitiatorSlot.Item.ItemID, offerPanel.ResponderSlot.Item.ItemID, false));
-        //    _inviteResponseReceived = false;
-
-        //    try
-        //    {
-        //        while (_inviteResponseReceived == false)
-        //        {
-        //            cts.Token.ThrowIfCancellationRequested();
-        //            await Task.Yield();
-        //        }
-        //    }
-        //    catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
-        //    {
-        //        StateSessionComplete($"No response from {_viewData.Respondent.DisplayName}");
-        //        await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.otherPartyNotResponding));
-        //        actions.SetButtonInteractable(cmdCloseView, true);
-        //    }
-        //}
 
         private void OnBtnAcceptCounteroffer(string _)
         {
@@ -80,33 +34,7 @@ namespace PubNubUnityShowcase
             var offer = OfferData.GetRejectedOffer(CounterOffer);
             Services.Trading.SendOfferAsync(offer);
         }
-
-        private async void OnBtnWithdraw(string _)
-        {
-            actions.RemoveButton(cmdCloseView);
-
-            LeaveSessionData leaveData = new LeaveSessionData(_viewData.Initiator, LeaveReason.withdrawOffer);
-            await Services.Trading.LeaveSessionAsync(leaveData);
-            InvokeCloseViewRequest();
-        }
-
-        //private void OnBtnClose(string _)
-        //{
-        //    InvokeCloseViewRequest();
-        //}
-
         #endregion
-
-        //private void SortButtons()
-        //{
-        //    var priority = new List<string>
-        //    {
-        //        cmdCloseView,
-        //        cmdRefuse,
-        //        cmdSendOffer
-        //    };
-        //    actions.Arrange(priority);
-        //}
 
         public override void Dispose()
         {
@@ -118,9 +46,7 @@ namespace PubNubUnityShowcase
         #region ITradeSessionSubscriber
         void ITradeSessionSubscriber.OnParticipantJoined(TraderData participant)
         {
-            offerPanel.SetSessionStatus("Player checking your offer");
-            actions.ChangeButton(cmdCloseView, OnBtnWithdraw, "Withdraw");
-            actions.SetButtonInteractable(cmdCloseView, true);
+
         }
 
         void ITradeSessionSubscriber.OnParticipantGoodbye(LeaveSessionData leaveData)
@@ -135,9 +61,9 @@ namespace PubNubUnityShowcase
 
         async void ITradeSessionSubscriber.OnTradingCompleted(OfferData offerData)
         {
-            await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.transactionComplete));
-            
-            if(offerData.State == OfferData.OfferState.accepted)
+            await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.transactionComplete));
+
+            if (offerData.State == OfferData.OfferState.accepted)
                 StateSessionComplete($"Trade successfull");
 
             if (offerData.State == OfferData.OfferState.rejected)
@@ -146,22 +72,30 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
-            CounterOffer = offerData;
+            Debug.LogWarning("Received Counteroffer");
 
-            offerPanel.SetSessionStatus($"{_viewData.Respondent.DisplayName}'s counter offer");
-            offerPanel.SetLabel("counter offer");
-            offerPanel.SetLocked(false);
+            Flow.Unload();
+            Flow = new FlowInitialOfferReceived(offerData, SessionData, this, UI, Services);
+            Flow.Load();
 
-            FillOfferPanelFromInventories(offerData);
+            //{
+            //    CounterOffer = offerData;
 
-            //hide inventories initially
-            initiatorInventory.SetVisibility(false);
-            respondentInventory.SetVisibility(false);
+            //    offerPanel.SetSessionStatus($"{SessionData.Respondent.DisplayName}'s counter offer");
+            //    offerPanel.SetLabel("counter offer");
+            //    offerPanel.SetLocked(false);
 
-            //Reset buttons
-            actions.AddButton(cmdSendOffer, "Accept", OnBtnAcceptCounteroffer);
-            actions.AddButton(cmdRefuse, "Refuse", OnBtnRefuseCounteroffer);
-            actions.RemoveButton(cmdCloseView);
+            //    FillOfferPanelFromInventories(offerData);
+
+            //    //hide inventories initially
+            //    initiatorInventory.SetVisibility(false);
+            //    respondentInventory.SetVisibility(false);
+
+            //    //Reset buttons
+            //    actions.AddButton(FlowBase.cmdAccept, "Accept", OnBtnAcceptCounteroffer);
+            //    actions.AddButton(FlowBase.cmdRefuse, "Refuse", OnBtnRefuseCounteroffer);
+            //    actions.RemoveButton(FlowBase.cmdCancel);
+            //}
         }
 
         #endregion
@@ -182,22 +116,27 @@ namespace PubNubUnityShowcase
         {
             //only handle refuse to join (joins will handled as ITradeSessionSubscriber)
             Debug.Log($"Respondent: json={((IJsonSerializable)response).RawJson}");
-            _inviteResponseReceived = true;
+            Flow.TradeInviteResponceReceived = true;
 
             if (response.WillJoin == false)
             {
                 //why?
                 if (response.InGameOrLobby)
                 {
-                    StateSessionComplete($"{_viewData.Respondent.DisplayName} is in Match");
-                    await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.otherPartyBusy));
+                    StateSessionComplete($"{SessionData.Respondent.DisplayName} is in Match");
+                    await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.otherPartyBusy));
                 }
 
                 else if (response.InTradingSession)
                 {
-                    StateSessionComplete($"{_viewData.Respondent.DisplayName} is Trading with another player");
-                    await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.otherPartyBusy));
+                    StateSessionComplete($"{SessionData.Respondent.DisplayName} is Trading with another player");
+                    await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.otherPartyBusy));
                 }
+            }
+            else
+            {
+                offerPanel.SetSessionStatus($"{SessionData.Respondent.DisplayName} checking your offer");
+
             }
         }
         #endregion

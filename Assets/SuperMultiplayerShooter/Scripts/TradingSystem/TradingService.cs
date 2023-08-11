@@ -141,7 +141,7 @@ namespace PubNubUnityShowcase
             cts = new CancellationTokenSource();
             TradingViewData viewData = new TradingViewData(session.Initiator, session.Respondent, services, cts.Token);
 
-            viewData.SetStateData(offer);
+            viewData.SetStateData(session, offer);
 
             return viewData;
         }

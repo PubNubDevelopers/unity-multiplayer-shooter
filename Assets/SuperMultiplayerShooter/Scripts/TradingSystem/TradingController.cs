@@ -67,7 +67,7 @@ namespace PubNubUnityShowcase
             catch (System.Exception e) { Debug.LogError($"{DebugTag} Exception: {e}"); }            
         }
 
-        TradeSessionData ITrading.CreateSession(TraderData initiator, TraderData respondent)
+        TradeSessionData ITrading.GenerateSessionData(TraderData initiator, TraderData respondent)
         {
             SessionData = new TradeSessionData(GetRandomSessionID(), initiator, respondent);  
             return SessionData;

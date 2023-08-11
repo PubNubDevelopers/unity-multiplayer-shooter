@@ -18,7 +18,7 @@ namespace PubNubUnityShowcase
         /// </summary>
         /// <param name="initiator"></param>
         /// <param name="respondent"></param>
-        TradeSessionData CreateSession(TraderData initiator, TraderData respondent);
+        TradeSessionData GenerateSessionData(TraderData initiator, TraderData respondent);
 
         /// <summary>
         /// Join Session as Respondent

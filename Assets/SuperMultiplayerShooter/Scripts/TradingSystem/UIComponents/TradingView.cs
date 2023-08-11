@@ -74,8 +74,9 @@ namespace PubNubUnityShowcase.UIComponents
             {
                 //Setup Flow
                 UIComponents ui = new UIComponents(offerPanel, initiatorInventory, respondentInventory, actionButtons);
-                _state = new TradingViewStateInitiator(initData, ui);
-                _state.ApplyState();
+                var session = initData.Services.Trading.GenerateSessionData(initData.Initiator, initData.Respondent);
+                _state = new TradingViewStateInitiator(session, initData.Services, ui);
+                _state.Join();
                 _state.CloseViewRequested += OnSelfClose;
             }
 
@@ -83,13 +84,10 @@ namespace PubNubUnityShowcase.UIComponents
             {
                 //Setup Flow
                 UIComponents ui = new UIComponents(offerPanel, initiatorInventory, respondentInventory, actionButtons);
-                _state = new TradingViewStateRespondent(initData.InitiatorOffer, initData, ui);
-                _state.ApplyState();
+                _state = new TradingViewStateRespondent(initData.Session, initData.InitiatorOffer, initData.Services, ui);
                 _state.CloseViewRequested += OnSelfClose;
             }
         }
-
-
 
         public void OnOpenView()
         {
