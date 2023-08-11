@@ -16,12 +16,16 @@ namespace PubNubUnityShowcase
         public static string TradingPreffix => "trading"; //Trading channel prefix
         private readonly Pubnub _pnApi;
 
+        public PubNubTrading()
+        {
+            _pnApi = Connector.instance.GetPubNubObject();
+            Connector.instance.onPubNubMessage += OnPnMessage;
+            Connector.instance.onPubNubPresence += OnPnPresence;
+        }
+
         private Pubnub PNApi { get => _pnApi; }
-        
         private UserId ThisUser => _pnApi.GetCurrentUserId();
-
         private Dictionary<string, UserMetadata> DatastoreUserMetadata => PNManager.pubnubInstance.CachedPlayers;
-
         private string DebugTag => $"<color=red>[Network]</color>";
 
         public event Action<OfferData> ReceivedOffer;
@@ -29,13 +33,6 @@ namespace PubNubUnityShowcase
         public event Action<InviteResponseData> ReceivedInviteResponse;
         public event Action<LeaveSessionData> ParticipantGoodbye;   //If least with explicid SendLeaveMessage()
         public event Action<string, string> SessionPresenceChanged; //uuid, event
-
-        public PubNubTrading()
-        {
-            _pnApi = Connector.instance.GetPubNubObject();
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubPresence += OnPnPresence;
-        }
 
         #region PubNub Requests
         public async Task SendTradeInviteAsync(TradeInvite invite)
@@ -49,7 +46,7 @@ namespace PubNubUnityShowcase
                 .ShouldStore(true)
                 .ExecuteAsync();
 
-            Debug.Log($"{DebugTag} SendInvite ch={invite.RSVPChannel}");
+            //Debug.Log($"{DebugTag} SendInvite ch={invite.RSVPChannel}");
         }
 
         public async Task SendInviteResponse(TradeInvite invite, InviteResponseData response)
@@ -92,7 +89,7 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            Debug.Log($"{DebugTag} Subscribed ch={GetInbox(ThisUser)}");
+            //Debug.Log($"{DebugTag} Subscribed ch={GetInbox(ThisUser)}");
 
             return GetInbox(ThisUser);
         }
@@ -194,7 +191,7 @@ namespace PubNubUnityShowcase
             {
                 var meta = (Dictionary<string, object>)result.UserMetadata;
                 string typeKey = meta[MessageNormalilzation.TYPE_KEY] as string;
-                
+
                 //Debug.Log($"{DebugTag} MSG<{typeKey}> ch={result.Channel} | paylaod= {json} ");
 
                 if (meta[MessageNormalilzation.TYPE_KEY].Equals(MessageNormalilzation.COMMAND_KEY))
@@ -269,7 +266,7 @@ namespace PubNubUnityShowcase
             Connector.instance.onPubNubMessage -= OnPnMessage;
             Connector.instance.onPubNubPresence -= OnPnPresence;
 
-            Debug.Log($"{DebugTag} Disposed");
+            //Debug.Log($"{DebugTag} Disposed");
         }
     }
 }

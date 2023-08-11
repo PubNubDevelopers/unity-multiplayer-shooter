@@ -92,7 +92,7 @@ namespace PubNubUnityShowcase
                 await Network.SubscribeSession(session);
                 SessionData = session;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
 
                 throw e;
@@ -122,18 +122,11 @@ namespace PubNubUnityShowcase
             SentOffer = await Network.SendOffer(SessionData, offer);
         }
 
-        async Task ITrading.SendCounterOffer(OfferData offer)
-        {
-            var json = JsonConvert.SerializeObject(offer);
-
-            Debug.Log($"{DebugTag} Counteroffer >>>{json}<<<");
-            await Task.CompletedTask;
-        }
-
         void ITrading.SubscribeTradeInvites(ITradeInviteSubscriber subscriber)
         {
-            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
+            
             inviteSubscribers.Add(subscriber);
+            //Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
         }
 
         void ITrading.SubscribeSessionEvents(ITradeSessionSubscriber subscriber)

@@ -36,6 +36,7 @@ namespace PubNubUnityShowcase.UIComponents
         public void SetVisibility(bool state)
         {
             panelGroup.alpha = state ? 1 : 0;
+            panelGroup.interactable = state;
         }
 
         public void SetInteraction(bool state)

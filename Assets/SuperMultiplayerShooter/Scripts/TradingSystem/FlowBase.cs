@@ -40,16 +40,50 @@ public abstract class FlowBase
     public abstract void Unload();
 
 
+    protected void InitializeUIElements()
+    {
+        //Initialize UI Elements
+        UI.OfferPanel.Construct();
+        UI.InventoryInitiator.Construct(Services.HatsLibrary, 8);
+        UI.InventoryRespondent.Construct(Services.HatsLibrary, 8);
+        UI.AvatarInitiator.Construct(Services.Avatars, Services.HatsLibrary, UI.OfferPanel.ResponderSlot, UI.InventoryInitiator, SessionData.Initiator.EquippedCosmetic);
+        UI.AvatarRespondent.Construct(Services.Avatars, Services.HatsLibrary, UI.OfferPanel.InitiatorSlot, UI.InventoryRespondent, SessionData.Respondent.EquippedCosmetic);
+    }
+
+    protected void RefreshAvatars(TraderData initiator, TraderData respondent)
+    {
+        UI.AvatarInitiator.SetNickname(initiator.DisplayName);
+        UI.AvatarInitiator.SetHat(initiator.EquippedCosmetic);
+        UI.AvatarInitiator.SetBody(initiator.PlayerAvatarType);
+        UI.AvatarInitiator.SetLookDirection(1);
+
+        UI.AvatarRespondent.SetNickname(respondent.DisplayName);
+        UI.AvatarRespondent.SetHat(respondent.EquippedCosmetic);
+        UI.AvatarRespondent.SetBody(respondent.PlayerAvatarType);
+        UI.AvatarRespondent.SetLookDirection(-1);
+    }
+
+    protected void RefreshInventories(TradeInventoryData initiator, TradeInventoryData respondent)
+    {
+        UI.InventoryInitiator.UpdateData(initiator);
+        UI.InventoryRespondent.UpdateData(respondent);
+    }
+
+    protected void DisableDuplicateItems()
+    {
+        //Check duplicates
+        UI.InventoryRespondent.CheckDuplicates(UI.InventoryInitiator.GetCosmetics(), true);
+        UI.InventoryInitiator.CheckDuplicates(UI.InventoryRespondent.GetCosmetics(), true);
+    }
+
     protected void FillOfferPanelFromInventories(OfferData offerData)
     {
         //Fill offer panel
-        CosmeticItem initiatorGives = Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorGives);
-        UI.InitiatorInventory.RemoveItem(initiatorGives);
-        UI.OfferPanel.InitiatorSlot.SetItem(initiatorGives);
+        UI.InventoryInitiator.RemoveItem(Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorGives));
+        UI.OfferPanel.InitiatorSlot.SetItem(Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorGives));
 
-        CosmeticItem initiatorReceives = Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorReceives);
-        UI.RespondentInventory.RemoveItem(initiatorReceives);
-        UI.OfferPanel.ResponderSlot.SetItem(initiatorReceives);
+        UI.InventoryRespondent.RemoveItem(Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorReceives));
+        UI.OfferPanel.ResponderSlot.SetItem(Services.HatsLibrary.GetCosmeticItem(offerData.InitiatorReceives));
     }
 
     protected void SetOfferTransfersEnabled(bool enabled)
@@ -58,43 +92,37 @@ public abstract class FlowBase
         {
             UI.OfferPanel.ItemTakenInitiator += OnOfferPanelInitiatorTaken;
             UI.OfferPanel.ItemTakenResponder += OnOfferPanelRespondentTaken;
-            UI.InitiatorInventory.ItemTaken += OnInitiatorInventoryTake;
-            UI.RespondentInventory.ItemTaken += OnRespondentInventoryTake;
+            UI.InventoryInitiator.ItemTaken += OnInitiatorInventoryTake;
+            UI.InventoryRespondent.ItemTaken += OnRespondentInventoryTake;
         }
         else
         {
             UI.OfferPanel.ItemTakenInitiator -= OnOfferPanelInitiatorTaken;
             UI.OfferPanel.ItemTakenResponder -= OnOfferPanelRespondentTaken;
-            UI.InitiatorInventory.ItemTaken -= OnInitiatorInventoryTake;
-            UI.RespondentInventory.ItemTaken -= OnRespondentInventoryTake;
+            UI.InventoryInitiator.ItemTaken -= OnInitiatorInventoryTake;
+            UI.InventoryRespondent.ItemTaken -= OnRespondentInventoryTake;
         }
-    }
-
-    protected void ResetInventories(TradeInventoryData initiator, TradeInventoryData respondent)
-    {
-        UI.InitiatorInventory.UpdateData(initiator);
-        UI.RespondentInventory.UpdateData(respondent);
     }
 
     protected void SetOfferLocked(bool locked)
     {
         UI.OfferPanel.SetLocked(locked);
-        UI.InitiatorInventory.SetVisibility(!locked);
-        UI.RespondentInventory.SetVisibility(!locked);
+        UI.InventoryInitiator.SetVisibility(!locked);
+        UI.InventoryRespondent.SetVisibility(!locked);
     }
 
     protected void OnOfferPanelInitiatorTaken(CosmeticItem item)
     {
-        UI.InitiatorInventory.PutAnywhere(item);
-        UI.InitiatorInventory.SetVisibility(true);
-        UI.RespondentInventory.SetVisibility(true);
+        UI.InventoryInitiator.PutAnywhere(item);
+        UI.InventoryInitiator.SetVisibility(true);
+        UI.InventoryRespondent.SetVisibility(true);
     }
 
     protected void OnOfferPanelRespondentTaken(CosmeticItem item)
     {
-        UI.RespondentInventory.PutAnywhere(item);
-        UI.InitiatorInventory.SetVisibility(true);
-        UI.RespondentInventory.SetVisibility(true);
+        UI.InventoryRespondent.PutAnywhere(item);
+        UI.InventoryInitiator.SetVisibility(true);
+        UI.InventoryRespondent.SetVisibility(true);
     }
     protected void OnInitiatorInventoryTake(CosmeticItem cosmeticItem)
     {
@@ -103,7 +131,7 @@ public abstract class FlowBase
             var temp = UI.OfferPanel.InitiatorSlot.Item;
             UI.OfferPanel.InitiatorSlot.SetEmpty();
             UI.OfferPanel.SetInitiatorGive(cosmeticItem);
-            UI.InitiatorInventory.PutAnywhere(temp);
+            UI.InventoryInitiator.PutAnywhere(temp);
         }
         else
         {
@@ -118,7 +146,7 @@ public abstract class FlowBase
             var temp = UI.OfferPanel.ResponderSlot.Item;
             UI.OfferPanel.ResponderSlot.SetEmpty();
             UI.OfferPanel.SetInitiatorReceive(cosmeticItem);
-            UI.RespondentInventory.PutAnywhere(temp);
+            UI.InventoryRespondent.PutAnywhere(temp);
         }
         else
         {
@@ -131,8 +159,8 @@ public abstract class FlowBase
         UI.Actions.RemoveAll();
         UI.Actions.AddButton(cmdOK, "OK", OnBtnClose);
         UI.Actions.SetButtonInteractable(cmdOK, true);
-        UI.InitiatorInventory.SetVisibility(false);
-        UI.RespondentInventory.SetVisibility(false);
+        UI.InventoryInitiator.SetVisibility(false);
+        UI.InventoryRespondent.SetVisibility(false);
         UI.OfferPanel.SetLocked(true);
         UI.OfferPanel.SetSessionStatus(message);
     }

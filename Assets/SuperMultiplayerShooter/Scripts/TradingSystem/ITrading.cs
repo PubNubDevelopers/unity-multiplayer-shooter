@@ -36,7 +36,6 @@ namespace PubNubUnityShowcase
         Task LeaveSessionAsync(LeaveSessionData leaveData);
 
         Task SendOfferAsync(OfferData offer);
-        Task SendCounterOffer(OfferData offer);
 
         /// <remarks>Don't forget to unsubscribe!</remarks>
         void SubscribeTradeInvites(ITradeInviteSubscriber subscriber);

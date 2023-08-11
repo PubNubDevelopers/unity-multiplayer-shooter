@@ -28,8 +28,8 @@ namespace PubNubUnityShowcase
             _sessionData = sessionData;
             _ui = ui;
             this.offerPanel = ui.OfferPanel;
-            this.initiatorInventory = ui.InitiatorInventory;
-            this.respondentInventory = ui.RespondentInventory;
+            this.initiatorInventory = ui.InventoryInitiator;
+            this.respondentInventory = ui.InventoryRespondent;
             this.actions = ui.Actions;
 
             _services = services;
@@ -52,10 +52,7 @@ namespace PubNubUnityShowcase
 
         public virtual void Dispose()
         {
-            //offerPanel.ItemTakenInitiator -= OnOfferPanelInitiatorTaken;
-            //offerPanel.ItemTakenResponder -= OnOfferPanelRespondentTaken;
-            //initiatorInventory.ItemTaken -= OnInitiatorInventoryTake;
-            //respondentInventory.ItemTaken -= OnRespondentInventoryTake;
+            Flow.Unload();
         }
 
 

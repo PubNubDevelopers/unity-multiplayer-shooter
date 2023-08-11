@@ -11,14 +11,12 @@ namespace PubNubUnityShowcase
         private readonly TraderData _initiator;
         private readonly TraderData _respondent;
         private readonly TradingView.Services _services;
-        private readonly CancellationToken _token;
 
-        public TradingViewData(TraderData sellerPlayer, TraderData buyerPlayer, TradingView.Services services, CancellationToken token)
+        public TradingViewData(TraderData sellerPlayer, TraderData buyerPlayer, TradingView.Services services)
         {
             _initiator = sellerPlayer;
             _respondent = buyerPlayer;
             _services = services;
-            _token = token;
         }
 
         public TradingView.StateType State { get; private set; }

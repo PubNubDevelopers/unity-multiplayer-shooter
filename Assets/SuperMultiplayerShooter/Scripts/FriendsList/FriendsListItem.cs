@@ -1,5 +1,6 @@
 ﻿using PubnubApi;
 using PubNubUnityShowcase;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,7 +47,9 @@ namespace Visyde
         /// </summary>
         public void OnTradeClick()
         {
-            TradingService.Instance.OpenViewAsOfferEditor(userId);
+            var cts = new CancellationTokenSource();
+            var viewData = TradingService.Instance.GetViewDataInitiator(userId, cts.Token);
+            var view = TradingService.Instance.OpenView(viewData, cts.Token);
         }
         /// <summary>
         /// Remove friend

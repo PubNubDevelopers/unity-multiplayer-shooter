@@ -1,5 +1,7 @@
+using PubnubApi;
 using PubNubUnityShowcase;
 using PubNubUnityShowcase.UIComponents;
+using System.Threading;
 using UnityEngine;
 
 public class MockLauncher : MonoBehaviour
@@ -15,12 +17,16 @@ public class MockLauncher : MonoBehaviour
 
     public void OnBtnOpenInitiator()
     {
-        tradingService.OpenViewAsOfferEditor(mockSession.Respondent.UserID);
+        var cts = new CancellationTokenSource();
+        var viewData = TradingService.Instance.GetViewDataInitiator(mockSession.Respondent.UserID, cts.Token);
+        var view = TradingService.Instance.OpenView(viewData, cts.Token);
     }
 
     public void OnBtnOpenRespondent()
     {
-        tradingService.OpenViewAsRespondent(mockSession, mockOffer);
+        var cts = new CancellationTokenSource();
+        var viewData = tradingService.GetViewDataRespondent(mockSession, mockOffer, cts.Token);
+        tradingService.OpenView(viewData, cts.Token);
     }
 
     public void OnBtnClose()

@@ -13,6 +13,12 @@ namespace PubNubUnityShowcase.UIComponents
 
         public override void Load()
         {
+            InitializeUIElements();
+
+            RefreshAvatars(SessionData.Initiator, SessionData.Respondent);
+            RefreshInventories(SessionData.Initiator.Inventory, SessionData.Respondent.Inventory);
+            DisableDuplicateItems();
+
             UI.OfferPanel.SetSessionStatus("Make your offer");
 
             SetOfferTransfersEnabled(true);
@@ -67,10 +73,10 @@ namespace PubNubUnityShowcase.UIComponents
             {              
                 while (TradeInviteResponceReceived == false)
                 {
+                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
-                    time += 100;
-                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
+                    time += 100;                    
                     await Task.Yield();
                 }
                 
@@ -79,8 +85,7 @@ namespace PubNubUnityShowcase.UIComponents
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
                 ShowSessionResult($"No response from {SessionData.Respondent.DisplayName}");
-                await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.otherPartyNotResponding));
-                UI.Actions.SetButtonInteractable(cmdWitdraw, true);
+                await Services.Trading.LeaveSessionAsync(new LeaveSessionData(SessionData.Initiator, LeaveReason.otherPartyNotResponding));                
             }
         }
 

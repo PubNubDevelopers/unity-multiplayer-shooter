@@ -21,14 +21,20 @@ namespace PubNubUnityShowcase.UIComponents
 
         public override void Load()
         {
+            InitializeUIElements();
+
+            RefreshAvatars(SessionData.Initiator, SessionData.Respondent);
+            RefreshInventories(SessionData.Initiator.Inventory, SessionData.Respondent.Inventory);
+            DisableDuplicateItems();
+
             UI.OfferPanel.SetSessionStatus($"{SessionData.Initiator.DisplayName}'s offer");
             FillOfferPanelFromInventories(ReceivedOffer);
 
             UI.OfferPanel.AnyChange += OnAnyOfferChange;
 
             //hide inventories
-            UI.InitiatorInventory.SetVisibility(false);
-            UI.RespondentInventory.SetVisibility(false);
+            UI.InventoryInitiator.SetVisibility(false);
+            UI.InventoryRespondent.SetVisibility(false);
 
             //Add buttons
             UI.Actions.AddButton(cmdAccept, "Accept", OnBtnAccept);
@@ -96,13 +102,10 @@ namespace PubNubUnityShowcase.UIComponents
 
             SetOfferLocked(true);
 
-            var cts = new CancellationTokenSource(10000);
-            await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false));
-
             ReceivedCounterofferResponse = false;
 
+            var cts = new CancellationTokenSource(30000); //30 sec hardcode timeout
             int time = 0;
-
             try
             {
                 while (ReceivedCounterofferResponse == false)

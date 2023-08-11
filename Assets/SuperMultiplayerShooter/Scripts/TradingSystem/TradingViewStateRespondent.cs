@@ -1,4 +1,5 @@
 using PubNubUnityShowcase.UIComponents;
+using System;
 using UnityEngine;
 
 namespace PubNubUnityShowcase
@@ -16,6 +17,13 @@ namespace PubNubUnityShowcase
             Services.Trading.SubscribeSessionEvents(this);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            Services.Trading.UnsubscribeSessionEvents(this);
+        }
+
+        #region ITradeSessionSubscriber
         void ITradeSessionSubscriber.OnParticipantJoined(TraderData participant)
         {
             Debug.LogWarning("Respondent should always join second. Something went wrong");
@@ -54,12 +62,8 @@ namespace PubNubUnityShowcase
 
             offerPanel.SetLabel("counter offer");
         }
+        #endregion
 
-        public override void Dispose()
-        {
-            base.Dispose();
-            Services.Trading.UnsubscribeSessionEvents(this);
-            Flow.Unload();
-        }
+
     }
 }

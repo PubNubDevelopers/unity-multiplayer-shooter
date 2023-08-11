@@ -10,8 +10,6 @@ namespace PubNubUnityShowcase
         ITradeSessionSubscriber,
         ITradeInviteSubscriber
     {
-        private OfferData CounterOffer { get; set; }
-
         public TradingViewStateInitiator(TradeSessionData sessionData, TradingView.Services services, TradingView.UIComponents ui) : base(sessionData, services, ui)
         {
             Flow = new FlowCreateInitialOffer(sessionData, this, ui, services);
@@ -57,7 +55,7 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnCounterOffer(OfferData offerData)
         {
-            Debug.LogWarning("------------>Received Counteroffer");
+            Debug.LogWarning($"------------>Received Counteroffer target: {offerData.Target}");
 
             Flow.Unload();
             Flow = new FlowOfferReceived(offerData, SessionData, this, UI, Services);
