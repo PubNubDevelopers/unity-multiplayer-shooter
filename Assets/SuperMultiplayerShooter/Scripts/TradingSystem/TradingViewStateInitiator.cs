@@ -127,6 +127,13 @@ namespace PubNubUnityShowcase
             actions.Arrange(priority);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            Services.Trading.UnsubscribeTradeInvites(this);
+            Services.Trading.UnsubscribeSessionEvents(this);
+        }
+
         #region ITradeSessionSubscriber
         void ITradeSessionSubscriber.OnParticipantJoined(TraderData participant)
         {

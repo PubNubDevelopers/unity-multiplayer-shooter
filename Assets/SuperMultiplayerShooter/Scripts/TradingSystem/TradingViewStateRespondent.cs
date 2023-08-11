@@ -1,6 +1,4 @@
 using PubNubUnityShowcase.UIComponents;
-using System;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace PubNubUnityShowcase
@@ -30,7 +28,7 @@ namespace PubNubUnityShowcase
 
             FillOfferPanelFromInventories(_currentOffer);
 
-            offerPanel.AnyChange += OnAnyOfferChange;                       
+            offerPanel.AnyChange += OnAnyOfferChange;
 
             //hide inventories initially
             initiatorInventory.SetVisibility(false);
@@ -71,7 +69,7 @@ namespace PubNubUnityShowcase
         {
             Debug.Log($"{leaveData.Participant.DisplayName} Left the trade: {leaveData.Reason}");
 
-            if(leaveData.Reason == LeaveReason.withdrawOffer)
+            if (leaveData.Reason == LeaveReason.withdrawOffer)
             {
                 LeaveSessionData myLeave = new LeaveSessionData(_viewData.Initiator, LeaveReason.withdrawOffer);
                 await Services.Trading.LeaveSessionAsync(myLeave); //You leave too
@@ -120,6 +118,12 @@ namespace PubNubUnityShowcase
         private void OnBtnClose(string _)
         {
             InvokeCloseViewRequest();
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            Services.Trading.UnsubscribeSessionEvents(this);
         }
     }
 }

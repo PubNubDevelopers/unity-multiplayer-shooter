@@ -28,6 +28,7 @@ namespace PubNubUnityShowcase.UIComponents
         private CancellationTokenSource _viewCts;
         private TradingViewStateBase _state;
 
+        private TradingViewStateBase State => _state;
 
         /// <summary>
         /// Initialize the view
@@ -66,7 +67,7 @@ namespace PubNubUnityShowcase.UIComponents
             respondentInventory.CheckDuplicates(initiatorInventory.GetCosmetics(), true);
             initiatorInventory.CheckDuplicates(respondentInventory.GetCosmetics(), true);
 
-            if(initData.State == State.initiator)
+            if(initData.State == StateType.initiator)
             {
                 //Setup Flow
                 UIComponents ui = new UIComponents(offerPanel, initiatorInventory, respondentInventory, actionButtons);
@@ -75,7 +76,7 @@ namespace PubNubUnityShowcase.UIComponents
                 _state.CloseViewRequested += OnSelfClose;
             }
 
-            if (initData.State == State.respondent)
+            if (initData.State == StateType.respondent)
             {
                 //Setup Flow
                 UIComponents ui = new UIComponents(offerPanel, initiatorInventory, respondentInventory, actionButtons);
@@ -84,6 +85,8 @@ namespace PubNubUnityShowcase.UIComponents
                 _state.CloseViewRequested += OnSelfClose;
             }
         }
+
+
 
         public void OnOpenView()
         {
@@ -106,7 +109,7 @@ namespace PubNubUnityShowcase.UIComponents
             _state.Dispose();
         }
 
-        public enum State
+        public enum StateType
         {
             initiator, 
             respondent

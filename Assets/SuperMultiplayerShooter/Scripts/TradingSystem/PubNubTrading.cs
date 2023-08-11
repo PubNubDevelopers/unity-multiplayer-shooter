@@ -11,7 +11,7 @@ namespace PubNubUnityShowcase
     /// <summary>
     /// Requests and listeners (PubNubAPI)
     /// </summary>
-    public class PubNubTrading
+    public class PubNubTrading : IDisposable
     {
         public static string TradingPreffix => "trading"; //Trading channel prefix
         private readonly Pubnub _pnApi;
@@ -90,7 +90,7 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            //Debug.Log($"<color=red>[Network]</color> Subscribed ch={GetInbox(ThisUser)}");
+            Debug.Log($"{DebugTag} Subscribed ch={GetInbox(ThisUser)}");
 
             return GetInbox(ThisUser);
         }
@@ -102,7 +102,7 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            //Debug.Log($"<color=red>[Network]</color> Unsubscribed ch={GetInbox(ThisUser)}");
+            Debug.Log($"{DebugTag} Unsubscribed ch={GetInbox(ThisUser)}");
         }
 
         public async Task SubscribeSession(TradeSessionData session)
@@ -254,6 +254,20 @@ namespace PubNubUnityShowcase
         private static string GetInbox(UserId userId)
         {
             return $"{TradingPreffix}.{userId}";
+        }
+
+        public void Dispose()
+        {
+            ReceivedInvite = null;
+            ReceivedInviteResponse = null;
+            ReceivedOffer = null;
+            SessionPresenceChanged = null;
+            ParticipantGoodbye = null;
+
+            Connector.instance.onPubNubMessage -= OnPnMessage;
+            Connector.instance.onPubNubPresence -= OnPnPresence;
+
+            Debug.Log($"{DebugTag} Disposed");
         }
     }
 }

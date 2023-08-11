@@ -74,7 +74,7 @@ namespace PubNubUnityShowcase
 
         private void OnDestroy()
         {
-            Trading.DisconnectTradingAsync();
+            Dispose();
         }
 
         private TradingView SpawnView(TradingViewData viewData)
@@ -177,8 +177,11 @@ namespace PubNubUnityShowcase
 
         private void Dispose()
         {
-            cts.Cancel();
+            cts?.Cancel();
             view = null;
+            Trading.DisconnectTradingAsync();
+            Trading.UnsubscribeTradeInvites(this);
+            _tradingController.Dispose();
         }
     }
 }

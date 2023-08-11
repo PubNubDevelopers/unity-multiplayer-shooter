@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -6,7 +7,10 @@ using Visyde;
 
 namespace PubNubUnityShowcase
 {
-    public class TradingController : ITrading
+    public class TradingController : 
+        ITrading,
+        IDisposable
+
     {
         private List<ITradeInviteSubscriber> inviteSubscribers;
         private List<ITradeSessionSubscriber> sessionSubscribers;
@@ -128,13 +132,26 @@ namespace PubNubUnityShowcase
 
         void ITrading.SubscribeTradeInvites(ITradeInviteSubscriber subscriber)
         {
+            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
             inviteSubscribers.Add(subscriber);
         }
 
         void ITrading.SubscribeSessionEvents(ITradeSessionSubscriber subscriber)
         {
+            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={sessionSubscribers.Count}");
             sessionSubscribers.Add(subscriber);
         }
+
+        void ITrading.UnsubscribeTradeInvites(ITradeInviteSubscriber subscriber)
+        {
+            inviteSubscribers.Remove(subscriber);
+        }
+
+        void ITrading.UnsubscribeSessionEvents(ITradeSessionSubscriber subscriber)
+        {
+            sessionSubscribers.Remove(subscriber);
+        }
+
         #endregion
 
         #region Network Event Handlers
@@ -208,28 +225,6 @@ namespace PubNubUnityShowcase
             }
         }
 
-        //public async void OnAcceptedOffer(OfferData offer)
-        //{
-        //    //Apply data
-        //    await Network.ApplyMetadata(SessionData, offer);
-
-        //    foreach (var sub in sessionSubscribers)
-        //        sub.OnTradingCompleted(offer);
-        //}
-
-        //public void OnReceiveCounterOffer(OfferData offer)
-        //{
-        //    Debug.Log($"<color=green>[Trading]</color> Received counter offer");
-        //}
-
-        //public void OnReceiveRejection(OfferData offer)
-        //{
-        //    Debug.Log($"<color=green>[Trading]</color> Received Rejection");
-        //    Debug.Log($"<color=green>[Trading]</color> You successufully sent offer");
-        //    foreach (var sub in sessionSubscribers)
-        //        sub.OnCounterOffer(offer);
-        //}
-
         private void OnParticipantGoodbye(LeaveSessionData leaveData)
         {
             //Ignore own events 
@@ -269,5 +264,12 @@ namespace PubNubUnityShowcase
         {
             return UnityEngine.Random.Range(100000, 999999);
         }
+
+        public void Dispose()
+        {
+            _network.Dispose();
+        }
+
+
     }
 }

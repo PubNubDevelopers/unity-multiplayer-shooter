@@ -33,19 +33,18 @@ namespace PubNubUnityShowcase
 
         Task InviteRespondAsync(TradeInvite invite, InviteResponseData response);
 
-
-
         Task LeaveSessionAsync(LeaveSessionData leaveData);
 
         Task SendOfferAsync(OfferData offer);
         Task SendCounterOffer(OfferData offer);
 
-        /// <summary>
-        /// Subscribe to TradeInvites
-        /// </summary>
-        /// <param name="subscriber"></param>
+        /// <remarks>Don't forget to unsubscribe!</remarks>
         void SubscribeTradeInvites(ITradeInviteSubscriber subscriber);
 
+        /// <remarks>Don't forget to unsubscribe!</remarks>
         void SubscribeSessionEvents(ITradeSessionSubscriber subscriber);
+
+        void UnsubscribeTradeInvites(ITradeInviteSubscriber subscriber);
+        void UnsubscribeSessionEvents(ITradeSessionSubscriber subscriber);
     }
 }

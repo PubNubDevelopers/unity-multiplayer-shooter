@@ -21,7 +21,7 @@ namespace PubNubUnityShowcase
             _token = token;
         }
 
-        public TradingView.State State { get; private set; }
+        public TradingView.StateType State { get; private set; }
         public TraderData Initiator { get => _initiator; }
         public TraderData Respondent { get => _respondent; }
         public OfferData InitiatorOffer { get; private set; }
@@ -32,7 +32,7 @@ namespace PubNubUnityShowcase
         /// </summary>
         public void SetStateData()
         {
-            State = TradingView.State.initiator;
+            State = TradingView.StateType.initiator;
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace PubNubUnityShowcase
         /// <param name="offer"></param>
         public void SetStateData(OfferData offer)
         {
-            State = TradingView.State.respondent;
+            State = TradingView.StateType.respondent;
             InitiatorOffer = offer;
         }
     }
