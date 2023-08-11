@@ -26,67 +26,48 @@ namespace PubNubUnityShowcase
 
         public override void ApplyState()
         {
-            //Initial Title
-            offerPanel.SetSessionStatus("Make your offer");
-            SetInvenotryToOfferFlow();
+            var session = Services.Trading.CreateSession(_viewData.Initiator, _viewData.Respondent);
 
-            //Offer panel is empty initially
-
-            offerPanel.AnyChange += OnAnyOfferChange;
-
-            actions.AddButton(cmdCloseView, "Cancel", OnBtnClose);
-            
+            var initialOfferFlow = new FlowCreateInitialOffer(session, this, UI, Services);
+            initialOfferFlow.Load();
+           
             Services.Trading.SubscribeSessionEvents(this);
             Services.Trading.SubscribeTradeInvites(this);
-
-            var session = Services.Trading.CreateSession(_viewData.Initiator, _viewData.Respondent);
+            
             Services.Trading.JoinSessionAsync(session);
         }
 
-        private void OnAnyOfferChange()
-        {
-            if (offerPanel.HaveValidOffer)
-            {
-                actions.AddButton(cmdSendOffer, "Propose", OnBtnPropose);
-                SortButtons();
-            }
-            else
-            {
-                actions.RemoveButton(cmdSendOffer);
-            }
-        }
-
         #region OnButtonAction Handlers
-        private async void OnBtnPropose(string _)
-        {
-            offerPanel.SetSessionStatus("Sending offer...");
-            actions.RemoveButton(cmdSendOffer);
-            actions.ChangeButton(cmdCloseView, OnBtnClose, "Withdraw");
-            actions.SetButtonInteractable(cmdCloseView, false);
+        //private async void OnBtnPropose(string _)
+        //{
+        //    offerPanel.SetSessionStatus("Sending offer...");
+        //    actions.RemoveButton(cmdSendOffer);
+        //    actions.ChangeButton(cmdCloseView, OnBtnClose, "Withdraw");
+        //    actions.SetButtonInteractable(cmdCloseView, false);
 
-            offerPanel.SetLocked(true);
-            initiatorInventory.SetVisibility(false);
-            respondentInventory.SetVisibility(false);
+        //    offerPanel.SetLocked(true);
+        //    initiatorInventory.SetVisibility(false);
+        //    respondentInventory.SetVisibility(false);
 
-            var cts = new CancellationTokenSource(10000);
-            await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(offerPanel.InitiatorSlot.Item.ItemID, offerPanel.ResponderSlot.Item.ItemID, false));
-            _inviteResponseReceived = false;
+        //    var cts = new CancellationTokenSource(10000);
+        //    await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(offerPanel.InitiatorSlot.Item.ItemID, offerPanel.ResponderSlot.Item.ItemID, false));
+        //    _inviteResponseReceived = false;
 
-            try
-            {
-                while (_inviteResponseReceived == false)
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-                    await Task.Yield();
-                }
-            }
-            catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
-            {
-                StateSessionComplete($"No response from {_viewData.Respondent.DisplayName}");
-                await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.otherPartyNotResponding));
-                actions.SetButtonInteractable(cmdCloseView, true);
-            }
-        }
+        //    try
+        //    {
+        //        while (_inviteResponseReceived == false)
+        //        {
+        //            cts.Token.ThrowIfCancellationRequested();
+        //            await Task.Yield();
+        //        }
+        //    }
+        //    catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+        //    {
+        //        StateSessionComplete($"No response from {_viewData.Respondent.DisplayName}");
+        //        await Services.Trading.LeaveSessionAsync(new LeaveSessionData(_viewData.Initiator, LeaveReason.otherPartyNotResponding));
+        //        actions.SetButtonInteractable(cmdCloseView, true);
+        //    }
+        //}
 
         private void OnBtnAcceptCounteroffer(string _)
         {
@@ -109,23 +90,23 @@ namespace PubNubUnityShowcase
             InvokeCloseViewRequest();
         }
 
-        private void OnBtnClose(string _)
-        {
-            InvokeCloseViewRequest();
-        }
+        //private void OnBtnClose(string _)
+        //{
+        //    InvokeCloseViewRequest();
+        //}
 
         #endregion
 
-        private void SortButtons()
-        {
-            var priority = new List<string>
-            {
-                cmdCloseView,
-                cmdRefuse,
-                cmdSendOffer
-            };
-            actions.Arrange(priority);
-        }
+        //private void SortButtons()
+        //{
+        //    var priority = new List<string>
+        //    {
+        //        cmdCloseView,
+        //        cmdRefuse,
+        //        cmdSendOffer
+        //    };
+        //    actions.Arrange(priority);
+        //}
 
         public override void Dispose()
         {

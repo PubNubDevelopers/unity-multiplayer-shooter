@@ -12,6 +12,7 @@ namespace PubNubUnityShowcase
 
         private readonly TradingViewData _viewData;
 
+
         private bool SameOffer => _currentOffer.InitiatorGives == offerPanel.InitiatorSlot.Item.ItemID && _currentOffer.InitiatorReceives == offerPanel.ResponderSlot.Item.ItemID;
 
         public TradingViewStateRespondent(OfferData originalOffer, TradingViewData viewData, TradingView.UIComponents ui) : base(viewData.Services, ui)
@@ -25,6 +26,8 @@ namespace PubNubUnityShowcase
             //Initial Title
             offerPanel.SetSessionStatus($"{_viewData.Initiator.DisplayName}'s offer");
             SetInvenotryToOfferFlow();
+
+
 
             FillOfferPanelFromInventories(_currentOffer);
 

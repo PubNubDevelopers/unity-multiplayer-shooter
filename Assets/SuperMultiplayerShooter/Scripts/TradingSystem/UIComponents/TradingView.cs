@@ -49,19 +49,22 @@ namespace PubNubUnityShowcase.UIComponents
             initiatorAvatar.Construct(initData.Services.Avatars, initData.Services.HatsLibrary, offerPanel.ResponderSlot, initiatorInventory, _initiator.EquippedCosmetic);
             respondentAvatar.Construct(initData.Services.Avatars, initData.Services.HatsLibrary, offerPanel.InitiatorSlot, respondentInventory, _respondent.EquippedCosmetic);
 
-            //Set Initial State
-            initiatorInventory.UpdateData(_initiator.Inventory);
-            respondentInventory.UpdateData(_respondent.Inventory);
+            //TODO: move this to flows
+            {
+                //Set Initial State
+                initiatorInventory.UpdateData(_initiator.Inventory);
+                respondentInventory.UpdateData(_respondent.Inventory);
 
-            initiatorAvatar.SetNickname(_initiator.DisplayName);
-            initiatorAvatar.SetHat(_initiator.EquippedCosmetic);
-            initiatorAvatar.SetBody(_initiator.PlayerAvatarType);
-            initiatorAvatar.SetLookDirection(1);
+                initiatorAvatar.SetNickname(_initiator.DisplayName);
+                initiatorAvatar.SetHat(_initiator.EquippedCosmetic);
+                initiatorAvatar.SetBody(_initiator.PlayerAvatarType);
+                initiatorAvatar.SetLookDirection(1);
 
-            respondentAvatar.SetNickname(_respondent.DisplayName);
-            respondentAvatar.SetHat(_respondent.EquippedCosmetic);
-            respondentAvatar.SetBody(_respondent.PlayerAvatarType);
-            respondentAvatar.SetLookDirection(-1);
+                respondentAvatar.SetNickname(_respondent.DisplayName);
+                respondentAvatar.SetHat(_respondent.EquippedCosmetic);
+                respondentAvatar.SetBody(_respondent.PlayerAvatarType);
+                respondentAvatar.SetLookDirection(-1);
+            }
 
             //  Check duplicates
             respondentInventory.CheckDuplicates(initiatorInventory.GetCosmetics(), true);

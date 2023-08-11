@@ -13,12 +13,16 @@ namespace PubNubUnityShowcase
         protected readonly TraderInventoryPanel respondentInventory;
         protected readonly ActionButtonsPanel actions;
         protected readonly TradingView.Services _services;
+        private readonly TradingView.UIComponents _ui;
+
+        protected TradingView.UIComponents UI => _ui;
 
         public event Action CloseViewRequested;
 
         protected TradingView.Services Services { get => _services; }
         protected TradingViewStateBase(TradingView.Services services, TradingView.UIComponents ui)
         {
+            _ui = ui;
             this.offerPanel = ui.OfferPanel;
             this.initiatorInventory = ui.InitiatorInventory;
             this.respondentInventory = ui.RespondentInventory;
@@ -29,7 +33,7 @@ namespace PubNubUnityShowcase
 
         public abstract void ApplyState();
 
-        protected void InvokeCloseViewRequest()
+        public void InvokeCloseViewRequest()
         {
             CloseViewRequested?.Invoke();
         }
@@ -68,7 +72,7 @@ namespace PubNubUnityShowcase
             offerPanel.ResponderSlot.SetItem(initiatorReceives);
         }
 
-        protected void StateSessionComplete(string message)
+        public void StateSessionComplete(string message)
         {
             actions.RemoveAll();
             actions.AddButton(cmdCloseView, "OK", InvokeCloseViewRequest);
