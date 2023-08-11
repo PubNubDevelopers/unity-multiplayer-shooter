@@ -29,9 +29,9 @@ namespace Visyde
             userId = uuid;
             onlineStatus.color = Color.gray;
             messageButton.onClick.AddListener(() => OnMessageClick());
-            //tradeBtn.onClick.AddListener(() => OnTradeClick()); To update when trade is implemented.
             acceptButton.onClick.AddListener(async () => await OnAcceptFriendClick());
             removeButton.onClick.AddListener(async () => await OnRemoveClick());
+            tradeButton.onClick.AddListener(() => OnTradeClick());
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Visyde
         /// </summary>
         public void OnTradeClick()
         {
-            //TODO, once player trading is integrated.
+            TradingService.Instance.OpenViewAsOfferEditor(userId);
         }
         /// <summary>
         /// Remove friend
