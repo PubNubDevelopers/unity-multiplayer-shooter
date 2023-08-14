@@ -218,7 +218,7 @@ The following files are of focus to review for this scene that pertain to PubNub
 
 This application uses [PubNub presence state](https://www.pubnub.com/docs/general/presence/presence-state) to create and track lobby ownership, this allows the lobby to be automatically closed when the owner (creator) goes offline for whatever reason.  New players who join the lobby indicate their membership by publishing a [PubNub message](https://www.pubnub.com/docs/general/messages/publish) to the lobby creator, meaning new players can only join lobbies whose owners are online.
 
-An alternative lobby implementation would be to use [PubNub messages](https://www.pubnub.com/docs/general/messages/publish) in conujnction with [message persistence](https://www.pubnub.com/docs/general/storage), so a lobby creator would publish a message in a `lobbies` channel and other players could read the lobby state by reading the `lobbies` channel history, along with any associated [message actions](https://www.pubnub.com/docs/general/messages/actions#retrieving-actions).
+An alternative lobby implementation would be to use [PubNub messages](https://www.pubnub.com/docs/general/messages/publish) in conujnction with [message persistence](https://www.pubnub.com/docs/general/storage), so a lobby creator would publish a message in a `lobbies` channel.  Other players could read the lobby state by reading the `lobbies` channel history, along with any associated lobby metadata, stored in [message actions](https://www.pubnub.com/docs/general/messages/actions#retrieving-actions).
 
 ### Item Trading
 
