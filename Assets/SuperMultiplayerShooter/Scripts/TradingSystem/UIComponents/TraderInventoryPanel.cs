@@ -25,8 +25,7 @@ namespace PubNubUnityShowcase.UIComponents
 
             for (int i = 0; i <= _slotCount - 1; i++)
             {
-                var slot = Instantiate(slotPrefab);
-                slot.transform.SetParent(gridRoot);
+                var slot = Instantiate(slotPrefab, gridRoot, false);
                 slot.Construct(i, $"--slot-[{i}]");
                 slot.SetClickInteraction(OnClick);
                 slots.Add(i, slot);
