@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using Unity.VisualScripting;
 using UnityEditor.Tilemaps;
 using UnityEngine;
@@ -35,10 +36,13 @@ namespace PubNubUnityShowcase
         public int Version { get => version; set => version = value; }
         public OfferState State { get => state; set => state = value; }
 
+        [JsonIgnore]
+        public TradeSessionData.Role Sender => Flip(target);
+
         public static OfferData GenerateInitialOffer(int initiatorGives, int initiatorReceives, bool final)
         {
             return new OfferData(
-                TradeSessionData.Role.Initiator,
+                TradeSessionData.Role.Respondent,
                 initiatorGives,
                 initiatorReceives,
                 final,

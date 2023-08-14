@@ -198,7 +198,7 @@ namespace PubNubUnityShowcase
             switch (offer.State)
             {
                 case OfferData.OfferState.open:
-                    if (!target.Equals(You))
+                    if (target.Equals(You))
                     {
                         foreach (var sub in sessionSubscribers)
                             sub.OnCounterOffer(offer);

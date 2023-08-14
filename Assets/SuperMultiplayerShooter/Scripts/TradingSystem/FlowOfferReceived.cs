@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace PubNubUnityShowcase.UIComponents
@@ -28,7 +29,7 @@ namespace PubNubUnityShowcase.UIComponents
             RefreshInventories(SessionData.Initiator.Inventory, SessionData.Respondent.Inventory);
             DisableDuplicateItems();
 
-            UI.OfferPanel.SetSessionStatus($"{SessionData.Initiator.DisplayName}'s offer");
+            UI.OfferPanel.SetSessionStatus($"{SessionData.GetParticipant(ReceivedOffer.Sender).DisplayName}'s offer");
             FillOfferPanelFromInventories(ReceivedOffer);
 
             UI.OfferPanel.AnyChange += OnAnyOfferChange;
@@ -115,7 +116,8 @@ namespace PubNubUnityShowcase.UIComponents
             {
                 while (ReceivedOfferResponse == false)
                 {
-                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
+                    string targetName = SessionData.GetParticipant(offer.Target).DisplayName;
+                    UI.OfferPanel.SetSessionStatus($"Awaiting response from {targetName} ({time / 1000})");
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
                     time += 100;                    

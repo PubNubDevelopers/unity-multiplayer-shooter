@@ -62,9 +62,8 @@ namespace PubNubUnityShowcase.UIComponents
 
             var cts = new CancellationTokenSource(10000);
 
-
-
-            await Services.Trading.SendInviteAsync(OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false));
+            var sentOffer = OfferData.GenerateInitialOffer(UI.OfferPanel.InitiatorSlot.Item.ItemID, UI.OfferPanel.ResponderSlot.Item.ItemID, false);
+            await Services.Trading.SendInviteAsync(sentOffer);
             
             TradeInviteResponceReceived = false;
             int time = 0;
@@ -73,7 +72,9 @@ namespace PubNubUnityShowcase.UIComponents
             {              
                 while (TradeInviteResponceReceived == false)
                 {
-                    UI.OfferPanel.SetSessionStatus($"({time / 1000}) Awaiting response...");
+                    string targetName = SessionData.GetParticipant(sentOffer.Target).DisplayName;
+
+                    UI.OfferPanel.SetSessionStatus($"Awaiting {targetName}'s response ({time / 1000})");
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
                     time += 100;                    

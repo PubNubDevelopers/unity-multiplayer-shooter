@@ -67,7 +67,11 @@ namespace PubNubUnityShowcase
 
             Debug.LogWarning("------------>Received Counteroffer: ");            
 
-            UI.OfferPanel.SetLabel("counter offer");
+            //UI.OfferPanel.SetLabel("counter offer");
+
+            Flow.Unload();
+            Flow = new FlowOfferReceived(offerData, SessionData, this, UI, Services);
+            Flow.Load();
         }
         #endregion
 
