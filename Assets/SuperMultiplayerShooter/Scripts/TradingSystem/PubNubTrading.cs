@@ -179,8 +179,8 @@ namespace PubNubUnityShowcase
                 DatastoreUserMetadata.TryGetValue(session.Initiator.UserID, out var initiatorCurrent);
                 DatastoreUserMetadata.TryGetValue(session.Respondent.UserID, out var respondentCurrent);
 
-                MetadataNormalization.ReplaceHats(initiatorCurrent.Custom, offer.InitiatorGives, offer.InitiatorReceives);
-                MetadataNormalization.ReplaceHats(respondentCurrent.Custom, offer.InitiatorReceives, offer.InitiatorGives);
+                MetadataNormalization.ReplaceHats(session.Initiator.UserID, initiatorCurrent.Custom, offer.InitiatorGives, offer.InitiatorReceives);
+                MetadataNormalization.ReplaceHats(session.Respondent.UserID, respondentCurrent.Custom, offer.InitiatorReceives, offer.InitiatorGives);
 
                 var initiatorSuccess = await PNApi.SetUuidMetadata()
                     .Uuid(session.Initiator.UserID)
