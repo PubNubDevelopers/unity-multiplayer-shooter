@@ -212,6 +212,18 @@ The following files are of focus to review for this scene that pertain to PubNub
 - Admin Portal (to obtain Pub/Sub API Keys): https://admin.pubnub.com/
 - Super Multiplayer Shooter Template Game: https://assetstore.unity.com/packages/templates/systems/super-multiplayer-shooter-template-124977
 
+## Implementation Notes
+
+### Lobby Implementation
+
+This application uses [PubNub presence state](https://www.pubnub.com/docs/general/presence/presence-state) to create and track lobby ownership, this allows the lobby to be automatically closed when the owner (creator) goes offline for whatever reason.  New players who join the lobby indicate their membership by publishing a [PubNub message](https://www.pubnub.com/docs/general/messages/publish) to the lobby creator, meaning new players can only join lobbies whose owners are online.
+
+An alternative lobby implementation would be to use [PubNub messages](https://www.pubnub.com/docs/general/messages/publish) in conujnction with [message persistence](https://www.pubnub.com/docs/general/storage), so a lobby creator would publish a message in a `lobbies` channel.  Other players could read the lobby state by reading the `lobbies` channel history, along with any associated lobby metadata, stored in [message actions](https://www.pubnub.com/docs/general/messages/actions#retrieving-actions).
+
+### Item Trading
+
+The implementation of item trading in this appliction is deliberately simple.  Typically when receiving a trade request the recipient will be informed through a notification but this demo will instead immediately initiate the trading window and workflow.  One limitation of this streamlined approach worth bearing in mind is that the recipient of your trade must be online. 
+
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
