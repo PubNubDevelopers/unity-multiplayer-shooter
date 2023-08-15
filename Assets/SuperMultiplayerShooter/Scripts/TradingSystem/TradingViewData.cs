@@ -11,15 +11,17 @@ namespace PubNubUnityShowcase
         private readonly TraderData _initiator;
         private readonly TraderData _respondent;
         private readonly TradingView.Services _services;
+        private readonly TradingView.StateType _mode;
 
-        public TradingViewData(TraderData sellerPlayer, TraderData buyerPlayer, TradingView.Services services)
+        public TradingViewData(TraderData sellerPlayer, TraderData buyerPlayer, TradingView.Services services, TradingView.StateType mode)
         {
             _initiator = sellerPlayer;
             _respondent = buyerPlayer;
             _services = services;
+            _mode = mode;
         }
 
-        public TradingView.StateType State { get; private set; }
+        public TradingView.StateType State { get => _mode; }
         public TraderData Initiator { get => _initiator; }
         public TraderData Respondent { get => _respondent; }
         public TradeSessionData Session { get; private set; }
@@ -27,22 +29,13 @@ namespace PubNubUnityShowcase
         public TradingView.Services Services { get => _services; }
 
         /// <summary>
-        /// Initiator State
-        /// </summary>
-        public void SetStateData()
-        {
-            State = TradingView.StateType.initiator;
-        }
-
-        /// <summary>
         /// RespondentState
         /// </summary>
-        /// <param name="offer"></param>
-        public void SetStateData(TradeSessionData session, OfferData offer)
+        /// <param name="initiatorOffer"></param>
+        public void SetStateData(TradeSessionData sessionData, OfferData initiatorOffer)
         {
-            State = TradingView.StateType.respondent;
-            InitiatorOffer = offer;
-            Session = session;
+            InitiatorOffer = initiatorOffer;
+            Session = sessionData;
         }
     }
 }

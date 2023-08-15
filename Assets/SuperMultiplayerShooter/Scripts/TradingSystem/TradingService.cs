@@ -1,10 +1,10 @@
 using PubNubUnityShowcase.ScriptableObjects;
 using PubNubUnityShowcase.UIComponents;
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
 using Visyde;
 
 namespace PubNubUnityShowcase
@@ -27,14 +27,17 @@ namespace PubNubUnityShowcase
         [Header("Assets")]
         [SerializeField] private CosmeticsLibrary assets;               //Assets
         [SerializeField] private TradingView tradingViewPrefab;         //View Prefab   
+        [SerializeField] private Text debugText;
 
 
         //private CancellationTokenSource cts;
         private TradingView view;
         private Connector _connector;
         private TradingController _tradingController;
+        private TraderDataCached _cachedTraders;
 
         public ITrading Trading => _tradingController;
+        public ITradingDatastore Datastore { get; private set; }
         private IAvatarLibrary AvatarAssets => assets;
         private ICosmeticItemLibrary CosmeticAssets => assets;
 
@@ -57,19 +60,6 @@ namespace PubNubUnityShowcase
             return Instance;
         }
 
-        //public TradingView OpenViewAsOfferEditor(string targetUser)
-        //{
-        //    var cts = new CancellationTokenSource();
-        //    var data = GetViewDataInitiator(targetUser, cts.Token);
-        //    return OpenView(data, cts.Token);
-        //}
-
-        //public TradingView OpenViewAsRespondent(TradeSessionData session, OfferData offer)
-        //{
-        //    var cts = new CancellationTokenSource();
-        //    var data = GetViewDataRespondent(session, offer, cts.Token);
-        //    return OpenView(data, cts.Token);
-        //}
         public void CloseView()
         {
             if (view == null)
@@ -86,23 +76,29 @@ namespace PubNubUnityShowcase
             var cts = new CancellationTokenSource(10000);
             try
             {
-                while (_connector == null)
+                while (_connector == null || _connector?.Connected == false)
                 {
                     _connector = Connector.instance;
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
                     await Task.Yield();
                 }
-                
+
                 _tradingController = new TradingController(_connector.GetPubNubObject().GetCurrentUserId());
                 Trading.SubscribeTradeInvites(this);
                 Trading.JoinTradingAsync();
+
+                Datastore = _tradingController; //requests are done every time view is opened
+                //Datastore = new TraderDataCached(); //data is taken from cache
+
+                if (debugText != null)
+                    debugText.text = _connector.GetPubNubObject().GetCurrentUserId();
             }
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
                 Debug.LogError($"{typeof(Connector).Name} didn't initialize for 10+ seconds.");
                 gameObject.SetActive(false);
-            }        
+            }
         }
 
         private void OnDestroy()
@@ -131,40 +127,15 @@ namespace PubNubUnityShowcase
         /// <summary>
         /// Helper to get proper data for the view
         /// </summary>
-        public TradingViewData GetViewDataInitiator(string targetUser, CancellationToken token)
+        public async Task<TradingViewData> GetViewDataInitiator(string targetUser, CancellationToken token)
         {
-            //Get Initiator data from cache
-            TradeInventoryData initiatorInventory = default;
-            if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(_connector.GetPubNubObject().GetCurrentUserId(), out var initatorMetadata))
-                initiatorInventory = new TradeInventoryData(MetadataNormalization.GetHats(initatorMetadata.Custom));
-            else
-                Debug.LogError("Player Does Not Exist!");
-
-            var initiator = new TraderData(
-                initatorMetadata.Uuid,
-                initatorMetadata.Name,
-                DataCarrier.chosenCharacter,
-                initiatorInventory,
-                initiatorInventory.CosmeticItems[0]); //TODO: find a way to get this 
-
-            //Get Respondent data from cache
-            TradeInventoryData respondentInventory = default;
-            if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(targetUser, out var respondentMetadata))
-                respondentInventory = new TradeInventoryData(MetadataNormalization.GetHats(respondentMetadata.Custom));
-            else
-                Debug.LogError("Player Does Not Exist!");
-
-            var respondent = new TraderData(
-                respondentMetadata.Uuid,
-                respondentMetadata.Name,
-                1,//TODO: find a way to get this 
-                respondentInventory,
-                respondentInventory.CosmeticItems[0]);//TODO: find a way to get this 
-
             TradingView.Services services = new TradingView.Services(CosmeticAssets, AvatarAssets, Trading, token);
-            TradingViewData viewData = new TradingViewData(initiator, respondent, services);
 
-            viewData.SetStateData();
+            var initiator = await Datastore.GetTraderData(_connector.GetPubNubObject().GetCurrentUserId());
+            var respondent = await Datastore.GetTraderData(targetUser);
+
+            TradingViewData viewData = new TradingViewData(initiator, respondent, services, TradingView.StateType.initiator);
+
             return viewData;
         }
 
@@ -177,7 +148,7 @@ namespace PubNubUnityShowcase
         public TradingViewData GetViewDataRespondent(TradeSessionData session, OfferData offer, CancellationToken token)
         {
             TradingView.Services services = new TradingView.Services(CosmeticAssets, AvatarAssets, Trading, token);
-            TradingViewData viewData = new TradingViewData(session.Initiator, session.Respondent, services);
+            TradingViewData viewData = new TradingViewData(session.Initiator, session.Respondent, services, TradingView.StateType.respondent);
 
             viewData.SetStateData(session, offer);
 
@@ -190,7 +161,7 @@ namespace PubNubUnityShowcase
 
         #region ITradeInviteSubscriber
         void ITradeInviteSubscriber.OnTradeInviteReceived(TradeInvite invite)
-        {      
+        {
             var cts = new CancellationTokenSource();
             var viewData = GetViewDataRespondent(invite.SessionData, invite.OfferData, cts.Token);
             OpenView(viewData, cts.Token);
@@ -212,8 +183,7 @@ namespace PubNubUnityShowcase
         private void Dispose()
         {
             view = null;
-            Trading.DisconnectTradingAsync();
-            Trading.UnsubscribeTradeInvites(this);
+            Trading?.UnsubscribeTradeInvites(this);
             _tradingController.Dispose();
         }
     }

@@ -34,6 +34,7 @@ namespace Visyde
         [Header("Other References:")]
         public CharacterSelector characterSelector;
 
+        public bool Connected { get; private set; }
         public bool tryingToJoinCustom { get; protected set; }
         bool inCustom = true;
         public bool isInCustomGame {
@@ -120,6 +121,7 @@ namespace Visyde
         public event Action OnConnectorReady; // Signals listeners that the Connector.instance is ready to go.
         public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
         public PNObjectEvent onPubNubObject;
+        public event Action<PNStatus> PNStatusReceived;
         
         // Internal variables:
         private Bot[] curBots;
@@ -141,7 +143,7 @@ namespace Visyde
             instance = this;
         }
 
-        private void OnDestroy()
+        private async void OnDestroy()
         {
             /*
             listener.onMessage -= OnPnMessage;
@@ -155,11 +157,18 @@ namespace Visyde
                 .Execute();
             }
             catch (System.Exception) { }
-            */
+            */           
+        
+            await Task.Delay(3000);
+            pubnub.UnsubscribeAll();
+            Connected = false;
+            Debug.Log("<color=red>[PubNub]</color> PubNub Disconnected (unsubscribe all channels)");
         }
 
         async void Start()
         {
+            DontDestroyOnLoad(gameObject);
+
             //  PubNub initialization
             pubnub = PNManager.pubnubInstance.InitializePubNub();
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
@@ -173,6 +182,7 @@ namespace Visyde
             listener.onSignal += OnPnSignal;
             AddPresenceListener();
             listener.onObject += OnPnObject;
+            listener.onStatus += OnPnStatus;
 
             pubnub.Subscribe<string>()
                 .Channels(new List<string>() {
@@ -199,6 +209,7 @@ namespace Visyde
             mainMenu = GetComponent<SampleMainMenu>();
             mainMenu.customMatchBTN.interactable = true;
             mainMenu.customizeCharacterButton.interactable = true;
+            Connected = true;
             ConnectorReady();
         }
 
@@ -1052,6 +1063,11 @@ namespace Visyde
                 onPubNubObject(result);
             }
             catch (System.Exception) { }
+        }
+
+        private void OnPnStatus(Pubnub pubnub, PNStatus status)
+        {
+            PNStatusReceived?.Invoke(status);
         }
 
         //  User wants to join a rom.  Notify everyone by sending a PubNub message

@@ -15,10 +15,10 @@ public class MockLauncher : MonoBehaviour
 
     #region UnityEvents (for Buttons setup manually in the Editor)
 
-    public void OnBtnOpenInitiator()
+    public async void OnBtnOpenInitiator()
     {
         var cts = new CancellationTokenSource();
-        var viewData = TradingService.Instance.GetViewDataInitiator(mockSession.Respondent.UserID, cts.Token);
+        var viewData = await TradingService.Instance.GetViewDataInitiator(mockSession.Respondent.UserID, cts.Token);
         var view = TradingService.Instance.OpenView(viewData, cts.Token);
     }
 

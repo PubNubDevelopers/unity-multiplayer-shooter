@@ -1,8 +1,5 @@
 using Newtonsoft.Json;
-using Unity.VisualScripting;
-using UnityEditor.Tilemaps;
 using UnityEngine;
-using static UnityEngine.UI.Image;
 
 namespace PubNubUnityShowcase
 {
@@ -23,7 +20,7 @@ namespace PubNubUnityShowcase
         {
             this.target = target;
             this.initiatorGives = initiatorGives;
-            this.initiatorReceives = initiatorReceives;            
+            this.initiatorReceives = initiatorReceives;
             this.final = final;
             this.version = version;
             this.state = state;
@@ -32,7 +29,7 @@ namespace PubNubUnityShowcase
         public TradeSessionData.Role Target { get => target; set => target = value; }
         public int InitiatorGives { get => initiatorGives; set => initiatorGives = value; }
         public int InitiatorReceives { get => initiatorReceives; set => initiatorReceives = value; }
-        public bool FinalOffer { get => final; set => final = value; }        
+        public bool FinalOffer { get => final; set => final = value; }
         public int Version { get => version; set => version = value; }
         public OfferState State { get => state; set => state = value; }
 
@@ -94,7 +91,7 @@ namespace PubNubUnityShowcase
 
         public enum OfferState
         {
-            open, 
+            open,
             accepted,
             rejected
         }
