@@ -1,10 +1,10 @@
 using PubNubUnityShowcase.ScriptableObjects;
 using PubNubUnityShowcase.UIComponents;
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
 using Visyde;
 
 namespace PubNubUnityShowcase
@@ -27,6 +27,7 @@ namespace PubNubUnityShowcase
         [Header("Assets")]
         [SerializeField] private CosmeticsLibrary assets;               //Assets
         [SerializeField] private TradingView tradingViewPrefab;         //View Prefab   
+        [SerializeField] private Text debugText;
 
 
         //private CancellationTokenSource cts;
@@ -36,7 +37,7 @@ namespace PubNubUnityShowcase
         private TraderDataCached _cachedTraders;
 
         public ITrading Trading => _tradingController;
-        public ITradingDatastore Datastore {get; private set;}
+        public ITradingDatastore Datastore { get; private set; }
         private IAvatarLibrary AvatarAssets => assets;
         private ICosmeticItemLibrary CosmeticAssets => assets;
 
@@ -75,26 +76,29 @@ namespace PubNubUnityShowcase
             var cts = new CancellationTokenSource(10000);
             try
             {
-                while (_connector == null)
+                while (_connector == null || _connector?.Connected == false)
                 {
                     _connector = Connector.instance;
                     cts.Token.ThrowIfCancellationRequested();
                     await Task.Delay(100);
                     await Task.Yield();
                 }
-                
+
                 _tradingController = new TradingController(_connector.GetPubNubObject().GetCurrentUserId());
                 Trading.SubscribeTradeInvites(this);
                 Trading.JoinTradingAsync();
 
                 Datastore = _tradingController; //requests are done every time view is opened
                 //Datastore = new TraderDataCached(); //data is taken from cache
+
+                if (debugText != null)
+                    debugText.text = _connector.GetPubNubObject().GetCurrentUserId();
             }
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
                 Debug.LogError($"{typeof(Connector).Name} didn't initialize for 10+ seconds.");
                 gameObject.SetActive(false);
-            }        
+            }
         }
 
         private void OnDestroy()
@@ -157,7 +161,7 @@ namespace PubNubUnityShowcase
 
         #region ITradeInviteSubscriber
         void ITradeInviteSubscriber.OnTradeInviteReceived(TradeInvite invite)
-        {      
+        {
             var cts = new CancellationTokenSource();
             var viewData = GetViewDataRespondent(invite.SessionData, invite.OfferData, cts.Token);
             OpenView(viewData, cts.Token);
@@ -179,7 +183,6 @@ namespace PubNubUnityShowcase
         private void Dispose()
         {
             view = null;
-            Trading?.DisconnectTradingAsync();
             Trading?.UnsubscribeTradeInvites(this);
             _tradingController.Dispose();
         }

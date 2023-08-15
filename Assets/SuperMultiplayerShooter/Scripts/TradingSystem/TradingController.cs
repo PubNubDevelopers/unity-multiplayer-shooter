@@ -1,4 +1,3 @@
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,7 +6,7 @@ using Visyde;
 
 namespace PubNubUnityShowcase
 {
-    public class TradingController : 
+    public class TradingController :
         ITrading,
         ITradingDatastore,
         IDisposable
@@ -64,7 +63,7 @@ namespace PubNubUnityShowcase
         }
 
         async void ITrading.JoinTradingAsync()
-        {           
+        {
             try
             {
                 await Network.SubscribeToTradeInvites();
@@ -73,19 +72,21 @@ namespace PubNubUnityShowcase
             catch (System.Exception e) { Debug.LogError($"{DebugTag} Exception: {e}"); }
         }
 
-        async void ITrading.DisconnectTradingAsync()
+        async Task ITrading.DisconnectTradingAsync()
         {
             try
             {
                 await Network.UnubscribeToTradeInvites();
+                if (InSession)
+                    await Network.UnsubscribeSession(SessionData);
                 Debug.Log($"{DebugTag} Disconnect Trading.");
             }
-            catch (System.Exception e) { Debug.LogError($"{DebugTag} Exception: {e}"); }            
+            catch (System.Exception e) { Debug.LogError($"{DebugTag} Exception: {e}"); }
         }
 
         TradeSessionData ITrading.GenerateSessionData(TraderData initiator, TraderData respondent)
         {
-            SessionData = new TradeSessionData(GetRandomSessionID(), initiator, respondent);  
+            SessionData = new TradeSessionData(GetRandomSessionID(), initiator, respondent);
             return SessionData;
         }
 
@@ -140,13 +141,13 @@ namespace PubNubUnityShowcase
 
         void ITrading.SubscribeTradeInvites(ITradeInviteSubscriber subscriber)
         {
-            
+
             inviteSubscribers.Add(subscriber);
             Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
         }
 
         void ITrading.SubscribeSessionEvents(ITradeSessionSubscriber subscriber)
-        {           
+        {
             sessionSubscribers.Add(subscriber);
             Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={sessionSubscribers.Count}");
         }
@@ -218,7 +219,7 @@ namespace PubNubUnityShowcase
                     {
                         foreach (var sub in sessionSubscribers)
                             sub.OnCounterOffer(offer);
-                    }                    
+                    }
                     break;
                 case OfferData.OfferState.accepted:
                     if (target.Equals(You))
@@ -277,11 +278,12 @@ namespace PubNubUnityShowcase
             return UnityEngine.Random.Range(100000, 999999);
         }
 
-        public void Dispose()
+        public async void Dispose()
         {
-            _network.Dispose();
+            await ((ITrading)this).DisconnectTradingAsync();
+
+
+            Network.Dispose();
         }
-
-
     }
 }

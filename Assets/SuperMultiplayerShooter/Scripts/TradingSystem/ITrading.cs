@@ -11,7 +11,7 @@ namespace PubNubUnityShowcase
         void JoinTradingAsync();
 
         /// <remarks> To stop receiving trading Invites </remarks>
-        void DisconnectTradingAsync();
+        Task DisconnectTradingAsync();
 
         /// <summary>
         /// Initialize session as Initiator (Local only)

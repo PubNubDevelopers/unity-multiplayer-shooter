@@ -22,9 +22,10 @@ namespace PubNubUnityShowcase
             Connector.instance.onPubNubMessage += OnPnMessage;
             Connector.instance.onPubNubPresence += OnPnPresence;
             Connector.instance.onPubNubObject += OnPNObject;
+            Connector.instance.PNStatusReceived += OnPnStatus;
         }
 
-        private Pubnub PNApi { get => _pnApi; }
+        private Pubnub PNApi { get => Connector.instance.GetPubNubObject(); }
         private UserId ThisUser => _pnApi.GetCurrentUserId();
         private Dictionary<string, UserMetadata> DatastoreUserMetadata => PNManager.pubnubInstance.CachedPlayers;
         private string DebugTag => $"<color=red>[Network]</color>";
@@ -96,24 +97,32 @@ namespace PubNubUnityShowcase
 
         public async Task<string> SubscribeToTradeInvites()
         {
-            PNApi.Subscribe<string>()
-                .Channels(new[] { GetInbox(ThisUser) })
-                .Execute();
+            try
+            {
+                PNApi.Subscribe<string>()
+                    .Channels(new[] { GetInbox(ThisUser) })
+                    .Execute();
 
-            await Task.Delay(2000);
-            //Debug.Log($"{DebugTag} Subscribed ch={GetInbox(ThisUser)}");
+                await Task.Delay(2000);
+                //Debug.Log($"{DebugTag} Subscribed ch={GetInbox(ThisUser)}");
 
-            return GetInbox(ThisUser);
+                return GetInbox(ThisUser);
+            }
+            catch (Exception e) { throw e; }
         }
 
         public async Task UnubscribeToTradeInvites()
         {
-            PNApi.Unsubscribe<string>()
-                .Channels(new[] { GetInbox(ThisUser) })
-                .Execute();
+            try
+            {
+                PNApi.Unsubscribe<string>()
+                    .Channels(new[] { GetInbox(ThisUser) })
+                    .Execute();
 
-            await Task.Delay(2000);
-            Debug.Log($"{DebugTag} Unsubscribed ch={GetInbox(ThisUser)}");
+                await Task.Delay(2000);
+                //Debug.Log($"{DebugTag} Unsubscribed ch={GetInbox(ThisUser)}");
+            }
+            catch (Exception e) { throw e; }
         }
 
         public async Task SubscribeSession(TradeSessionData session)
@@ -124,7 +133,6 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            //Debug.Log($"{DebugTag} Subscribed ch={session.Channel}");
         }
 
         public async Task UnsubscribeSession(TradeSessionData session)
@@ -134,7 +142,7 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            //Debug.Log($"<color=red>[Network]</color> Session({session.Id}): unsubscribe ch={session.Channel}-pnpres");
+            Debug.Log($"<color=red>[Network]</color> Session({session.Id}): unsubscribe ch={session.Channel}-pnpres");
         }
 
         public async Task<TradeInventoryData> GetTraderInventory(UserId user)
@@ -153,13 +161,13 @@ namespace PubNubUnityShowcase
                 TradeInventoryData traderData = new TradeInventoryData(MetadataNormalization.GetHats(response.Result.Custom));
                 return traderData;
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Debug.Log($"{DebugTag} (GetInventory): FAILED! >>{e}");
-                return TradeInventoryData.GetEmpty(); 
+                return TradeInventoryData.GetEmpty();
             }
             finally
-            {                
+            {
                 Debug.Log($"{DebugTag} (GetInventory): user={user}");
             }
         }
@@ -246,7 +254,7 @@ namespace PubNubUnityShowcase
             SessionPresenceChanged?.Invoke(result.Uuid, result.Event);
 
             //string json = JsonConvert.SerializeObject(result);
-            //Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");            
+            Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");
         }
 
         private void OnPNObject(PNObjectEventResult result)
@@ -254,7 +262,60 @@ namespace PubNubUnityShowcase
             Debug.Log($"MetaUpdate event received: {result.Type}");
         }
 
+        private void OnPnStatus(PNStatus status)
+        {
+            try
+            {
+                if (status != null)
+                {
+                    if (status.Operation == PNOperationType.PNSubscribeOperation)
+                    {
+                        var allTrading = new List<string>();
+                        foreach (var ch in status.AffectedChannels)
+                        {
+                            if (ch.StartsWith(TradingPreffix))
+                                allTrading.Add(ch);
+                            OnStatusSubscribeAnyTrading(allTrading);
+                        }
+                    }
+
+                    if (status.Operation == PNOperationType.PNUnsubscribeOperation)
+                    {
+                        var allTrading = new List<string>();
+                        foreach (var ch in status.AffectedChannels)
+                        {
+                            if (ch.StartsWith(TradingPreffix))
+                                allTrading.Add(ch);
+                            OnStatusUnsubscribeAnyTrading(allTrading);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+
+                throw e;
+            }
+            //Debug.Log($"Status received: {status.Operation}");
+        }
         #endregion
+
+
+        private void OnStatusSubscribeAnyTrading(List<string> channels)
+        {
+            foreach (var ch in channels)
+            {
+                Debug.Log($"{DebugTag} Subscribed ch={ch}");
+            }
+        }
+
+        private void OnStatusUnsubscribeAnyTrading(List<string> channels)
+        {
+            foreach (var ch in channels)
+            {
+                Debug.Log($"{DebugTag} Unubscribed ch={ch}");
+            }
+        }
 
         private void OnMsgPayloadTradeInvite(TradeInvite invite)
         {
@@ -292,8 +353,6 @@ namespace PubNubUnityShowcase
 
             Connector.instance.onPubNubMessage -= OnPnMessage;
             Connector.instance.onPubNubPresence -= OnPnPresence;
-
-            //Debug.Log($"{DebugTag} Disposed");
         }
     }
 }
