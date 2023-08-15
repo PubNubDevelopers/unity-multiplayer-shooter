@@ -81,6 +81,7 @@ namespace Visyde
         {
             //Hide accept and reject buttons. Allow for trade and remove friend.
             tradeButton.gameObject.SetActive(true);
+            tradeButton.interactable = false; //To be removed once trading is fully integrated.
             acceptButton.gameObject.SetActive(false);
             removeButton.name = "remove"; // Used to determine whether or not to remove from friend groups
             gameObject.GetComponent<Image>().color = Color.white; // change color to show accepted friend.
