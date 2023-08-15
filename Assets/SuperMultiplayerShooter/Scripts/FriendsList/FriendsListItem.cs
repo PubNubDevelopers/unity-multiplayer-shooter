@@ -45,10 +45,10 @@ namespace Visyde
         /// <summary>
         /// Called when the user clicks the trade button
         /// </summary>
-        public void OnTradeClick()
+        public async void OnTradeClick()
         {
             var cts = new CancellationTokenSource();
-            var viewData = TradingService.Instance.GetViewDataInitiator(userId, cts.Token);
+            var viewData = await TradingService.Instance.GetViewDataInitiator(userId, cts.Token);
             var view = TradingService.Instance.OpenView(viewData, cts.Token);
         }
         /// <summary>

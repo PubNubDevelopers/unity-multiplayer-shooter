@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using Visyde;
-using static System.Collections.Specialized.BitVector32;
 
 namespace PubNubUnityShowcase
 {
@@ -22,6 +21,7 @@ namespace PubNubUnityShowcase
             _pnApi = Connector.instance.GetPubNubObject();
             Connector.instance.onPubNubMessage += OnPnMessage;
             Connector.instance.onPubNubPresence += OnPnPresence;
+            Connector.instance.onPubNubObject += OnPNObject;
         }
 
         private Pubnub PNApi { get => _pnApi; }
@@ -137,9 +137,9 @@ namespace PubNubUnityShowcase
             //Debug.Log($"<color=red>[Network]</color> Session({session.Id}): unsubscribe ch={session.Channel}-pnpres");
         }
 
-        /// <param name="fallback">Won't be needed if it can be taken fom cache</param>
-        public async Task<TraderData> GetTraderData(UserId user, TraderData fallback)
+        public async Task<TradeInventoryData> GetTraderInventory(UserId user)
         {
+            //TODO: handle unsuccessfull requests
             try
             {
                 var response = await PNApi.GetUuidMetadata()
@@ -147,19 +147,20 @@ namespace PubNubUnityShowcase
                     .IncludeCustom(true)
                     .ExecuteAsync();
 
-                TraderData traderData = new TraderData(
-                    response.Result.Uuid,
-                    response.Result.Name,
-                    fallback.PlayerAvatarType,
-                    new TradeInventoryData(MetadataNormalization.GetHats(response.Result.Custom)),
-                    fallback.EquippedCosmetic);
+                if (response == null)
+                    throw new NullReferenceException(nameof(response));
 
+                TradeInventoryData traderData = new TradeInventoryData(MetadataNormalization.GetHats(response.Result.Custom));
                 return traderData;
             }
-            catch (Exception e)
+            catch (Exception e) 
             {
-
-                throw e;
+                Debug.Log($"{DebugTag} (GetInventory): FAILED! >>{e}");
+                return TradeInventoryData.GetEmpty(); 
+            }
+            finally
+            {                
+                Debug.Log($"{DebugTag} (GetInventory): user={user}");
             }
         }
 
@@ -196,6 +197,13 @@ namespace PubNubUnityShowcase
         #region PubNub EventHandlers
         private void OnPnMessage(PNMessageResult<object> result)
         {
+            if (result == null)
+                return;
+
+            //filter only trading messages
+            if (!result.Channel.StartsWith(TradingPreffix))
+                return;
+
             string json = JsonConvert.SerializeObject(result.Message);
             //Debug.Log($"{DebugTag} MSG: json=>>>{result.Message}<<<");
 
@@ -240,6 +248,12 @@ namespace PubNubUnityShowcase
             //string json = JsonConvert.SerializeObject(result);
             //Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");            
         }
+
+        private void OnPNObject(PNObjectEventResult result)
+        {
+            Debug.Log($"MetaUpdate event received: {result.Type}");
+        }
+
         #endregion
 
         private void OnMsgPayloadTradeInvite(TradeInvite invite)

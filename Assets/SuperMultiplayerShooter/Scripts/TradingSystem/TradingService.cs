@@ -33,8 +33,10 @@ namespace PubNubUnityShowcase
         private TradingView view;
         private Connector _connector;
         private TradingController _tradingController;
+        private TraderDataCached _cachedTraders;
 
         public ITrading Trading => _tradingController;
+        public ITradingDatastore Datastore {get; private set;}
         private IAvatarLibrary AvatarAssets => assets;
         private ICosmeticItemLibrary CosmeticAssets => assets;
 
@@ -57,19 +59,6 @@ namespace PubNubUnityShowcase
             return Instance;
         }
 
-        //public TradingView OpenViewAsOfferEditor(string targetUser)
-        //{
-        //    var cts = new CancellationTokenSource();
-        //    var data = GetViewDataInitiator(targetUser, cts.Token);
-        //    return OpenView(data, cts.Token);
-        //}
-
-        //public TradingView OpenViewAsRespondent(TradeSessionData session, OfferData offer)
-        //{
-        //    var cts = new CancellationTokenSource();
-        //    var data = GetViewDataRespondent(session, offer, cts.Token);
-        //    return OpenView(data, cts.Token);
-        //}
         public void CloseView()
         {
             if (view == null)
@@ -97,6 +86,9 @@ namespace PubNubUnityShowcase
                 _tradingController = new TradingController(_connector.GetPubNubObject().GetCurrentUserId());
                 Trading.SubscribeTradeInvites(this);
                 Trading.JoinTradingAsync();
+
+                Datastore = _tradingController; //requests are done every time view is opened
+                //Datastore = new TraderDataCached(); //data is taken from cache
             }
             catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
             {
@@ -131,40 +123,15 @@ namespace PubNubUnityShowcase
         /// <summary>
         /// Helper to get proper data for the view
         /// </summary>
-        public TradingViewData GetViewDataInitiator(string targetUser, CancellationToken token)
+        public async Task<TradingViewData> GetViewDataInitiator(string targetUser, CancellationToken token)
         {
-            //Get Initiator data from cache
-            TradeInventoryData initiatorInventory = default;
-            if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(_connector.GetPubNubObject().GetCurrentUserId(), out var initatorMetadata))
-                initiatorInventory = new TradeInventoryData(MetadataNormalization.GetHats(initatorMetadata.Custom));
-            else
-                Debug.LogError("Player Does Not Exist!");
-
-            var initiator = new TraderData(
-                initatorMetadata.Uuid,
-                initatorMetadata.Name,
-                DataCarrier.chosenCharacter,
-                initiatorInventory,
-                initiatorInventory.CosmeticItems[0]); //TODO: find a way to get this 
-
-            //Get Respondent data from cache
-            TradeInventoryData respondentInventory = default;
-            if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(targetUser, out var respondentMetadata))
-                respondentInventory = new TradeInventoryData(MetadataNormalization.GetHats(respondentMetadata.Custom));
-            else
-                Debug.LogError("Player Does Not Exist!");
-
-            var respondent = new TraderData(
-                respondentMetadata.Uuid,
-                respondentMetadata.Name,
-                1,//TODO: find a way to get this 
-                respondentInventory,
-                respondentInventory.CosmeticItems[0]);//TODO: find a way to get this 
-
             TradingView.Services services = new TradingView.Services(CosmeticAssets, AvatarAssets, Trading, token);
-            TradingViewData viewData = new TradingViewData(initiator, respondent, services);
 
-            viewData.SetStateData();
+            var initiator = await Datastore.GetTraderData(_connector.GetPubNubObject().GetCurrentUserId());
+            var respondent = await Datastore.GetTraderData(targetUser);
+
+            TradingViewData viewData = new TradingViewData(initiator, respondent, services, TradingView.StateType.initiator);
+
             return viewData;
         }
 
@@ -177,7 +144,7 @@ namespace PubNubUnityShowcase
         public TradingViewData GetViewDataRespondent(TradeSessionData session, OfferData offer, CancellationToken token)
         {
             TradingView.Services services = new TradingView.Services(CosmeticAssets, AvatarAssets, Trading, token);
-            TradingViewData viewData = new TradingViewData(session.Initiator, session.Respondent, services);
+            TradingViewData viewData = new TradingViewData(session.Initiator, session.Respondent, services, TradingView.StateType.respondent);
 
             viewData.SetStateData(session, offer);
 
@@ -212,8 +179,8 @@ namespace PubNubUnityShowcase
         private void Dispose()
         {
             view = null;
-            Trading.DisconnectTradingAsync();
-            Trading.UnsubscribeTradeInvites(this);
+            Trading?.DisconnectTradingAsync();
+            Trading?.UnsubscribeTradeInvites(this);
             _tradingController.Dispose();
         }
     }

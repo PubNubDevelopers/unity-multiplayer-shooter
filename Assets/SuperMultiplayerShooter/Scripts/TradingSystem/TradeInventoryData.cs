@@ -13,6 +13,11 @@ namespace PubNubUnityShowcase
             this.hats = cosmeticItems;
         }
 
+        public static TradeInventoryData GetEmpty()
+        {
+            return new TradeInventoryData(new List<int>());
+        }
+
         public List<int> CosmeticItems { get => hats; set => hats = value; }
     }
 }

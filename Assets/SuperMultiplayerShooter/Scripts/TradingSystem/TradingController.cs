@@ -9,6 +9,7 @@ namespace PubNubUnityShowcase
 {
     public class TradingController : 
         ITrading,
+        ITradingDatastore,
         IDisposable
 
     {
@@ -46,6 +47,21 @@ namespace PubNubUnityShowcase
 
         #region ITrading
 
+        /// <remarks>Name, avatarType and equipped are still taken from cache until properly implemented </remarks>
+        async Task<TraderData> ITradingDatastore.GetTraderData(string traderID)
+        {
+            TradeInventoryData inventory = await _network.GetTraderInventory(traderID);
+
+            if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(traderID, out var metadata))
+                inventory = new TradeInventoryData(MetadataNormalization.GetHats(metadata.Custom));
+
+            return new TraderData(
+                traderID,
+                metadata.Name,
+                DataCarrier.chosenCharacter,
+                inventory,
+                inventory.CosmeticItems[0]); //TODO: find a way to get this 
+        }
 
         async void ITrading.JoinTradingAsync()
         {           
@@ -126,13 +142,13 @@ namespace PubNubUnityShowcase
         {
             
             inviteSubscribers.Add(subscriber);
-            //Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
+            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
         }
 
         void ITrading.SubscribeSessionEvents(ITradeSessionSubscriber subscriber)
-        {
-            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={sessionSubscribers.Count}");
+        {           
             sessionSubscribers.Add(subscriber);
+            Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={sessionSubscribers.Count}");
         }
 
         void ITrading.UnsubscribeTradeInvites(ITradeInviteSubscriber subscriber)
