@@ -182,27 +182,34 @@ public class FriendsList : MonoBehaviour
         // Only focus on friend id additions. Ignore events coming in from other sources.
         if (action.Equals("selected") && gameObject.activeSelf && PNManager.pubnubInstance.CachedPlayers.ContainsKey(id))
         {
-            FriendsListItem friendItem = Instantiate(friendsListItemPrefab, friendsListItemHandler);
-            friendItem.name = id; // set the name to be able to access later for updates.
-            friendItem.removeButton.name = "remove";
-            //If a profile image or other metadata wants to be displayed for each player in the list, can update this function in the future.
-            friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
-            // Add friend to status feed group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
-            string message = "request"; //initiates a friend request.
-            // Send Message to indicate request has been made.
-            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
-               .Channel(PubNubUtilities.chanFriendRequest + id) //chanFriendRequest channel reserved for handling friend requests.
-               .Message(message)
-               .ExecuteAsync();
-            if(publishResponse.Status.Error)
+            //Don't add Friend if they are already in friend list.
+            FriendsListItem friendItem = GetFriend(id);
+            if (friendItem == null)
             {
-                Debug.Log("Error when sending message");
-            }
+                friendItem = Instantiate(friendsListItemPrefab, friendsListItemHandler);
+                friendItem.name = id; // set the name to be able to access later for updates.
+                friendItem.tradeButton.interactable = false; //To be removed once trading is fully integrated.
+                friendItem.removeButton.name = "remove";
+                //If a profile image or other metadata wants to be displayed for each player in the list, can update this function in the future.
+                friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
+                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
+                // Add friend to status feed group
+                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
+                string message = "request"; //initiates a friend request.
+                                            // Send Message to indicate request has been made.
+                PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+                   .Channel(PubNubUtilities.chanFriendRequest + id) //chanFriendRequest channel reserved for handling friend requests.
+                   .Message(message)
+                   .ExecuteAsync();
+               
+                if (publishResponse.Status.Error)
+                {
+                    Debug.Log("Error when sending message");
+                }
 
-            // Update friends list to get online status of new friend.
-            await GetCurrentFriendOnlineStatus();
+                // Update friends list to get online status of new friend.
+                await GetCurrentFriendOnlineStatus();
+            }                
         }
     }
 
