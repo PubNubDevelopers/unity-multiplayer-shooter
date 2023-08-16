@@ -60,7 +60,7 @@ namespace PubNubUnityShowcase
                 .Meta(MessageNormalilzation.GetMeta<InviteResponseData>())
                 .ShouldStore(true)
                 .ExecuteAsync();
-            Debug.Log($"{DebugTag} SendInvResponse ch={invite.RSVPChannel}");
+            //Debug.Log($"{DebugTag} SendInvResponse ch={invite.RSVPChannel}");
         }
 
         public async Task<OfferData> SendOffer(TradeSessionData session, OfferData offer)
@@ -142,7 +142,7 @@ namespace PubNubUnityShowcase
                 .Execute();
 
             await Task.Delay(2000);
-            Debug.Log($"<color=red>[Network]</color> Session({session.Id}): unsubscribe ch={session.Channel}-pnpres");
+            //Debug.Log($"<color=red>[Network]</color> Session({session.Id}): unsubscribe ch={session.Channel}-pnpres");
         }
 
         public async Task<TradeInventoryData> GetTraderInventory(UserId user)
@@ -168,7 +168,7 @@ namespace PubNubUnityShowcase
             }
             finally
             {
-                Debug.Log($"{DebugTag} (GetInventory): user={user}");
+                //Debug.Log($"{DebugTag} (GetInventory): user={user}");
             }
         }
 
@@ -242,7 +242,7 @@ namespace PubNubUnityShowcase
                 }
             }
             else
-                Debug.LogWarning($"Received unknown payload type.");
+                Debug.LogWarning($"{DebugTag} Received unknown payload type.");
         }
 
         private void OnPnPresence(PNPresenceEventResult result)
@@ -253,13 +253,12 @@ namespace PubNubUnityShowcase
             //it is safe to assume that only the current session channel will receive presence events so no need to check the channel
             SessionPresenceChanged?.Invoke(result.Uuid, result.Event);
 
-            //string json = JsonConvert.SerializeObject(result);
-            Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");
+            //Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");
         }
 
         private void OnPNObject(PNObjectEventResult result)
         {
-            Debug.Log($"MetaUpdate event received: {result.Type}");
+            Debug.Log($"{DebugTag} MetaUpdate event received: {result.Type}");
         }
 
         private void OnPnStatus(PNStatus status)
@@ -305,7 +304,7 @@ namespace PubNubUnityShowcase
         {
             foreach (var ch in channels)
             {
-                Debug.Log($"{DebugTag} Subscribed ch={ch}");
+                //Debug.Log($"{DebugTag} Subscribed ch={ch}");
             }
         }
 
@@ -313,7 +312,7 @@ namespace PubNubUnityShowcase
         {
             foreach (var ch in channels)
             {
-                Debug.Log($"{DebugTag} Unubscribed ch={ch}");
+                //Debug.Log($"{DebugTag} Unubscribed ch={ch}");
             }
         }
 
