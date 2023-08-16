@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Visyde;
 
 namespace PubNubUnityShowcase
 {
@@ -25,17 +26,25 @@ namespace PubNubUnityShowcase
         
 
         /// <param name="customMetadata">This is AppContext's UserMetadata.Custom </param>
-        public static void ReplaceHats(Dictionary<string, object> customMetadata, int existing, int newHat)
+        public static void ReplaceHats(string userId, Dictionary<string, object> customMetadata, int existing, int newHat)
         {
             string old = JsonConvert.SerializeObject(customMetadata);
 
             List<int> currentInventory = GetHats(customMetadata);
-            List<int> updatedInventory = currentInventory.Select(hat => hat == existing ? newHat : hat).ToList();
-
+            List<int> updatedInventory = currentInventory.Select(hat => hat == existing ? newHat : hat).ToList();         
             //note: hats' keyvalue is seriliazed as <string,string> not as <string,List<int>> !!!
             string listAsJson = JsonConvert.SerializeObject(updatedInventory);
 
             customMetadata["hats"] = listAsJson;
+
+            //For any player, update the CachedPlayersList with the new updated inventory
+            PNManager.pubnubInstance.CachedPlayers[userId].Custom = customMetadata;
+
+            //If updating active metdata, update current inventory.
+            if(userId.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+            {
+                Connector.instance.UpdateAvailableHats(updatedInventory);
+            }
         }
     }
 }

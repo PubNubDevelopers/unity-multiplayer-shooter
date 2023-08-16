@@ -76,7 +76,7 @@ public class PlayerListUI : MonoBehaviour
         {
             //If users name hit a match, then add to list.
             //Don't add own user to the list.
-            if (cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
+            if (!string.IsNullOrWhiteSpace(cachedPlayer.Value.Name) && cachedPlayer.Value.Name.ToLowerInvariant().StartsWith(searchPlayersInput.text.ToLowerInvariant())
                 && !cachedPlayer.Value.Uuid.Equals(PNManager.pubnubInstance.pubnub.GetCurrentUserId())) //lower case the text to allow for case insensitivity
             {
                 //Guarenteed to find at least one match, clear "No player's found text".        

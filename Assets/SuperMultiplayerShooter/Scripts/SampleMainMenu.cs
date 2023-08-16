@@ -132,41 +132,53 @@ namespace Visyde
             }
         }
       
-        // Update is called once per frame
+        // Update is called once per frame.
+        // Note: Ensuring each Gameobject is not null due to the connection not being destroyed when
+        // transitioning scenes.
         void Update()
         {
             // Handling panels:
-            customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
+            if(customGameRoomPanel != null)
+            {
+                customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
+
+            }
 
             // Messages popup system (used for checking if we we're kicked or we quit the match ourself from the last game etc):
-            if (DataCarrier.message.Length > 0)
+            if (messagePopupObj != null && DataCarrier.message.Length > 0)
             {
                 messagePopupObj.SetActive(true);
                 messagePopupText.text = DataCarrier.message;
                 DataCarrier.message = "";
             }
 
-            //Listen for whenever user opens the chat window.
-            if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
+            if(chat != null)
             {
-                //Don't allow interaction with chat if windows
-                if(!characterSelectionPanel.activeSelf && !lobbyBrowserPanel.activeSelf && !settingsPanel.activeSelf && !cosmeticsPanel.activeSelf)
+                //Listen for whenever user opens the chat window.
+                if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
                 {
-                    //opens the chat window.
+                    //Don't allow interaction with chat if windows
+                    if (!characterSelectionPanel.activeSelf && !lobbyBrowserPanel.activeSelf && !settingsPanel.activeSelf && !cosmeticsPanel.activeSelf)
+                    {
+                        //opens the chat window.
+                        chat.SetActive(true);
+                    }
+                }
+            }
+           
+            if(lobbyBrowserPanel != null && customGameRoomPanel != null)
+            {
+                //Don't allow chatting while searching for games.
+                if (lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
+                {
+                    chat.SetActive(false);
+                }
+
+                else
+                {
                     chat.SetActive(true);
-                }           
-            }
-
-            //Don't allow chatting while searching for games.
-            if(lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
-            {
-                chat.SetActive(false);
-            }
-
-            else
-            {
-                chat.SetActive(true);
-            }
+                }
+            }          
         }
 
         /// <summary>

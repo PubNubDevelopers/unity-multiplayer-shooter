@@ -78,7 +78,6 @@ public class FriendsList : MonoBehaviour
                     if(acceptFriend != null)
                     {
                         acceptFriend.tradeButton.gameObject.SetActive(true);
-                        acceptFriend.tradeButton.interactable = false; //To be removed once trading is fully integrated.
                         acceptFriend.acceptButton.gameObject.SetActive(false);
                         acceptFriend.removeButton.name = "remove"; // Used to determine whether or not to remove from friend groups
                         acceptFriend.gameObject.GetComponent<Image>().color = Color.white; // change color to show accepted friend.
