@@ -46,7 +46,9 @@ namespace PubNubUnityShowcase
 
         void ITradeSessionSubscriber.OnLeftUnknownReason(TraderData participant)
         {
-            Debug.Log("LeftUnknown");
+            Flow.Unload();
+            Flow = new FlowSessionClosed("Offer Withdraw", SessionData, this, UI, Services);
+            Flow.Load();
         }
 
         async void ITradeSessionSubscriber.OnTradingCompleted(OfferData offerData)
