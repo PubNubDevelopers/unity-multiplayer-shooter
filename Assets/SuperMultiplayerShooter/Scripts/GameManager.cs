@@ -867,17 +867,20 @@ namespace Visyde
                             int wasOwner = System.Convert.ToInt32(payload["wasGameOwner"]);
                             string playerName = (string)payload["playerName"];
                             bool bWasOwner = (wasOwner == 1);
-                            try
+                            if (Connector.instance.RoomContainsPlayerId(Connector.instance.CurrentRoom, playerUserId))
                             {
-                                Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
-                                Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
-                                if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                                try
                                 {
-                                    Connector.instance.LeaveRoom();
+                                    Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                                    Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                                    if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                                    {
+                                        Connector.instance.LeaveRoom();
+                                    }
+                                    OnDisconnected(bWasOwner, playerName);
                                 }
-                                OnDisconnected(bWasOwner, playerName);
+                                catch (System.Exception) { }
                             }
-                            catch (System.Exception) { }
                         }
                     }
                     if (payload.ContainsKey("playerReady"))

@@ -1010,6 +1010,23 @@ namespace Visyde
             return ret;
         }
 
+        public bool RoomContainsPlayerId(PNRoomInfo room, string playerId)
+        {
+            bool ret = false;
+            if (room != null)
+            {
+                for (int j = 0; j < room.PlayerList.Count; j++)
+                {
+                    if (room.PlayerList[j].UserId.Equals(playerId))
+                    {
+                        ret = true;
+                        break;
+                    }
+                }
+            }
+            return ret;
+        }
+
         //  Handler for PubNub Presence events
         private async void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
         {
