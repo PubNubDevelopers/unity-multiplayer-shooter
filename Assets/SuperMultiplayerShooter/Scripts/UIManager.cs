@@ -102,7 +102,6 @@ public class MyClass
 
         public bool isMenuShown { get { return menuPanel.activeSelf; }}
 
-        private Pubnub pubnub;
         private string _leaderboardChannelPub = "score.leaderboard";
         public bool notPublished = true; 
 
@@ -124,8 +123,6 @@ public class MyClass
             UpdateBoards();
             gameOverPanel.SetActive(false);
             hurtOverlay.color = Color.clear;
-            //Initializes the PubNub Connection.
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
 
             // Show mobile controls if needed:
             mobileControlsPanel.SetActive(gm.useMobileControls);
@@ -494,7 +491,7 @@ public class MyClass
         /// <param name="text"></param>
         private async void PublishMessage(string text, string channel)
         {
-            await pubnub.Publish()
+            await PNManager.pubnubInstance.pubnub.Publish()
              .Channel(channel)
              .Message(text)
              .ExecuteAsync();

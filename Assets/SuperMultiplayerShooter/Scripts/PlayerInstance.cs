@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using PubnubApi;
 using PubNubUnityShowcase;
 
 namespace Visyde
@@ -17,6 +18,7 @@ namespace Visyde
         public string PlayerName { get; }
         public int Character { get; }
         public PNPlayer player { get; protected set; }
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         // Cosmetics:
         public Cosmetics cosmeticItems;
@@ -89,7 +91,7 @@ namespace Visyde
                 if (Kills != 0) playerProps.Add("kills", Kills);
                 if (Deaths != 0) playerProps.Add("deaths", Deaths);
                 if (OtherScore != 0) playerProps.Add("otherScore", OtherScore);
-                new PubNubUtilities().PubNubSendRoomProperties(GameManager.instance.pubnub, playerProps);
+                new PubNubUtilities().PubNubSendRoomProperties(pubnub, playerProps);
             }
         }
     }

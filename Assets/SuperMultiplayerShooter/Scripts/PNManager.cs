@@ -25,10 +25,26 @@ public class PNManager : PNManagerBehaviour
     //The list of private message connections a user can quickly connect to.
     private static string privateMessageUUID = "";
 
+    //  Callbacks
+    public delegate void PNMessageEvent(PNMessageResult<object> message);
+    public PNMessageEvent onPubNubMessage;  
+    public delegate void PNSignalEvent(PNSignalResult<object> message);
+    public PNSignalEvent onPubNubSignal;
+    public delegate void PNPresenceEvent(PNPresenceEventResult result);
+    public PNPresenceEvent onPubNubPresence;  
+    public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
+    public PNObjectEvent onPubNubObject;
+
+
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
     private void Awake()
     {
+        if (pubnubInstance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
         pubnubInstance = this;
         privateMessageUUID = "";
         DontDestroyOnLoad(gameObject);
@@ -38,8 +54,13 @@ public class PNManager : PNManagerBehaviour
     /// Returns the PNConfiguration to reinitialize the PubNub object in different scenes.
     /// </summary>
     /// <returns></returns>
-    public Pubnub InitializePubNub()
+    public async Task InitializePubNub()
     {
+        if (pubnubInstance.pubnub != null)
+        {
+            //  Not Initializing PubNub since it is not null
+            return;
+        }
         if (string.IsNullOrWhiteSpace(pnConfiguration.PublishKey) || string.IsNullOrWhiteSpace(pnConfiguration.SubscribeKey))
         {
             Debug.LogError("Please set your PubNub keys in the PNConfigAsset.");
@@ -62,10 +83,84 @@ public class PNManager : PNManagerBehaviour
         }
 
         userId = uuid;
+        Initialize(userId);
+        pubnub.AddListener(listener);
+        listener.onMessage += OnPnMessage;
+        listener.onSignal += OnPnSignal;
+        listener.onPresence += OnPnPresence;
+        listener.onObject += OnPnObject;
 
-        return Initialize(userId);
+        await SubscribeToStaticChannels();
     }
 
+    private async Task SubscribeToStaticChannels()
+    {
+        pubnub.Subscribe<string>()
+        .Channels(new List<string>() {
+                        PubNubUtilities.chanChatLobby + "*",
+                        PubNubUtilities.chanGlobal,
+                        PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
+                        PubNubUtilities.chanPrefixLobbyRooms + "*",
+                        PubNubUtilities.chanRoomStatus,
+                        PubNubUtilities.chanChatAll,
+                        PubNubUtilities.chanPrivateChat,
+                        PubNubUtilities.chanChatTranslate + userId,
+                        PubNubUtilities.chanLeaderboardSub,
+                        PubNubUtilities.chanFriendRequest + userId
+        })
+        .ChannelGroups(new List<string>() {
+                        PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
+                        PubNubUtilities.chanFriendChanGroupChat + userId
+        })
+        .Execute();
+        await Task.Delay(1000); //  Give some time for the subscription to finish
+    }
+
+    private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+    {
+        if (result.Message != null)
+        {
+            //  Notify other listeners
+            try
+            {
+                onPubNubMessage(result);
+            }
+            catch (System.Exception) { }
+        }
+    }
+
+    private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
+    {
+        if (result.Message != null)
+        {
+            try
+            {
+                onPubNubSignal(result);
+            }
+            catch (System.Exception) { }
+        }
+    }
+
+    private void OnPnPresence(Pubnub pn, PNPresenceEventResult result)
+    {
+        //  Notify other listeners
+        try
+        {
+            onPubNubPresence(result);
+        }
+        catch (System.Exception) { }
+    }
+
+    //  Handler for PubNub Object event
+    private void OnPnObject(Pubnub pn, PNObjectEventResult result)
+    {
+        //  Notify other listeners
+        try
+        {
+            onPubNubObject(result);
+        }
+        catch (System.Exception) { }
+    }
 
     /// Tracks a cached list of all players to be used throughout the application.
     /// </summary>
@@ -82,7 +177,7 @@ public class PNManager : PNManagerBehaviour
     public async Task<string> GetUserNickname()
     {
         string nickname = "";
-        if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
+        if (pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
             && !string.IsNullOrWhiteSpace(PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name))
         {
             nickname = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
@@ -141,7 +236,7 @@ public class PNManager : PNManagerBehaviour
             customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
             customData["60fps"] = false;
             // Update
-            await UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), Connector.instance.GetPubNubObject().GetCurrentUserId(), customData);
+            await UpdateUserMetadata(pubnub.GetCurrentUserId(), pubnub.GetCurrentUserId(), customData);
         }
 
         return true;
@@ -319,7 +414,7 @@ public class PNManager : PNManagerBehaviour
     /// <returns></returns>
     public async Task<bool> DeleteMessages(string channel)
     {
-        PNResult<PNDeleteMessageResult> delMsgResponse = await Connector.instance.GetPubNubObject().DeleteMessages()
+        PNResult<PNDeleteMessageResult> delMsgResponse = await pubnub.DeleteMessages()
             .Channel(channel)
             .ExecuteAsync();
 

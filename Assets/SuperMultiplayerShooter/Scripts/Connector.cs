@@ -83,9 +83,7 @@ namespace Visyde
         public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
         //  PubNub properties
-        private Pubnub pubnub = null;   //  Connection to PubNub used for all network comms apart from game-specific comms
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         private static string userId = null;    //  The PubNub user ID for the current instance
         private SampleMainMenu mainMenu;    //  Used to enable the join room button when PubNub is ready
         public PNRoomInfo CurrentRoom = null;
@@ -94,7 +92,7 @@ namespace Visyde
         public static string PNNickName { get; set; } = "Uninitialized";  //  My nickname, ultimately populated from PubNub App Context
         public static string UserLanguage { get; set; }  // The language code of the user, defaulting to English (en)
         public static bool IsFPSSettingEnabled { get; set; } //Whether or not the setting is enabled for 60 FPS
-        public Pubnub GetPubNubObject() { return pubnub; }
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         public PNPlayer LocalPlayer { get; set; }
         private long roomCounter = 0;
         //  End PubNub properties
@@ -111,16 +109,8 @@ namespace Visyde
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
-        public delegate void PNMessageEvent(PNMessageResult<object> message);
-        public PNMessageEvent onPubNubMessage;  //  Send chat messages to e.g. the lobby chat pane
-        public delegate void PNSignalEvent(PNSignalResult<object> message);
-        public PNSignalEvent onPubNubSignal;
-        public delegate void PNPresenceEvent(PNPresenceEventResult result);
-        public PNPresenceEvent onPubNubPresence;  // Receive online/offline updates
         public event Action OnConnectorReady; // Signals listeners that the Connector.instance is ready to go.
-        public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
-        public PNObjectEvent onPubNubObject;
-        
+
         // Internal variables:
         private Bot[] curBots;
         private int bnp;
@@ -143,55 +133,21 @@ namespace Visyde
 
         private void OnDestroy()
         {
-            /*
-            listener.onMessage -= OnPnMessage;
-            listener.onSignal -= OnPnSignal;
-            listener.onPresence -= OnPnPresence;
-            listener.onObject -= OnPnObject;
-            try
-            {
-                pubnub.Unsubscribe<string>()
-                .Channels(new string[] { PubNubUtilities.chanGlobal, PubNubUtilities.chanPrefixLobbyRooms + "*" })
-                .Execute();
-            }
-            catch (System.Exception) { }
-            */
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
         }
 
         async void Start()
         {
             //  PubNub initialization
-            pubnub = PNManager.pubnubInstance.InitializePubNub();
             PNNickName = await PNManager.pubnubInstance.GetUserNickname();
             loadNow = false;
             pubNubRooms = new List<PNRoomInfo>();
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
             UserLanguage = GetUserLanguage();
             IsFPSSettingEnabled = GetFPSSetting();
-            pubnub.AddListener(listener);
-            listener.onMessage += OnPnMessage;
-            listener.onSignal += OnPnSignal;
-            AddPresenceListener();
-            listener.onObject += OnPnObject;
-
-            pubnub.Subscribe<string>()
-                .Channels(new List<string>() {
-                    PubNubUtilities.chanChatLobby + "*",
-                    PubNubUtilities.chanGlobal,
-                    PubNubUtilities.chanGlobal + "-pnpres",   //  We only use presence events for the lobby channel
-                    PubNubUtilities.chanPrefixLobbyRooms + "*",
-                    PubNubUtilities.chanRoomStatus,
-                    PubNubUtilities.chanChatAll,
-                    PubNubUtilities.chanPrivateChat,
-                    PubNubUtilities.chanChatTranslate + userId,
-                    PubNubUtilities.chanLeaderboardSub,
-                    PubNubUtilities.chanFriendRequest + userId
-                })
-                .ChannelGroups(new List<string>() {
-                    PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
-                    PubNubUtilities.chanFriendChanGroupChat + userId
-                })
-                .Execute();
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
             await PubNubGetRooms();
             await GetActiveGlobalPlayers();
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
@@ -225,8 +181,6 @@ namespace Visyde
                         SynchronizePlayerCharacteristics(); //  Exchange info about human players
                         PubNubGameInProgress();
                         //  Loading the game scene will generate presence events (since we subscribe to new channels).
-                        //  Temporarily unregister from presence events
-                        RemovePresenceListener();   
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
 
                         //  Notify other participants to load their own scene and provide the required info to allow
@@ -763,30 +717,11 @@ namespace Visyde
             }
         }
 
-        private void OnPnSignal(Pubnub pn, PNSignalResult<object> result)
-        {
-            if (result.Message != null)
-            {
-                try
-                {
-                    onPubNubSignal(result);
-                }
-                catch (System.Exception) { }
-            }
-        }
-
         //  Handler for PubNub Message event
-        private async void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
+        private async void OnPnMessage(PNMessageResult<object> result)
         {
             if (result.Message != null)
             {
-                //  Notify other listeners
-                try
-                {
-                    onPubNubMessage(result);
-                }
-                catch (System.Exception) { }
-
                 if (result.Channel.Equals(PubNubUtilities.chanRoomStatus))
                 {
                     if (CurrentRoom == null)
@@ -825,9 +760,6 @@ namespace Visyde
 
                                 UpdatePlayerCount();
                                 CurrentRoom.SortPlayerListAndAssignIds();
-                                //  Loading the game scene will generate presence events (since we subscribe to new channels).
-                                //  Temporarily unregister from presence events
-                                RemovePresenceListener();
                                 SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
                                 loadNow = false;
                                 isLoadingGameScene = true;
@@ -1011,15 +943,8 @@ namespace Visyde
         }
 
         //  Handler for PubNub Presence events
-        private async void OnPnPresence(Pubnub pubnub, PNPresenceEventResult result)
+        private async void OnPnPresence(PNPresenceEventResult result)
         {
-            //  Notify other listeners
-            try
-            {
-                onPubNubPresence(result);
-            }
-            catch (System.Exception) { }
-
             if (result.Channel.Equals(PubNubUtilities.chanGlobal))
             {
                 if (result.Event.Equals("leave") || result.Event.Equals("timeout"))
@@ -1041,17 +966,6 @@ namespace Visyde
                 //Inform the total number of global players.
                 GlobalPlayerCountUpdate(result.Occupancy);
             }
-        }
-
-        //  Handler for PubNub Object event
-        private void OnPnObject(Pubnub pubnub, PNObjectEventResult result)
-        {
-            //  Notify other listeners
-            try
-            {
-                onPubNubObject(result);
-            }
-            catch (System.Exception) { }
         }
 
         //  User wants to join a rom.  Notify everyone by sending a PubNub message
@@ -1203,16 +1117,6 @@ namespace Visyde
             {
                 SampleInventory.instance.availableHats.Add(hat);
             }
-        }
-
-        public void AddPresenceListener()
-        {
-            listener.onPresence += OnPnPresence;
-        }
-
-        public void RemovePresenceListener()
-        {
-            listener.onPresence -= OnPnPresence;
         }
 
         // Test case

@@ -37,19 +37,21 @@ namespace Visyde
         public GameObject lobbyBrowserPanel;
         public GameObject settingsPanel;
         public GameObject cosmeticsPanel;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         void Awake(){
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
         }
 
         // Use this for initialization
-        void Start()
+        async void Start()
         {
             //Add Listeners
+            await PNManager.pubnubInstance.InitializePubNub();
             Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
             Connector.instance.OnConnectorReady += ConnectorReady;
-            Connector.instance.onPubNubPresence += OnPnPresence;
-            Connector.instance.onPubNubObject += OnPnObject;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject += OnPnObject;
         }
 
         /// <summary>
@@ -176,8 +178,8 @@ namespace Visyde
         {
             Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
             Connector.instance.OnConnectorReady -= ConnectorReady;
-            Connector.instance.onPubNubPresence -= OnPnPresence;
-            Connector.instance.onPubNubObject -= OnPnObject;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
             //there are new players.
@@ -190,11 +192,11 @@ namespace Visyde
         private void MainMenuSetup()
         {          
             //Change playerInput name to be set to username of the user as long as the name was originally set.
-            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
-                playerNameInput.text = Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name;
+                playerNameInput.text = Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
                 //  Populate the available hat inventory and other settings, read from PubNub App Context
-                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom;
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
                 if (customData != null)
                 {
                     List<int> availableHats = new List<int>();
@@ -208,7 +210,7 @@ namespace Visyde
                     {
                         availableHats = Connector.instance.GenerateRandomHats();
                         customData.Add("hats", availableHats);
-                        PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom = customData;
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
                     }
 
                     Connector.instance.UpdateAvailableHats(availableHats);
@@ -231,8 +233,8 @@ namespace Visyde
         // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
         public async void SetPlayerName()
         {
-            await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom);
-            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name = playerNameInput.text;     
+            await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom);
+            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;     
         }
     }
 }

@@ -20,7 +20,7 @@ namespace Visyde
         public static GameManager instance;
 
         //  PubNub Properties
-        public Pubnub pubnub = null;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
@@ -133,7 +133,6 @@ namespace Visyde
         void Awake()
         {
             instance = this;
-            pubnub = Connector.instance.GetPubNubObject();
 
             // Prepare player instance arrays:
             bots = new PlayerInstance[0];
@@ -182,8 +181,8 @@ namespace Visyde
                     channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor + bot.playerID));
                 }
             }
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubPresence += OnPnPresence;
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
             //Subscribe to the list of Channels
             pubnub.Subscribe<string>()
                .Channels(channels)
@@ -220,8 +219,8 @@ namespace Visyde
         void OnDestroy()
         {
             //  Unsubscribe only for this PubNub instance (which is unique per game)
-            Connector.instance.onPubNubMessage -= OnPnMessage;
-            Connector.instance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
             pubnub.Unsubscribe<string>().Channels(channels.ToArray()).Execute();
         }
 
@@ -786,7 +785,6 @@ namespace Visyde
                     if (payload.ContainsKey("started"))
                     {
                         gameStarted = (bool)payload["started"];
-                        Invoke("AddPresenceListener", 1.0f);
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
@@ -893,11 +891,6 @@ namespace Visyde
                     }
                 }
             }
-        }
-
-        private void AddPresenceListener()
-        {
-            Connector.instance.AddPresenceListener();
         }
 
         //  PubNub Presence event handler

@@ -23,11 +23,12 @@ public class Leaderboard : MonoBehaviour
     public Text kdPos3;
     public Text kdPos4;
     public Text kdPos5;
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
     // Start is called before the first frame update
     void Start()
     {
-        Connector.instance.onPubNubMessage += OnPnMessage;
+        PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
         Connector.instance.OnConnectorReady += ConnectorReady;       
     }
 
@@ -36,7 +37,7 @@ public class Leaderboard : MonoBehaviour
     /// </summary>
     void OnDestroy()
     {
-        Connector.instance.onPubNubMessage -= OnPnMessage;
+        PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
     }
 
     /// <summary>
@@ -54,7 +55,7 @@ public class Leaderboard : MonoBehaviour
     /// <param name="text"></param>
     private async Task<bool> PublishMessage(string text, string channel)
     {
-        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+        PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
          .Channel(channel)
          .Message(text)
          .ExecuteAsync();

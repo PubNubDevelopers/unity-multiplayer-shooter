@@ -15,19 +15,20 @@ public class FriendsList : MonoBehaviour
     public FriendsListItem friendsListItemPrefab;         // the room item prefab (represents a game session in the lobby list)
     public Button searchFriendsButton;
     public GameObject privateMessagePopupPanel;
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
     // Start is called before the first frame update
     async void Start()
     {
         //Listeners
         Connector.instance.OnPlayerSelect += AddFriend;
-        Connector.instance.onPubNubMessage += OnPnMessage;
-        Connector.instance.onPubNubPresence += OnPnPresence;
-        Connector.instance.onPubNubObject += OnPnObject;
+        PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+        PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
+        PNManager.pubnubInstance.onPubNubObject += OnPnObject;
 
         // Since both online status and message channel groups are in conjunction, doesn't matter which to use.
         //Populate friend group
-        await PopulateFriendList(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId());
+        await PopulateFriendList(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId());
         // Get Online Status of Friends by referencing who's currently online.
         await GetCurrentFriendOnlineStatus();
     }
@@ -35,9 +36,9 @@ public class FriendsList : MonoBehaviour
     public void OnDestroy()
     {
         Connector.instance.OnPlayerSelect -= AddFriend;
-        Connector.instance.onPubNubMessage -= OnPnMessage;
-        Connector.instance.onPubNubPresence -= OnPnPresence;
-        Connector.instance.onPubNubObject -= OnPnObject;
+        PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+        PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
+        PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
     }
 
     /// <summary>
@@ -50,7 +51,7 @@ public class FriendsList : MonoBehaviour
         if(result != null && !string.IsNullOrWhiteSpace(result.Message.ToString())
             && !string.IsNullOrWhiteSpace(result.Channel) && (result.Channel.StartsWith(PubNubUtilities.chanFriendRequest))
             && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.Publisher) 
-            && !PNManager.pubnubInstance.CachedPlayers[result.Publisher].Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+            && !PNManager.pubnubInstance.CachedPlayers[result.Publisher].Equals(pubnub.GetCurrentUserId()))
         {
             //Handle request based on the message.
             switch(result.Message)
@@ -114,7 +115,7 @@ public class FriendsList : MonoBehaviour
     private void OnPnPresence(PNPresenceEventResult result)
     {
         //Update to use channel group catching, rather than global
-        if(result != null && result.Subscription != null && result.Subscription.Equals(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId()))
+        if(result != null && result.Subscription != null && result.Subscription.Equals(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId()))
         {
             FriendsListItem friend = GetFriend(result.Uuid);
             if(friend != null)
@@ -187,12 +188,12 @@ public class FriendsList : MonoBehaviour
             friendItem.removeButton.name = "remove";
             //If a profile image or other metadata wants to be displayed for each player in the list, can update this function in the future.
             friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
             // Add friend to status feed group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
             string message = "request"; //initiates a friend request.
             // Send Message to indicate request has been made.
-            PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+            PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                .Channel(PubNubUtilities.chanFriendRequest + id) //chanFriendRequest channel reserved for handling friend requests.
                .Message(message)
                .ExecuteAsync();
@@ -213,7 +214,7 @@ public class FriendsList : MonoBehaviour
     /// <returns></returns>
     public async Task<bool> PopulateFriendList(string channelGroup)
     {    
-        PNResult<PNChannelGroupsAllChannelsResult> cgListChResponse = await Connector.instance.GetPubNubObject().ListChannelsForChannelGroup()
+        PNResult<PNChannelGroupsAllChannelsResult> cgListChResponse = await pubnub.ListChannelsForChannelGroup()
             .ChannelGroup(channelGroup)
             .ExecuteAsync();
 
@@ -230,7 +231,7 @@ public class FriendsList : MonoBehaviour
                 //UserIds are contained within the channel names.
                 string id = channel.Substring(PubNubUtilities.chanPresence.Length);
                 //Don't add self to the friend list.
-                if(!id.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()) && PNManager.pubnubInstance.CachedPlayers.ContainsKey(id))
+                if(!id.Equals(pubnub.GetCurrentUserId()) && PNManager.pubnubInstance.CachedPlayers.ContainsKey(id))
                 {
                     FriendsListItem friendItem = Instantiate(friendsListItemPrefab, friendsListItemHandler);
                     friendItem.name = id; // set the name to be able to access later for updates.
@@ -241,8 +242,8 @@ public class FriendsList : MonoBehaviour
 
             // Obtain history of messages from the friend request channel to determine if there are any pending invites.
             // Please Note that this will cap out on 100 friend requests.
-            PNResult<PNFetchHistoryResult> fetchHistoryResponse = await Connector.instance.GetPubNubObject().FetchHistory()
-                .Channels(new string[] { PubNubUtilities.chanFriendRequest + Connector.instance.GetPubNubObject().GetCurrentUserId() })
+            PNResult<PNFetchHistoryResult> fetchHistoryResponse = await pubnub.FetchHistory()
+                .Channels(new string[] { PubNubUtilities.chanFriendRequest + pubnub.GetCurrentUserId() })
                 .ExecuteAsync();
            if(fetchHistoryResponse != null && fetchHistoryResponse.Result != null && fetchHistoryResponse.Result.Messages != null && !fetchHistoryResponse.Status.Error)
             {
@@ -280,10 +281,10 @@ public class FriendsList : MonoBehaviour
         else
         {
             // remember, channels wont be added again to channel groups if they've already been done so.
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + Connector.instance.GetPubNubObject().GetCurrentUserId() });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + pubnub.GetCurrentUserId() });
 
             //Add self mpresene channel to status feed channel group
-            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + Connector.instance.GetPubNubObject().GetCurrentUserId() });
+            await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + pubnub.GetCurrentUserId() });
             return true;
         }
     }
@@ -294,7 +295,7 @@ public class FriendsList : MonoBehaviour
     /// <returns></returns>
     private async Task<bool> GetCurrentFriendOnlineStatus()
     {
-        PNResult<PNHereNowResult> herenowResponse = await Connector.instance.GetPubNubObject().HereNow()
+        PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
             .Channels(new string[]
             {
             PubNubUtilities.chanGlobal
