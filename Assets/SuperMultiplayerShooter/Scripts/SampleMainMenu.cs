@@ -47,11 +47,22 @@ namespace Visyde
         async void Start()
         {
             //Add Listeners
-            await PNManager.pubnubInstance.InitializePubNub();
-            Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
-            Connector.instance.OnConnectorReady += ConnectorReady;
             PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
             PNManager.pubnubInstance.onPubNubObject += OnPnObject;
+            PNManager.pubnubInstance.onPubNubReady += OnPnReady;
+            await PNManager.pubnubInstance.InitializePubNub();
+        }
+
+        async void OnPnReady()
+        {
+            await GetActiveGlobalPlayers();
+            await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
+
+            customMatchBTN.interactable = true;
+            customizeCharacterButton.interactable = true;
+            //  todo set friends button interactable
+            //  todo set chat button interactable
+            MainMenuSetup();
         }
 
         /// <summary>
@@ -61,15 +72,6 @@ namespace Visyde
         private void UpdateGlobalPlayers(int count)
         {
             totalCountPlayers.text = count.ToString();
-        }
-
-        /// <summary>
-        /// Watch for when the connector is ready.
-        /// </summary>
-        private void ConnectorReady()
-        {
-            //Sets up the Main Menu based on player cached information.
-            MainMenuSetup();
         }
 
         /// Listen for status updates to update metadata cache
@@ -84,6 +86,12 @@ namespace Visyde
             {
                 //If not, obtain and cache the user.
                 await PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
+            }
+
+            if (result != null && result.Channel.Equals(PubNubUtilities.chanGlobal))
+            {
+                //Inform the total number of global players.
+                UpdateGlobalPlayers(result.Occupancy);
             }
         }
 
@@ -172,14 +180,40 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Gets all the active global players in the game
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> GetActiveGlobalPlayers()
+        {
+            //  Determine who is present based on who is subscribed to the global channel.
+            //  Called when we first launch to determine the game state
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[]
+                {
+                    PubNubUtilities.chanGlobal
+                })
+                .ExecuteAsync();
+            PNHereNowResult hereNowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+            if (status != null && status.Error)
+            {
+                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+            }
+            else
+            {
+                UpdateGlobalPlayers(hereNowResult.TotalOccupancy);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Called whenever the scene or game ends. Unsubscribe event listeners.
         /// </summary>
         void OnDestroy()
         {
-            Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
-            Connector.instance.OnConnectorReady -= ConnectorReady;
             PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
             PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
+            PNManager.pubnubInstance.onPubNubReady -= OnPnReady;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
             //there are new players.

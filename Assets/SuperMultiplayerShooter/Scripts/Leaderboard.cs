@@ -29,7 +29,7 @@ public class Leaderboard : MonoBehaviour
     void Start()
     {
         PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
-        Connector.instance.OnConnectorReady += ConnectorReady;       
+        PNManager.pubnubInstance.onPubNubReady += OnPnReady;
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class Leaderboard : MonoBehaviour
     /// <summary>
     /// Waits until the connector is ready before attempting to publish using pubnub object.
     /// </summary>
-    private async void ConnectorReady()
+    private async void OnPnReady()
     {
         //fire a refresh command to the pubnub function to get the leaderboard to update
         await PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", PubNubUtilities.chanLeaderboardPub);

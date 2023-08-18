@@ -25,6 +25,9 @@ public class PNManager : PNManagerBehaviour
     //The list of private message connections a user can quickly connect to.
     private static string privateMessageUUID = "";
 
+    //  Callback handler for PubNub messages and data
+    private static SubscribeCallbackListener pnListener = null;
+
     //  Callbacks
     public delegate void PNMessageEvent(PNMessageResult<object> message);
     public PNMessageEvent onPubNubMessage;  
@@ -34,7 +37,8 @@ public class PNManager : PNManagerBehaviour
     public PNPresenceEvent onPubNubPresence;  
     public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
     public PNObjectEvent onPubNubObject;
-
+    public delegate void PubNubReady(); //  PubNub is initialized, ok to call PubNub object
+    public PubNubReady onPubNubReady;
 
     //Initialize the static object, not for keeping the same instance of PubNub, but to retain the cached players and access
     //helper methods.
@@ -59,6 +63,7 @@ public class PNManager : PNManagerBehaviour
         if (pubnubInstance.pubnub != null)
         {
             //  Not Initializing PubNub since it is not null
+            onPubNubReady();
             return;
         }
         if (string.IsNullOrWhiteSpace(pnConfiguration.PublishKey) || string.IsNullOrWhiteSpace(pnConfiguration.SubscribeKey))
@@ -84,13 +89,14 @@ public class PNManager : PNManagerBehaviour
 
         userId = uuid;
         Initialize(userId);
-        pubnub.AddListener(listener);
-        listener.onMessage += OnPnMessage;
-        listener.onSignal += OnPnSignal;
-        listener.onPresence += OnPnPresence;
-        listener.onObject += OnPnObject;
-
+        pnListener = new SubscribeCallbackListener();
+        pubnub.AddListener(pnListener);
+        pnListener.onMessage += OnPnMessage;
+        pnListener.onSignal += OnPnSignal;
+        pnListener.onObject += OnPnObject;
+        pnListener.onPresence += OnPnPresence;
         await SubscribeToStaticChannels();
+        try { onPubNubReady(); } catch (System.Exception) { }
     }
 
     private async Task SubscribeToStaticChannels()
@@ -113,7 +119,7 @@ public class PNManager : PNManagerBehaviour
                         PubNubUtilities.chanFriendChanGroupChat + userId
         })
         .Execute();
-        await Task.Delay(1000); //  Give some time for the subscription to finish
+        await Task.Delay(100); //  Give some time for the subscription to finish
     }
 
     private void OnPnMessage(Pubnub pn, PNMessageResult<object> result)
@@ -160,6 +166,16 @@ public class PNManager : PNManagerBehaviour
             onPubNubObject(result);
         }
         catch (System.Exception) { }
+    }
+
+    protected virtual new void OnDestroy()
+    {
+        //  Don't want the default destroy behaviour
+    }
+
+    private void OnApplicationQuit()
+    {
+        pubnub?.UnsubscribeAll<string>();
     }
 
     /// Tracks a cached list of all players to be used throughout the application.

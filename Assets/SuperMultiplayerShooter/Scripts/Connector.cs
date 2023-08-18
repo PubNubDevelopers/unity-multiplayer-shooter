@@ -105,17 +105,16 @@ namespace Visyde
         public UnityAction onLeaveRoom;
         public UnityAction onDisconnect;
         public event Action<string, string> OnPlayerSelect;
-        public event Action<int> OnGlobalPlayerCountUpdate;
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
-        public event Action OnConnectorReady; // Signals listeners that the Connector.instance is ready to go.
 
         // Internal variables:
         private Bot[] curBots;
         private int bnp;
         private bool startCustomGameNow;
-        private bool loadNow;                       // if true, the game scene will be loaded. 
+        private bool loadNow;                       // if true, the game scene will be loaded.
+        private bool loadingInProgress = false;
         private bool isLoadingGameScene;
 
         //  The local definition of a bot
@@ -135,30 +134,38 @@ namespace Visyde
         {
             PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
             PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubReady -= OnPnReady;
         }
 
-        async void Start()
+        void Start()
         {
             //  PubNub initialization
-            PNNickName = await PNManager.pubnubInstance.GetUserNickname();
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
+            //  If PubNub is already initialized, then call OnPnReady() directly, else wait for the callback
+            if (PNManager.pubnubInstance.pubnub != null)
+            {
+                OnPnReady();
+            }
+            else
+            {
+                PNManager.pubnubInstance.onPubNubReady += OnPnReady;    //  It will take some finite time to PubNub to initialize, during which we register for this ready event
+            }
             loadNow = false;
+            isLoadingGameScene = false;
             pubNubRooms = new List<PNRoomInfo>();
             userId = PlayerPrefs.GetString("uuid"); //  Stored in local storage when PNManager is instantiated
             UserLanguage = GetUserLanguage();
             IsFPSSettingEnabled = GetFPSSetting();
-            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
-            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
-            await PubNubGetRooms();
-            await GetActiveGlobalPlayers();
-            await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
-            //  Everything is configured, allow users to create or join a room
-            mainMenu = GetComponent<SampleMainMenu>();
-            mainMenu.customMatchBTN.interactable = true;
-            mainMenu.customizeCharacterButton.interactable = true;
-            ConnectorReady();
         }
 
-        void Update()
+        async void OnPnReady()
+        {
+            PNNickName = await PNManager.pubnubInstance.GetUserNickname();
+            await PubNubGetRooms();
+        }
+
+        async void Update()
         {
             // Room managing:
             if (InRoom && !isLoadingGameScene)
@@ -171,15 +178,17 @@ namespace Visyde
 
                 if (loadNow)
                 {
-                    if (isMasterClient)
+                    if (isMasterClient && !loadingInProgress)
                     {
+                        loadingInProgress = true;
+                        //PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
                         //  If we are the master client, load the game scene for ourselves and notify all other
                         //  participants in the game to load the game scene themselves (everyone is responsible
                         //  for spawning their own instances of all players in their own scenes)
                         CurrentRoom.IsOpen = false;
                         CurrentRoom.SortPlayerListAndAssignIds();
-                        SynchronizePlayerCharacteristics(); //  Exchange info about human players
-                        PubNubGameInProgress();
+                        await SynchronizePlayerCharacteristics(); //  Exchange info about human players
+                        await PubNubGameInProgress();
                         //  Loading the game scene will generate presence events (since we subscribe to new channels).
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
 
@@ -201,16 +210,18 @@ namespace Visyde
                         loadProps.Add("botNames", bn);
                         loadProps.Add("botCharacters", bc);
                         loadProps.Add("botHats", bHats);
+                        loadProps.Add("roomOwnerId", CurrentRoom.OwnerId);
                         pubNubUtilities.PubNubSendRoomProperties(pubnub, loadProps);
                         loadNow = false;
                         isLoadingGameScene = true;
+                        loadingInProgress = false;
                     }
                 }
             }
         }
 
 
-        private void SynchronizePlayerCharacteristics()
+        private async Task SynchronizePlayerCharacteristics()
         {
             //  Called by master.  Notify all other human players of eachother's characteristics
             for (int i = 0; i < CurrentRoom.PlayerList.Count; i++)
@@ -222,7 +233,8 @@ namespace Visyde
                 int[] cosmetics = new int[1];   // You can have as many items as you want, but in our case we only need 1 and that's for the hat
                 cosmetics[0] = CurrentRoom.PlayerList[i].Cosmetics[0];
                 playerProps.Add("cosmetics", cosmetics);
-                pubNubUtilities.PubNubSendRoomProperties(pubnub, playerProps);
+                playerProps.Add("roomOwnerId", CurrentRoom.OwnerId);
+                await pubNubUtilities.PubNubSendRoomProperties(pubnub, playerProps);
             }
         }
 
@@ -235,7 +247,7 @@ namespace Visyde
                 PNPlayer self = new PNPlayer(userId, PNNickName, true, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
                 LocalPlayer = self;
                 CurrentRoom.PlayerList.Add(self);
-                OnJoinedRoom();
+                OnJoinedRoom(CurrentRoom.OwnerId);
             }
             else
             {
@@ -367,6 +379,7 @@ namespace Visyde
                 h.Add("botScoresOther", bsOther);
                 h.Add("botCharacters", bc);
                 h.Add("botHats", bHats);
+                h.Add("roomOwnerId", CurrentRoom.OwnerId);
                 pubNubUtilities.PubNubSendRoomProperties(pubnub, h);
 
                 //  Add the properties to the current room
@@ -438,6 +451,7 @@ namespace Visyde
                 props.Add("playerName", LocalPlayer.NickName);
                 bool isGameOwner = CurrentRoom.OwnerId == LocalPlayer.UserId;
                 props.Add("wasGameOwner", (isGameOwner ? 1 : 0));
+                props.Add("roomOwnerId", CurrentRoom.OwnerId);
                 pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
             }
 
@@ -460,7 +474,7 @@ namespace Visyde
             catch (System.Exception) { }
         }
 
-        public void OnJoinedRoom()
+        public void OnJoinedRoom(string roomOwnerId)
         {
             InRoom = true;
             tryingToJoinCustom = false;
@@ -484,13 +498,14 @@ namespace Visyde
             cosmetics[1] = DataCarrier.chosenBackpack;
             cosmetics[2] = DataCarrier.chosenShoes; */
             p.Add("cosmetics", cosmetics);
+            p.Add("roomOwnerId", roomOwnerId);
 
             pubNubUtilities.PubNubSendRoomProperties(pubnub, p);
 
             // Let's update the total player count (for local reference):
             UpdatePlayerCount();
 
-            onJoinRoom();
+            try { onJoinRoom(); } catch (System.Exception) { }
         }
 
         public void LeaveRoom()
@@ -701,7 +716,7 @@ namespace Visyde
         }
 
         //  Called by the master instance to indicate that their controlled game is in progress
-        private async void PubNubGameInProgress()
+        private async Task PubNubGameInProgress()
         {
             Dictionary<string, object> metaData = new Dictionary<string, object>();
             metaData["inProgress"] = 0;
@@ -777,8 +792,10 @@ namespace Visyde
                             {
                                 playerId = System.Convert.ToInt32(payload["playerId"]);
                             }
+                            string roomOwnerId = (string)payload["roomOwnerId"];
 
-                            if (CurrentRoom == null || CurrentRoom.PlayerList == null) return;
+                            if (CurrentRoom == null || CurrentRoom.PlayerList == null ||
+                                CurrentRoom.OwnerId != roomOwnerId) return;
 
                             for (int i = 0; i < CurrentRoom.PlayerList.Count; i++)
                             {
@@ -814,7 +831,7 @@ namespace Visyde
                         if (requestorId == userId)
                         {
                             LocalPlayer = newPlayer;
-                            OnJoinedRoom();
+                            OnJoinedRoom(roomOwnerId);
                         }
 
                         //  Consider the case where we are not in the room
@@ -823,6 +840,11 @@ namespace Visyde
                             if (room.OwnerId.Equals(roomOwnerId))
                             {
                                 room.PlayerList.Add(newPlayer);
+                                if (room.OwnerId == CurrentRoom.OwnerId)
+                                {
+                                    //  Would be better to have CurrentRoom be a pointer into the pubNubRooms array!
+                                    CurrentRoom = room;
+                                }
                                 break;
                             }
                         }
@@ -962,9 +984,6 @@ namespace Visyde
                     //  The specified user has created or deleted a room
                     await UserIsOnlineOrStateChange(result.Uuid);
                 }
-
-                //Inform the total number of global players.
-                GlobalPlayerCountUpdate(result.Occupancy);
             }
         }
 
@@ -1003,6 +1022,24 @@ namespace Visyde
             {
                 Debug.Log($"Error sending PubNub Message ({PubNubUtilities.GetCurrentMethodName()}): {publishResponse.Status.ErrorData.Information}");
             }
+        }
+
+        //  Whether the specified playerID (User ID) is present in the specified room
+        public bool RoomContainsPlayerId(PNRoomInfo room, string playerId)
+        {
+            bool ret = false;
+            if (room != null)
+            {
+                for (int j = 0; j < room.PlayerList.Count; j++)
+                {
+                    if (room.PlayerList[j].UserId.Equals(playerId))
+                    {
+                        ret = true;
+                        break;
+                    }
+                }
+            }
+            return ret;
         }
 
         /// <summary>
@@ -1053,52 +1090,6 @@ namespace Visyde
             }
 
             return setting;
-        }
-
-        /// <summary>
-        /// Gets all the active global players in the game
-        /// </summary>
-        /// <returns></returns>
-        public async Task<bool> GetActiveGlobalPlayers()
-        {
-            //  Determine who is present based on who is subscribed to the global channel.
-            //  Called when we first launch to determine the game state
-            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
-                .Channels(new string[]
-                {
-                    PubNubUtilities.chanGlobal + "-pnpres"
-                })
-                .IncludeUUIDs(true)
-                .ExecuteAsync();
-            PNHereNowResult hereNowResult = herenowResponse.Result;
-            PNStatus status = herenowResponse.Status;
-
-            if (status != null && status.Error)
-            {
-                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
-            }
-            else
-            {               
-                GlobalPlayerCountUpdate(hereNowResult.TotalOccupancy);
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// Update the calling class when the global number of players changes.
-        /// </summary>
-        /// <param name="count"></param>
-        public void GlobalPlayerCountUpdate(int count)
-        {
-            OnGlobalPlayerCountUpdate?.Invoke(count);
-        }
-
-        /// <summary>
-        /// Signals other classes that the connector is ready to go.
-        /// </summary>
-        public void ConnectorReady()
-        {
-            OnConnectorReady?.Invoke();
         }
 
         //  When the player is first created, they are assigned some random hats 
