@@ -193,12 +193,12 @@ public class FriendsList : MonoBehaviour
                 friendItem.removeButton.name = "remove";
                 //If a profile image or other metadata wants to be displayed for each player in the list, can update this function in the future.
                 friendItem.Set(id, PNManager.pubnubInstance.CachedPlayers[id].Name);
-                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
+                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + id });
                 // Add friend to status feed group
-                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + Connector.instance.GetPubNubObject().GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
+                await PNManager.pubnubInstance.AddChannelsToChannelGroup(PubNubUtilities.chanFriendChanGroupChat + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + id });
                 string message = "request"; //initiates a friend request.
                                             // Send Message to indicate request has been made.
-                PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+                PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                    .Channel(PubNubUtilities.chanFriendRequest + id) //chanFriendRequest channel reserved for handling friend requests.
                    .Message(message)
                    .ExecuteAsync();
