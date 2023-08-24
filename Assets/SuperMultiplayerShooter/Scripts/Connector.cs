@@ -95,6 +95,7 @@ namespace Visyde
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         public PNPlayer LocalPlayer { get; set; }
         private long roomCounter = 0;
+        private int GAME_LENGTH_MAKE_ME_CONFIGURABLE = 90;
         //  End PubNub properties
 
         // Events and Actions
@@ -189,7 +190,7 @@ namespace Visyde
                         CurrentRoom.SortPlayerListAndAssignIds();
                         await SynchronizePlayerCharacteristics(); //  Exchange info about human players
                         await PubNubGameInProgress();
-                        //  Loading the game scene will generate presence events (since we subscribe to new channels).
+                        isLoadingGameScene = true;
                         SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single);
 
                         //  Notify other participants to load their own scene and provide the required info to allow
@@ -213,7 +214,6 @@ namespace Visyde
                         loadProps.Add("roomOwnerId", CurrentRoom.OwnerId);
                         pubNubUtilities.PubNubSendRoomProperties(pubnub, loadProps);
                         loadNow = false;
-                        isLoadingGameScene = true;
                         loadingInProgress = false;
                     }
                 }
@@ -619,13 +619,15 @@ namespace Visyde
                     }
                     else if (userState.ContainsKey("name"))
                     {
+                        if (isLoadingGameScene) return true;    //  Don't join a game when already playing a game
+
                         string name = (string)userState["name"];
                         int map = System.Convert.ToInt32(userState["map"]);
                         int maxPlayers = System.Convert.ToInt32(userState["maxPlayers"]);
                         bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
                         string ownerId = (string)userState["ownerId"];
                         bool inProgress = System.Convert.ToInt32(userState["inProgress"]) == 1;
-                        PNRoomInfo roomInfo = new PNRoomInfo(uuid, name, map, maxPlayers, allowBots, roomCounter);
+                        PNRoomInfo roomInfo = new PNRoomInfo(uuid, name, map, maxPlayers, allowBots, roomCounter, GAME_LENGTH_MAKE_ME_CONFIGURABLE);
                         roomInfo.IsOpen = !inProgress;
                         roomCounter++;
                         PNPlayer owner = new PNPlayer(uuid, name, false, true, DataCarrier.chosenCharacter, DataCarrier.chosenHat);
@@ -751,7 +753,7 @@ namespace Visyde
                         //  The master instance has told us to start our game
                         if (payload.ContainsKey("gameSceneLoaded"))
                         {
-                            if (!CurrentRoom.Name.Equals(payload["currentRoomName"])) return;   //  Check the game being loaded is intended for us
+                            if (!CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return;    //  Check the game being loaded is intended for us
                             
                             if (!isMasterClient)
                             {

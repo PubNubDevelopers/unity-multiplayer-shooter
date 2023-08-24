@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
 using PubNubUnityShowcase;
+using System.Runtime.ConstrainedExecution;
 
 namespace Visyde
 {
@@ -55,9 +56,8 @@ namespace Visyde
 
         async void OnPnReady()
         {
-            await GetActiveGlobalPlayers();
+            Invoke("GetActiveGlobalPlayers", 2.0f); //  Give the system time to settle down before calling global player count
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
-
             customMatchBTN.interactable = true;
             customizeCharacterButton.interactable = true;
             //  todo set friends button interactable

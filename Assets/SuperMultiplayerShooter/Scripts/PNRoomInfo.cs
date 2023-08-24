@@ -11,7 +11,7 @@ namespace PubNubUnityShowcase
     public class PNRoomInfo
     {
         public static int MAX_BOTS = 4; //  Done for simplicity
-        public PNRoomInfo(string ownerId, string name, int map, int maxPlayers, bool allowBots, long id)
+        public PNRoomInfo(string ownerId, string name, int map, int maxPlayers, bool allowBots, long id, int gameLength)
         {
             OwnerId = ownerId;  //  The PubNub ID of the user who created the game
             Name = name;        //  Typically the same as the nickname of the user who created the game
@@ -21,7 +21,9 @@ namespace PubNubUnityShowcase
             this.PlayerList = new List<PNPlayer>();
             ID = id;
             IsOpen = true;
+            GameLength = gameLength;
         }
+        public int GameLength;
         //  Bots and bot objects define the same thing, keps separate for legacy reasons
         public Dictionary<string, object> Bots = null;  
         public Connector.Bot[] BotObjects = null;

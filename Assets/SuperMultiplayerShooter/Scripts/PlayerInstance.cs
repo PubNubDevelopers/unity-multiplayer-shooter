@@ -88,6 +88,7 @@ namespace Visyde
                 Dictionary<string, object> playerProps = new Dictionary<string, object>();
                 playerProps.Add("playerStats", "stats");
                 playerProps.Add("playerId", playerID);
+                playerProps.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
                 if (Kills != 0) playerProps.Add("kills", Kills);
                 if (Deaths != 0) playerProps.Add("deaths", Deaths);
                 if (OtherScore != 0) playerProps.Add("otherScore", OtherScore);

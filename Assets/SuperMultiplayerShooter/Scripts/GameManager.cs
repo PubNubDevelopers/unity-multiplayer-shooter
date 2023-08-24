@@ -731,6 +731,7 @@ namespace Visyde
             Dictionary<string, object> startGameProps = new Dictionary<string, object>();
             startGameProps.Add("gameStartTime", epochTime());
             startGameProps.Add("gameStartsIn", (epochTime() + preparationTime));
+            startGameProps.Add("gameLength", Connector.instance.CurrentRoom.GameLength);
             startGameProps.Add("started", true);
             startGameProps.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
             pubNubUtilities.PubNubSendRoomProperties(pubnub, startGameProps);
@@ -786,26 +787,36 @@ namespace Visyde
                 {
                     if (payload.ContainsKey("started"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         gameStarted = (bool)payload["started"];
                         Invoke("SubscribeToGameChannels", 0f);
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         gameStartsIn = System.Convert.ToSingle(payload["gameStartsIn"]);
                         startingCountdownStarted = true;
                     }
+                    if (payload.ContainsKey("gameLength"))
+                    {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
+                        gameLength = System.Convert.ToInt32(payload["gameLength"]);
+                    }
                     if (payload.ContainsKey("gameStartTime"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         startTime = System.Convert.ToSingle(payload["gameStartTime"]);
                         CheckTime();
                     }
                     if (payload.ContainsKey("rankings"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         playerRankings = (payload["rankings"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
                         isDraw = (bool)payload["draw"];
                     }
                     if (payload.ContainsKey("botScoresKills"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         long[] rxBotScoresKills = (payload["botScoresKills"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                         for (int i = 0; i < rxBotScoresKills.Length; i++)
                         {
@@ -825,6 +836,9 @@ namespace Visyde
                     }
                     if (payload.ContainsKey("playerStats"))
                     {
+                        string roomOwnerId = (string)payload["roomOwnerId"];
+                        if (Connector.instance.CurrentRoom.OwnerId != roomOwnerId) return;  //  Check the update was intended for us
+
                         int kills = 0;
                         int deaths = 0;
                         int otherScore = 0;
@@ -853,6 +867,8 @@ namespace Visyde
                     if (payload.ContainsKey("respawn"))
                     {
                         int playerId = System.Convert.ToInt32(payload["respawn"]);
+                        string roomOwnerId = (string)payload["roomOwnerId"];
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals(roomOwnerId)) return; //  The message was not intended for us
                         if (playerId != Connector.instance.LocalPlayer.ID)
                         {
                             //  Respawn the remote player asking to be respawned
@@ -868,7 +884,8 @@ namespace Visyde
                             int wasOwner = System.Convert.ToInt32(payload["wasGameOwner"]);
                             string playerName = (string)payload["playerName"];
                             bool bWasOwner = (wasOwner == 1);
-                            Debug.Log("Player " + playerName + " has left");
+                            string roomOwnerId = (string)payload["roomOwnerId"];
+                            if (!Connector.instance.CurrentRoom.OwnerId.Equals(roomOwnerId)) return; //  The message was not intended for our game
                             if (Connector.instance.RoomContainsPlayerId(Connector.instance.CurrentRoom, playerUserId))
                             {
                                 try
@@ -888,6 +905,7 @@ namespace Visyde
                     if (payload.ContainsKey("playerReady"))
                     {
                         string playerReadyUserId = (string)payload["playerReady"];
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
                         {
                             if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(playerReadyUserId))
