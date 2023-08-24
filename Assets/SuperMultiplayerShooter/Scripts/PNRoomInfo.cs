@@ -23,7 +23,7 @@ namespace PubNubUnityShowcase
             IsOpen = true;
             GameLength = gameLength;
         }
-        public int GameLength;
+        public int GameLength { get; }
         //  Bots and bot objects define the same thing, keps separate for legacy reasons
         public Dictionary<string, object> Bots = null;  
         public Connector.Bot[] BotObjects = null;
