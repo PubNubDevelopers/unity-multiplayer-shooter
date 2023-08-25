@@ -29,11 +29,6 @@ Note:
 This game is a work in progress, please bear with us whilst we make it awesome.  Any issues are a result of our implementation, not a limitation of PubNub :) 
 
 - Player trading has not been implemented.  The 'trade' button in the friend list will not do anything.
-- You can only have one game running at a time on the same keyset.  Trying to start a second _simultaneous_ game will confuse both games.
-- Players joining a lobby will occasionally not register with that lobby's creator.  If the creator does not see you appear in their room, the creator needs to close their lobby and start a new one.
-- Updating a characters name may not reflect for other players until they close and re-open the app.  This issue is intermittent.
-- The global presence count may be inaccurate when you first start the application.  A far rarer presence issue, likely related to this, is you may experience random disconnects during a game.
-- The game forcably tears down and recreates the connection with PubNub when a game is launched.  Sometimes this can prevent the game from starting or cause an expected disconnect.
 - Playing the game with players located on different continents can lead to unexpected results, such as characters not respawning.
 
 ## Prerequisites
