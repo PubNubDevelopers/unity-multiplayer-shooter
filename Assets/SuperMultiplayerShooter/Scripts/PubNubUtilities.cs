@@ -3,6 +3,7 @@ using PubnubApi;
 using PubnubApi.Unity;
 using System.Collections.Generic;
 using Visyde;
+using System.Threading.Tasks;
 
 /// <summary>
 /// PubNubUtilities
@@ -417,7 +418,7 @@ namespace PubNubUnityShowcase
             return instance;
         }
 
-        public async void PubNubSendRoomProperties(Pubnub pubnub, Dictionary<string, object> payload)
+        public async Task PubNubSendRoomProperties(Pubnub pubnub, Dictionary<string, object> payload)
         {
             await pubnub.Publish()
                 .Channel(PubNubUtilities.chanRoomStatus)
@@ -425,11 +426,11 @@ namespace PubNubUnityShowcase
                 .ExecuteAsync();
         }
 
-        public void PubNubSendRoomProperties(Pubnub pubnub, string property, object value)
+        public async Task PubNubSendRoomProperties(Pubnub pubnub, string property, object value)
         {
             Dictionary<string, object> payload = new Dictionary<string, object>();
             payload[property] = value;
-            PubNubSendRoomProperties(pubnub, payload);
+            await PubNubSendRoomProperties(pubnub, payload);
         }
 
         public static string GetCurrentMethodName()

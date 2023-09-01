@@ -16,6 +16,7 @@ namespace Visyde
     {
         //  PubNub variables
         private PubNubUtilities pubNubUtilities;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         public PubNubPlayerProps pubNubPlayerProps { get; set; }
         private bool initialPosition = true;
@@ -144,8 +145,8 @@ namespace Visyde
 
             pubNubUtilities = new PubNubUtilities();
             //Add Listeners
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubSignal += OnPnSignal;
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubSignal += OnPnSignal;
 
             if (gm.players.Length + gm.bots.Length <= 3)
             {
@@ -495,7 +496,7 @@ namespace Visyde
                     {
                         if (t.position.y < gm.deadZoneOffset && !doneDeadZone)
                         {
-                            pubNubUtilities.TriggerDeadZone(gm.pubnub, playerInstance.playerID, movementController.position);
+                            pubNubUtilities.TriggerDeadZone(pubnub, playerInstance.playerID, movementController.position);
                             TriggerDeadZone(movementController.position);
                             doneDeadZone = true;
                         }
@@ -583,7 +584,7 @@ namespace Visyde
                 // Update the others about our status:
                 if (pubNubPlayerProps.IsMine)
                 {
-                    pubNubUtilities.UpdateOthersPlayerStatus(gm.pubnub, playerInstance.playerID, health, shield);
+                    pubNubUtilities.UpdateOthersPlayerStatus(pubnub, playerInstance.playerID, health, shield);
                     
                     // If this is local player's, let the game manager know this is ours and is now dead:
                     if (isPlayerOurs && !gm.isGameOver) gm.dead = true;
@@ -632,17 +633,17 @@ namespace Visyde
                 //  so you may have to implement a more robust emote input system depending on your project's needs):
                 if (Input.GetKeyDown(KeyCode.Alpha1))
                 {
-                    pubNubUtilities.SendEmoji(gm.pubnub, 0, playerInstance.playerID);
+                    pubNubUtilities.SendEmoji(pubnub, 0, playerInstance.playerID);
                     Emote(0);
                 }
                 if (Input.GetKeyDown(KeyCode.Alpha2))
                 {
-                    pubNubUtilities.SendEmoji(gm.pubnub, 1, playerInstance.playerID);
+                    pubNubUtilities.SendEmoji(pubnub, 1, playerInstance.playerID);
                     Emote(1);
                 }
                 if (Input.GetKeyDown(KeyCode.Alpha3))
                 {
-                    pubNubUtilities.SendEmoji(gm.pubnub, 2, playerInstance.playerID);
+                    pubNubUtilities.SendEmoji(pubnub, 2, playerInstance.playerID);
                     Emote(2);
                 }
 
@@ -803,7 +804,7 @@ namespace Visyde
 
         public void OwnerShootCommand(){
             Shoot(mousePos, movementController.position, movementController.velocity);
-            pubNubUtilities.Shoot(gm.pubnub, playerInstance.playerID, mousePos);
+            pubNubUtilities.Shoot(pubnub, playerInstance.playerID, mousePos);
         }
         // Called by the owner from mobile or pc input:
         public void OwnerMeleeAttack()
@@ -811,7 +812,7 @@ namespace Visyde
             if (curMeleeAttackRate >= 1)
             {
                 MeleeAttack();
-                pubNubUtilities.MeleeAttack(gm.pubnub, playerInstance.playerID);
+                pubNubUtilities.MeleeAttack(pubnub, playerInstance.playerID);
                 curMeleeAttackRate = 0;
             }
         }
@@ -826,7 +827,7 @@ namespace Visyde
 
         void Die()
         {
-            pubNubUtilities.ForceDead(gm.pubnub, playerInstance.playerID);
+            pubNubUtilities.ForceDead(pubnub, playerInstance.playerID);
             if (!gm.isGameOver)
             {
                 // Multikill (if we are the killer and we are not the one dying):
@@ -857,8 +858,8 @@ namespace Visyde
                 catch (System.Exception) { }
 
                 // and then destroy (give a time for the death animation):
-                Connector.instance.onPubNubMessage -= OnPnMessage;
-                Connector.instance.onPubNubSignal -= OnPnSignal;
+                PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+                PNManager.pubnubInstance.onPubNubSignal -= OnPnSignal;
                 Invoke("PlayerDestroy", 1f);
             }
 
@@ -874,8 +875,8 @@ namespace Visyde
             invulnerabilityIndicator.SetActive(false);
 
             // PubNub
-            Connector.instance.onPubNubMessage -= OnPnMessage;
-            Connector.instance.onPubNubSignal -= OnPnSignal;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubSignal -= OnPnSignal;
         }
 
         public void Teleport(Vector3 newPos)
@@ -910,7 +911,7 @@ namespace Visyde
         /// <param name="value">Can be either a weapon id (if a gun was used) or a damage value (if melee attack or grenade).</param>
         /// <param name="gun">If set to <c>true</c>, "value" will be used as weapon id.</param>
         public void ApplyDamage(int fromPlayer, int value, bool gun){
-            pubNubUtilities.ApplyDamage(gm.pubnub, playerInstance.playerID, fromPlayer, value, gun);
+            pubNubUtilities.ApplyDamage(pubnub, playerInstance.playerID, fromPlayer, value, gun);
         }
 
         void Hurt(int fromPlayer, int value, bool gun)
@@ -1048,7 +1049,7 @@ namespace Visyde
             if (curWeapon && thePowerUp.fullRefillAmmo) curWeapon.curAmmo = curWeapon.ammo;
 
             // Update others about our current vital stats (health and shield):
-            pubNubUtilities.UpdateOthersPlayerStatus(gm.pubnub, playerInstance.playerID, health, shield);
+            pubNubUtilities.UpdateOthersPlayerStatus(pubnub, playerInstance.playerID, health, shield);
         }
 
         public void Emote(int emote){
@@ -1075,8 +1076,8 @@ namespace Visyde
         void OnDestroy()
         {
             if (forPreview) return;
-            Connector.instance.onPubNubMessage -= OnPnMessage;
-            Connector.instance.onPubNubSignal -= OnPnSignal;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubSignal -= OnPnSignal;
             OnDisable();
             Destroy(cosmeticsManager);
         }
@@ -1112,7 +1113,7 @@ namespace Visyde
 
             if (playerInstance.IsMine || (Connector.instance.isMasterClient && playerInstance.IsBot))
             {
-                pubNubUtilities.UpdatePlayerPosition(gm.pubnub, playerInstance.playerID,
+                pubNubUtilities.UpdatePlayerPosition(pubnub, playerInstance.playerID,
                 movementController.position, movementController.velocity);
             }
         }
@@ -1122,7 +1123,7 @@ namespace Visyde
             if (forPreview) return;
             if (playerInstance.IsMine || (Connector.instance.isMasterClient && playerInstance.IsBot))
             {
-                    pubNubUtilities.UpdatePlayerCursor(gm.pubnub, playerInstance.playerID,
+                    pubNubUtilities.UpdatePlayerCursor(pubnub, playerInstance.playerID,
                     mousePos, moving, isFalling, xInput);
             }
         }

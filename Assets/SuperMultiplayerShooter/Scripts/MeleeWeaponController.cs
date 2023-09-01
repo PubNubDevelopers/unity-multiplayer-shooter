@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using PubNubUnityShowcase;
+using PubnubApi;
 
 namespace Visyde
 {
@@ -24,6 +25,7 @@ namespace Visyde
         [HideInInspector] public bool isAttacking;
         PlayerController ourPlayer;
         PubNubUtilities pubNubUtilities = new PubNubUtilities();
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         // Update is called once per frame
         void Update()
@@ -53,7 +55,7 @@ namespace Visyde
                             // Don't hurt self and the invulnerable:
                             if (p.playerInstance != ourPlayer.playerInstance && !p.invulnerable)
                             {
-                                pubNubUtilities.ApplyDamage(GameManager.instance.pubnub, p.playerInstance.playerID, ourPlayer.playerInstance.playerID, damage, false);
+                                pubNubUtilities.ApplyDamage(pubnub, p.playerInstance.playerID, ourPlayer.playerInstance.playerID, damage, false);
 
                                 // VFX
                                 GameManager.instance.pooler.Spawn("BodyHit", p.transform.position);

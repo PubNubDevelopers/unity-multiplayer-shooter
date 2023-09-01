@@ -20,9 +20,8 @@ namespace Visyde
         public static GameManager instance;
 
         //  PubNub Properties
-        public Pubnub pubnub = null;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
-        private SubscribeCallbackListener listener = new SubscribeCallbackListener();
         public readonly Dictionary<string, GameObject> ResourceCache = new Dictionary<string, GameObject>();
         //  End PubNub properties
 
@@ -133,7 +132,6 @@ namespace Visyde
         void Awake()
         {
             instance = this;
-            pubnub = Connector.instance.GetPubNubObject();
 
             // Prepare player instance arrays:
             bots = new PlayerInstance[0];
@@ -159,7 +157,6 @@ namespace Visyde
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             //  Room status updates, such as bot attributes or game started?
-            channels.Add(PubNubUtilities.chanRoomStatus);  
             channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems));
             channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanItems) + "-pnpres");  //  We are only interested in presence events for this channel
             //  Every player will send their updates on a unique channel, so subscribe to those
@@ -182,12 +179,8 @@ namespace Visyde
                     channels.Add(PubNubUtilities.ToGameChannel(PubNubUtilities.chanPrefixPlayerCursor + bot.playerID));
                 }
             }
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubPresence += OnPnPresence;
-            //Subscribe to the list of Channels
-            pubnub.Subscribe<string>()
-               .Channels(channels)
-               .Execute();
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
         }
 
         void Start()
@@ -220,8 +213,8 @@ namespace Visyde
         void OnDestroy()
         {
             //  Unsubscribe only for this PubNub instance (which is unique per game)
-            Connector.instance.onPubNubMessage -= OnPnMessage;
-            Connector.instance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
             pubnub.Unsubscribe<string>().Channels(channels.ToArray()).Execute();
         }
 
@@ -292,6 +285,7 @@ namespace Visyde
                         //  Tell everyone else in the Game to respawn me
                         Dictionary<string, object> props = new Dictionary<string, object>();
                         props.Add("respawn", Connector.instance.GetMyId());
+                        props.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
                         pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
                     }
                 }
@@ -322,6 +316,7 @@ namespace Visyde
                         Dictionary<string, object> h = new Dictionary<string, object>();
                         h.Add("rankings", p);
                         h.Add("draw", isDraw);
+                        h.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
                         pubNubUtilities.PubNubSendRoomProperties(pubnub, h);
 
                         // Hide room from lobby:
@@ -469,6 +464,7 @@ namespace Visyde
             //  Notify the master instance that we are ready
             Dictionary<string, object> props = new Dictionary<string, object>();
             props.Add("playerReady", Connector.instance.LocalPlayer.UserId);
+            props.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
             pubNubUtilities.PubNubSendRoomProperties(pubnub, props);
         }
 
@@ -700,6 +696,7 @@ namespace Visyde
             botStats.Add("botScoresKills", bScoresKills);
             botStats.Add("botScoresDeaths", bScoresDeaths);
             botStats.Add("botScoresOther", bScoresOther);
+            botStats.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
             pubNubUtilities.PubNubSendRoomProperties(pubnub, botStats);
         }
 
@@ -714,11 +711,14 @@ namespace Visyde
         public void QuitMatch()
         {
             SceneManager.LoadScene("MainMenu");
-            Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
-            Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
-            if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+            if (Connector.instance.RoomContainsPlayerId(Connector.instance.CurrentRoom, Connector.instance.LocalPlayer.UserId))
             {
-                Connector.instance.LeaveRoom();
+                Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                {
+                    Connector.instance.LeaveRoom();
+                }
             }
         }
 
@@ -731,7 +731,9 @@ namespace Visyde
             Dictionary<string, object> startGameProps = new Dictionary<string, object>();
             startGameProps.Add("gameStartTime", epochTime());
             startGameProps.Add("gameStartsIn", (epochTime() + preparationTime));
+            startGameProps.Add("gameLength", Connector.instance.CurrentRoom.GameLength);
             startGameProps.Add("started", true);
+            startGameProps.Add("roomOwnerId", Connector.instance.CurrentRoom.OwnerId);
             pubNubUtilities.PubNubSendRoomProperties(pubnub, startGameProps);
         }
 
@@ -785,26 +787,36 @@ namespace Visyde
                 {
                     if (payload.ContainsKey("started"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         gameStarted = (bool)payload["started"];
-                        Invoke("AddPresenceListener", 1.0f);
+                        Invoke("SubscribeToGameChannels", 0f);
                     }
                     if (payload.ContainsKey("gameStartsIn"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         gameStartsIn = System.Convert.ToSingle(payload["gameStartsIn"]);
                         startingCountdownStarted = true;
                     }
+                    if (payload.ContainsKey("gameLength"))
+                    {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
+                        gameLength = System.Convert.ToInt32(payload["gameLength"]);
+                    }
                     if (payload.ContainsKey("gameStartTime"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         startTime = System.Convert.ToSingle(payload["gameStartTime"]);
                         CheckTime();
                     }
                     if (payload.ContainsKey("rankings"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         playerRankings = (payload["rankings"] as Newtonsoft.Json.Linq.JArray).ToObject<string[]>();
                         isDraw = (bool)payload["draw"];
                     }
                     if (payload.ContainsKey("botScoresKills"))
                     {
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         long[] rxBotScoresKills = (payload["botScoresKills"] as Newtonsoft.Json.Linq.JArray).ToObject<long[]>();
                         for (int i = 0; i < rxBotScoresKills.Length; i++)
                         {
@@ -824,6 +836,9 @@ namespace Visyde
                     }
                     if (payload.ContainsKey("playerStats"))
                     {
+                        string roomOwnerId = (string)payload["roomOwnerId"];
+                        if (Connector.instance.CurrentRoom.OwnerId != roomOwnerId) return;  //  Check the update was intended for us
+
                         int kills = 0;
                         int deaths = 0;
                         int otherScore = 0;
@@ -852,6 +867,8 @@ namespace Visyde
                     if (payload.ContainsKey("respawn"))
                     {
                         int playerId = System.Convert.ToInt32(payload["respawn"]);
+                        string roomOwnerId = (string)payload["roomOwnerId"];
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals(roomOwnerId)) return; //  The message was not intended for us
                         if (playerId != Connector.instance.LocalPlayer.ID)
                         {
                             //  Respawn the remote player asking to be respawned
@@ -867,22 +884,28 @@ namespace Visyde
                             int wasOwner = System.Convert.ToInt32(payload["wasGameOwner"]);
                             string playerName = (string)payload["playerName"];
                             bool bWasOwner = (wasOwner == 1);
-                            try
+                            string roomOwnerId = (string)payload["roomOwnerId"];
+                            if (!Connector.instance.CurrentRoom.OwnerId.Equals(roomOwnerId)) return; //  The message was not intended for our game
+                            if (Connector.instance.RoomContainsPlayerId(Connector.instance.CurrentRoom, playerUserId))
                             {
-                                Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
-                                Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
-                                if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                                try
                                 {
-                                    Connector.instance.LeaveRoom();
+                                    Connector.instance.OnPlayerLeftRoom(Connector.instance.LocalPlayer.UserId);
+                                    Connector.instance.PubNubRemoveRoom(Connector.instance.LocalPlayer.UserId, false);
+                                    if (Connector.instance.CurrentRoom != null && Connector.instance.CurrentRoom.OwnerId == Connector.instance.LocalPlayer.UserId)
+                                    {
+                                        Connector.instance.LeaveRoom();
+                                    }
+                                    OnDisconnected(bWasOwner, playerName);
                                 }
-                                OnDisconnected(bWasOwner, playerName);
+                                catch (System.Exception) { }
                             }
-                            catch (System.Exception) { }
                         }
                     }
                     if (payload.ContainsKey("playerReady"))
                     {
                         string playerReadyUserId = (string)payload["playerReady"];
+                        if (!Connector.instance.CurrentRoom.OwnerId.Equals((string)payload["roomOwnerId"])) return; //  Message was not intended for us
                         for (int i = 0; i < Connector.instance.CurrentRoom.PlayerList.Count; i++)
                         {
                             if (Connector.instance.CurrentRoom.PlayerList[i].UserId.Equals(playerReadyUserId))
@@ -895,9 +918,12 @@ namespace Visyde
             }
         }
 
-        private void AddPresenceListener()
+        private void SubscribeToGameChannels()
         {
-            Connector.instance.AddPresenceListener();
+            //Subscribe to the list of Channels
+            pubnub.Subscribe<string>()
+               .Channels(channels)
+               .Execute();
         }
 
         //  PubNub Presence event handler
