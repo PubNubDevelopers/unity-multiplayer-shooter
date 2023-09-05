@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using PubNubUnityShowcase;
+using PubnubApi;
 
 namespace Visyde
 {
@@ -56,6 +57,7 @@ namespace Visyde
         int lastHp, doMoveDir;
         public int chosenEmote = -1;
         private BotSpawner bs;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         // Map bounds knowledge so we know where should we not go:
         float worldBoundXPos, worldBoundXNeg, worldBoundYPos, worldBoundYNeg;
@@ -766,7 +768,7 @@ namespace Visyde
             {
                 if (chosenEmote > 0)
                 {
-                    new PubNubUtilities().SendEmoji(GameManager.instance.pubnub, chosenEmote, botID);
+                    new PubNubUtilities().SendEmoji(pubnub, chosenEmote, botID);
                     chosenEmote = -1;
                 }
                 yield return new WaitForSecondsRealtime(Random.Range(1f, 6f));

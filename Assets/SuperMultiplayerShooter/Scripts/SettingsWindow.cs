@@ -22,7 +22,8 @@ public class SettingsWindow : MonoBehaviour
     //internals
     private int originalLanguageLocation;
     private bool fpsToggled;
-    
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
+
 
     // Start is called before the first frame update
     void Start()
@@ -87,10 +88,10 @@ public class SettingsWindow : MonoBehaviour
         if(changesMade)
         {           
             //If successful, update the Connector object.
-            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(Connector.instance.GetPubNubObject().GetCurrentUserId())
-                && PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom != null)
+            if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId())
+                && PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom != null)
             {
-                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom;
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
                 if(customData.ContainsKey("language"))
                 {
                     customData["language"] = LocalizationSettings.AvailableLocales.Locales[originalLanguageLocation].Identifier.Code;
@@ -111,7 +112,7 @@ public class SettingsWindow : MonoBehaviour
                     customData.Add("60fps", fpsToggled);
                 }
                 
-                await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name, customData);
+                await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, customData);
             }
             
         }

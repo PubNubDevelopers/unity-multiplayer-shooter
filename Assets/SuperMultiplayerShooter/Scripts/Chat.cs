@@ -36,6 +36,7 @@ public class Chat : MonoBehaviour
     public Button chatButton;
     public EventSystem eventSystem;
     public GameObject friendsListPanel;
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
     //Internals
     private string targetChatChannel = PubNubUtilities.chanChatAll; // intended target when sending chat messages
@@ -47,7 +48,7 @@ public class Chat : MonoBehaviour
         eventSystem.SetSelectedGameObject(inputField.gameObject);
 
         //Add Listeners
-        Connector.instance.onPubNubMessage += OnPnMessage;
+        PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
         chatTargetDropdown.onValueChanged.AddListener(delegate
         {
             ChatTargetChanged(chatTargetDropdown);
@@ -85,7 +86,7 @@ public class Chat : MonoBehaviour
                     translateMessage.text = inputField.text;
                     translateMessage.source = LocalizationSettings.SelectedLocale.Identifier.Code;
                     translateMessage.target = LocalizationSettings.SelectedLocale.Identifier.Code;
-                    translateMessage.publisher = Connector.instance.GetPubNubObject().GetCurrentUserId();
+                    translateMessage.publisher = pubnub.GetCurrentUserId();
                     //Determine color of message based on channel. Default to all chat.
                     Color color = allChatColor;
 
@@ -194,7 +195,7 @@ public class Chat : MonoBehaviour
                 inputField.gameObject.SetActive(false);
                 break;
             case "Friends":
-                targetChatChannel = PubNubUtilities.chanFriendChat + Connector.instance.GetPubNubObject().GetCurrentUserId();
+                targetChatChannel = PubNubUtilities.chanFriendChat + pubnub.GetCurrentUserId();
                 Debug.Log("You selected Friends");
                 // Include the logic you want to happen when "FRIENDS" is selected
                 break;
@@ -218,7 +219,7 @@ public class Chat : MonoBehaviour
                     // Create the private channel and set the targetChatChannel appropriately.
                     // publising a private message will always start with the targer user's uuid.
                     // subscribe will always be in the format starting with your uuid.
-                    targetChatChannel = $"chat.private.{PNManager.pubnubInstance.PrivateMessageUUID}&{Connector.instance.GetPubNubObject().GetCurrentUserId()}";
+                    targetChatChannel = $"chat.private.{PNManager.pubnubInstance.PrivateMessageUUID}&{pubnub.GetCurrentUserId()}";
                 }
 
                 else
@@ -234,7 +235,7 @@ public class Chat : MonoBehaviour
     /// </summary>
     private void OnDestroy()
     {
-        Connector.instance.onPubNubMessage -= OnPnMessage;
+        PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
         Connector.instance.OnPlayerSelect -= UpdateDropdown;
     }
 
@@ -262,7 +263,7 @@ public class Chat : MonoBehaviour
     {
         //all chat messages start with "chat" or "translate".
         if (result != null && !string.IsNullOrWhiteSpace(result.Message.ToString()) && !string.IsNullOrWhiteSpace(result.Channel)
-            && (result.Channel.StartsWith(PubNubUtilities.chanChat) || result.Channel.Equals(PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId())))     
+            && (result.Channel.StartsWith(PubNubUtilities.chanChat) || result.Channel.Equals(PubNubUtilities.chanChatTranslate + pubnub.GetCurrentUserId())))     
         {
 
             // Determine if the message needs to be translated by checking the source/target languages
@@ -274,13 +275,13 @@ public class Chat : MonoBehaviour
                 if (moderatedMessage != null)
                 {
                     //Ignore messages from self (they are not translated / ran through profanity filter).
-                    if (result.Channel.StartsWith(PubNubUtilities.chanChat) && !result.Publisher.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                    if (result.Channel.StartsWith(PubNubUtilities.chanChat) && !result.Publisher.Equals(pubnub.GetCurrentUserId()))
                     {
                         Color color = new Color(0, 0, 0, 0);
                         //Private Chat
                         if (result.Channel.StartsWith(PubNubUtilities.chanPrivateChat[..^1]))
                         {
-                            if (result.Channel.Contains(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                            if (result.Channel.Contains(pubnub.GetCurrentUserId()))
                             {
                                 color = privateChatColor;
                             }
@@ -327,7 +328,7 @@ public class Chat : MonoBehaviour
                             if (!LocalizationSettings.SelectedLocale.Identifier.Code.Equals(moderatedMessage.source))
                             {
                                 //Prep the channel name to send to the PubNub Function. Replace "chat" with "translate" as we already know it's a chat message.
-                                string translateChannel = PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId();
+                                string translateChannel = PubNubUtilities.chanChatTranslate + pubnub.GetCurrentUserId();
 
                                 //Include the selected locale language whenever you are sending messages.
                                 MessageModeration translateMessage = new MessageModeration();
@@ -351,7 +352,7 @@ public class Chat : MonoBehaviour
                     }
 
                     // Translated message. Already ran through profanity filter and language translation.
-                    else if (result.Channel.Equals(PubNubUtilities.chanChatTranslate + Connector.instance.GetPubNubObject().GetCurrentUserId()))
+                    else if (result.Channel.Equals(PubNubUtilities.chanChatTranslate + pubnub.GetCurrentUserId()))
                     {
                         // Already know type from chat call. Display message.
                         // moderatedMessage
@@ -376,7 +377,7 @@ public class Chat : MonoBehaviour
         //clear input field.
         inputField.text = string.Empty;
 
-        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+        PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
             .Channel(channel)
             .Message(message)
             .ExecuteAsync();     
