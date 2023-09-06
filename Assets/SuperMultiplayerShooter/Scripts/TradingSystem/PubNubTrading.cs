@@ -14,19 +14,17 @@ namespace PubNubUnityShowcase
     public class PubNubTrading : IDisposable
     {
         public static string TradingPreffix => "trading"; //Trading channel prefix
-        private readonly Pubnub _pnApi;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         public PubNubTrading()
         {
-            _pnApi = Connector.instance.GetPubNubObject();
-            Connector.instance.onPubNubMessage += OnPnMessage;
-            Connector.instance.onPubNubPresence += OnPnPresence;
-            Connector.instance.onPubNubObject += OnPNObject;
-            Connector.instance.PNStatusReceived += OnPnStatus;
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject += OnPnObject;
+            PNManager.pubnubInstance.onPubNubStatus += OnPnStatus;
         }
 
-        private Pubnub PNApi { get => Connector.instance.GetPubNubObject(); }
-        private UserId ThisUser => _pnApi.GetCurrentUserId();
+        private UserId ThisUser => pubnub.GetCurrentUserId();
         private Dictionary<string, UserMetadata> DatastoreUserMetadata => PNManager.pubnubInstance.CachedPlayers;
         private string DebugTag => $"<color=red>[Network]</color>";
 
@@ -42,7 +40,7 @@ namespace PubNubUnityShowcase
         {
             var respInbox = GetInbox(invite.SessionData.Respondent.UserID);
 
-            await PNApi.Publish()
+            await pubnub.Publish()
                 .Message(invite)
                 .Channel(respInbox)
                 .Meta(MessageNormalilzation.GetMeta<TradeInvite>())
@@ -54,7 +52,7 @@ namespace PubNubUnityShowcase
 
         public async Task SendInviteResponse(TradeInvite invite, InviteResponseData response)
         {
-            await PNApi.Publish()
+            await pubnub.Publish()
                 .Message(response)
                 .Channel(invite.RSVPChannel)
                 .Meta(MessageNormalilzation.GetMeta<InviteResponseData>())
@@ -65,7 +63,7 @@ namespace PubNubUnityShowcase
 
         public async Task<OfferData> SendOffer(TradeSessionData session, OfferData offer)
         {
-            await PNApi.Publish()
+            await pubnub.Publish()
                 .Message(offer)
                 .Channel(session.Channel)
                 .Meta(MessageNormalilzation.GetMeta<OfferData>())
@@ -77,7 +75,7 @@ namespace PubNubUnityShowcase
 
         public async Task SendLeaveMessage(TradeSessionData session, LeaveSessionData leaveData)
         {
-            await PNApi.Publish()
+            await pubnub.Publish()
                 .Message(leaveData)
                 .Channel(session.Channel)
                 .Meta(MessageNormalilzation.GetMeta<LeaveSessionData>())
@@ -87,7 +85,7 @@ namespace PubNubUnityShowcase
 
         public async Task SendCommand(TradeSessionData session, string cmd)
         {
-            await PNApi.Publish()
+            await pubnub.Publish()
                 .Message(cmd)
                 .Channel(session.Channel)
                 .Meta(MessageNormalilzation.GetCommandMeta())
@@ -99,7 +97,7 @@ namespace PubNubUnityShowcase
         {
             try
             {
-                PNApi.Subscribe<string>()
+                pubnub.Subscribe<string>()
                     .Channels(new[] { GetInbox(ThisUser) })
                     .Execute();
 
@@ -115,7 +113,7 @@ namespace PubNubUnityShowcase
         {
             try
             {
-                PNApi.Unsubscribe<string>()
+                pubnub.Unsubscribe<string>()
                     .Channels(new[] { GetInbox(ThisUser) })
                     .Execute();
 
@@ -127,7 +125,7 @@ namespace PubNubUnityShowcase
 
         public async Task SubscribeSession(TradeSessionData session)
         {
-            PNApi.Subscribe<string>()
+            pubnub.Subscribe<string>()
                 .Channels(new[] { session.Channel })
                 .WithPresence()
                 .Execute();
@@ -137,7 +135,7 @@ namespace PubNubUnityShowcase
 
         public async Task UnsubscribeSession(TradeSessionData session)
         {
-            PNApi.Unsubscribe<string>()
+            pubnub.Unsubscribe<string>()
                 .Channels(new[] { session.Channel, $"{session.Channel}-pnpres" })
                 .Execute();
 
@@ -150,7 +148,7 @@ namespace PubNubUnityShowcase
             //TODO: handle unsuccessfull requests
             try
             {
-                var response = await PNApi.GetUuidMetadata()
+                var response = await pubnub.GetUuidMetadata()
                     .Uuid(user)
                     .IncludeCustom(true)
                     .ExecuteAsync();
@@ -182,17 +180,22 @@ namespace PubNubUnityShowcase
                 MetadataNormalization.ReplaceHats(session.Initiator.UserID, initiatorCurrent.Custom, offer.InitiatorGives, offer.InitiatorReceives);
                 MetadataNormalization.ReplaceHats(session.Respondent.UserID, respondentCurrent.Custom, offer.InitiatorReceives, offer.InitiatorGives);
 
-                var initiatorSuccess = await PNApi.SetUuidMetadata()
+                await PNManager.pubnubInstance.UpdateUserMetadata(session.Initiator.UserID, initiatorCurrent.Name, PNManager.pubnubInstance.CachedPlayers[session.Initiator.UserID].Custom);
+                await PNManager.pubnubInstance.UpdateUserMetadata(session.Respondent.UserID, respondentCurrent.Name, PNManager.pubnubInstance.CachedPlayers[session.Respondent.UserID].Custom);
+
+                /*
+                var initiatorSuccess = await pubnub.SetUuidMetadata()
                     .Uuid(session.Initiator.UserID)
                     .Name(initiatorCurrent.Name)
                     .Custom(initiatorCurrent.Custom)
                     .ExecuteAsync();
 
-                var respondentSuccess = await PNApi.SetUuidMetadata()
+                var respondentSuccess = await pubnub.SetUuidMetadata()
                     .Uuid(session.Respondent.UserID)
                     .Name(respondentCurrent.Name)
                     .Custom(respondentCurrent.Custom)
                     .ExecuteAsync();
+                */
             }
             catch (Exception e)
             {
@@ -256,7 +259,7 @@ namespace PubNubUnityShowcase
             //Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");
         }
 
-        private void OnPNObject(PNObjectEventResult result)
+        private void OnPnObject(PNObjectEventResult result)
         {
             Debug.Log($"{DebugTag} MetaUpdate event received: {result.Type}");
         }
@@ -350,8 +353,9 @@ namespace PubNubUnityShowcase
             SessionPresenceChanged = null;
             ParticipantGoodbye = null;
 
-            Connector.instance.onPubNubMessage -= OnPnMessage;
-            Connector.instance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
         }
     }
 }

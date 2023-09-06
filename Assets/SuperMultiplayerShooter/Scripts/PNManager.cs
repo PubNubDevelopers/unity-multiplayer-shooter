@@ -37,6 +37,8 @@ public class PNManager : PNManagerBehaviour
     public PNPresenceEvent onPubNubPresence;  
     public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
     public PNObjectEvent onPubNubObject;
+    public delegate void PNStatusEvent(PNStatus status); // Receive status updates
+    public PNStatusEvent onPubNubStatus;
     public delegate void PubNubReady(); //  PubNub is initialized, ok to call PubNub object
     public PubNubReady onPubNubReady;
 
@@ -95,6 +97,7 @@ public class PNManager : PNManagerBehaviour
         pnListener.onSignal += OnPnSignal;
         pnListener.onObject += OnPnObject;
         pnListener.onPresence += OnPnPresence;
+        pnListener.onStatus += OnPnStatus;
         await SubscribeToStaticChannels();
         try { onPubNubReady(); } catch (System.Exception) { }
     }
@@ -164,6 +167,17 @@ public class PNManager : PNManagerBehaviour
         try
         {
             onPubNubObject(result);
+        }
+        catch (System.Exception) { }
+    }
+
+    // Handler for PubNub Status event.
+    private void OnPnStatus(Pubnub pn, PNStatus status)
+    {
+        //  Notify other listeners
+        try
+        {
+            onPubNubStatus(status);
         }
         catch (System.Exception) { }
     }
