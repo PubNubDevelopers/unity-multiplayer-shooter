@@ -60,7 +60,6 @@ namespace PubNubUnityShowcase
                 .Meta(MessageNormalilzation.GetMeta<InviteResponseData>())
                 .ShouldStore(true)
                 .ExecuteAsync();
-            Debug.Log($"{DebugTag} SendInvResponse ch={invite.RSVPChannel}");
         }
 
         public async Task<OfferData> SendOffer(TradeSessionData session, OfferData offer)
@@ -241,8 +240,6 @@ namespace PubNubUnityShowcase
                         ParticipantGoodbye?.Invoke(MessageNormalilzation.GetPayload<LeaveSessionData>(result.Message));
                 }
             }
-            else
-                Debug.LogWarning($"Received unknown payload type.");
         }
 
         private void OnPnPresence(PNPresenceEventResult result)
@@ -252,14 +249,11 @@ namespace PubNubUnityShowcase
 
             //it is safe to assume that only the current session channel will receive presence events so no need to check the channel
             SessionPresenceChanged?.Invoke(result.Uuid, result.Event);
-
-            //string json = JsonConvert.SerializeObject(result);
-            Debug.Log($"<color=red>[Network]</color> Received Presence event:{result.Event} uuid={result.Uuid}");
         }
 
         private void OnPNObject(PNObjectEventResult result)
         {
-            Debug.Log($"MetaUpdate event received: {result.Type}");
+            Debug.Log($"{DebugTag} MetaUpdate event received: {result.Type}");
         }
 
         private void OnPnStatus(PNStatus status)

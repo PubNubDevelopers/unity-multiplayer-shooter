@@ -141,7 +141,6 @@ namespace PubNubUnityShowcase
 
         void ITrading.SubscribeTradeInvites(ITradeInviteSubscriber subscriber)
         {
-
             inviteSubscribers.Add(subscriber);
             Debug.Log($"{DebugTag} : subscribed={subscriber.GetType().Name} subs={inviteSubscribers.Count}");
         }
@@ -174,7 +173,7 @@ namespace PubNubUnityShowcase
             //notify listeners
             foreach (var sub in inviteSubscribers)
                 sub.OnTradeInviteReceived(invite);
-
+                
             InviteResponseData response;
 
             if (InLobbyOrMatch)
@@ -189,11 +188,16 @@ namespace PubNubUnityShowcase
             {
                 response = new InviteResponseData(true, false, false);
 
+
                 //note: Auto Join session (it can be also a notification button in the UI)
                 await Trading.JoinSessionAsync(invite.SessionData);
             }
 
             await Network.SendInviteResponse(invite, response);
+
+            //notify listeners
+            foreach (var sub in inviteSubscribers)
+                sub.OnTradeInviteReceived(invite);
         }
 
         private void OnReceiveInviteResponse(InviteResponseData response)
