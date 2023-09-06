@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
 using PubNubUnityShowcase;
+using System.Runtime.ConstrainedExecution;
 
 namespace Visyde
 {
@@ -37,19 +38,31 @@ namespace Visyde
         public GameObject lobbyBrowserPanel;
         public GameObject settingsPanel;
         public GameObject cosmeticsPanel;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         void Awake(){
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
         }
 
         // Use this for initialization
-        void Start()
+        async void Start()
         {
             //Add Listeners
-            Connector.instance.OnGlobalPlayerCountUpdate += UpdateGlobalPlayers;
-            Connector.instance.OnConnectorReady += ConnectorReady;
-            Connector.instance.onPubNubPresence += OnPnPresence;
-            Connector.instance.onPubNubObject += OnPnObject;
+            PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject += OnPnObject;
+            PNManager.pubnubInstance.onPubNubReady += OnPnReady;
+            await PNManager.pubnubInstance.InitializePubNub();
+        }
+
+        async void OnPnReady()
+        {
+            Invoke("GetActiveGlobalPlayers", 2.0f); //  Give the system time to settle down before calling global player count
+            await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
+            customMatchBTN.interactable = true;
+            customizeCharacterButton.interactable = true;
+            //  todo set friends button interactable
+            //  todo set chat button interactable
+            MainMenuSetup();
         }
 
         /// <summary>
@@ -59,15 +72,6 @@ namespace Visyde
         private void UpdateGlobalPlayers(int count)
         {
             totalCountPlayers.text = count.ToString();
-        }
-
-        /// <summary>
-        /// Watch for when the connector is ready.
-        /// </summary>
-        private void ConnectorReady()
-        {
-            //Sets up the Main Menu based on player cached information.
-            MainMenuSetup();
         }
 
         /// Listen for status updates to update metadata cache
@@ -82,6 +86,12 @@ namespace Visyde
             {
                 //If not, obtain and cache the user.
                 await PNManager.pubnubInstance.GetUserMetadata(result.Uuid);
+            }
+
+            if (result != null && result.Channel.Equals(PubNubUtilities.chanGlobal))
+            {
+                //Inform the total number of global players.
+                UpdateGlobalPlayers(result.Occupancy);
             }
         }
 
@@ -182,14 +192,40 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Gets all the active global players in the game
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> GetActiveGlobalPlayers()
+        {
+            //  Determine who is present based on who is subscribed to the global channel.
+            //  Called when we first launch to determine the game state
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[]
+                {
+                    PubNubUtilities.chanGlobal
+                })
+                .ExecuteAsync();
+            PNHereNowResult hereNowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+            if (status != null && status.Error)
+            {
+                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+            }
+            else
+            {
+                UpdateGlobalPlayers(hereNowResult.TotalOccupancy);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Called whenever the scene or game ends. Unsubscribe event listeners.
         /// </summary>
         void OnDestroy()
         {
-            Connector.instance.OnGlobalPlayerCountUpdate -= UpdateGlobalPlayers;
-            Connector.instance.OnConnectorReady -= ConnectorReady;
-            Connector.instance.onPubNubPresence -= OnPnPresence;
-            Connector.instance.onPubNubObject -= OnPnObject;
+            PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
+            PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
+            PNManager.pubnubInstance.onPubNubReady -= OnPnReady;
 
             //Clear out the cached players when changing scenes. The list needs to be updated when returning to the scene in case
             //there are new players.
@@ -202,11 +238,11 @@ namespace Visyde
         private void MainMenuSetup()
         {          
             //Change playerInput name to be set to username of the user as long as the name was originally set.
-            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(Connector.instance.GetPubNubObject().GetCurrentUserId()))
+            if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
-                playerNameInput.text = Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name;
+                playerNameInput.text = Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name;
                 //  Populate the available hat inventory and other settings, read from PubNub App Context
-                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom;
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
                 if (customData != null)
                 {
                     List<int> availableHats = new List<int>();
@@ -220,7 +256,7 @@ namespace Visyde
                     {
                         availableHats = Connector.instance.GenerateRandomHats();
                         customData.Add("hats", availableHats);
-                        PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom = customData;
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
                     }
 
                     Connector.instance.UpdateAvailableHats(availableHats);
@@ -243,8 +279,8 @@ namespace Visyde
         // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
         public async void SetPlayerName()
         {
-            await PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.GetPubNubObject().GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Custom);
-            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[Connector.instance.GetPubNubObject().GetCurrentUserId()].Name = playerNameInput.text;     
+            await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom);
+            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;     
         }
     }
 }

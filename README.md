@@ -23,6 +23,14 @@ Note:
 * The game is actively in development and more features are planned to be incorporated in the near future.
 * PubNub has purchased a Multi-Entity License for this template from the Unity Asset Store. We are not actively selling the game, but showcasing how to enhance the game with PubNub's Real-Time capabilities.
 
+
+## Known Issues
+
+This game is a work in progress, please bear with us whilst we make it awesome.  Any issues are a result of our implementation, not a limitation of PubNub :) 
+
+- Player trading has not been implemented.  The 'trade' button in the friend list will not do anything.
+- Playing the game with players located on different continents can lead to unexpected results, such as characters not respawning.
+
 ## Prerequisites
 You'll need to perform the following before getting started.
 
@@ -211,6 +219,14 @@ The following files are of focus to review for this scene that pertain to PubNub
 - PubNub Unity Resources: https://www.pubnub.com/developers/unity-real-time-developer-path/
 - Admin Portal (to obtain Pub/Sub API Keys): https://admin.pubnub.com/
 - Super Multiplayer Shooter Template Game: https://assetstore.unity.com/packages/templates/systems/super-multiplayer-shooter-template-124977
+
+## Implementation Notes
+
+### Lobby Implementation
+
+This application uses [PubNub presence state](https://www.pubnub.com/docs/general/presence/presence-state) to create and track lobby ownership, this allows the lobby to be automatically closed when the owner (creator) goes offline for whatever reason.  New players who join the lobby indicate their membership by publishing a [PubNub message](https://www.pubnub.com/docs/general/messages/publish) to the lobby creator, meaning new players can only join lobbies whose owners are online.
+
+An alternative lobby implementation would be to use [PubNub messages](https://www.pubnub.com/docs/general/messages/publish) in conujnction with [message persistence](https://www.pubnub.com/docs/general/storage), so a lobby creator would publish a message in a `lobbies` channel.  Other players could read the lobby state by reading the `lobbies` channel history, along with any associated lobby metadata, stored in [message actions](https://www.pubnub.com/docs/general/messages/actions#retrieving-actions).
 
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");

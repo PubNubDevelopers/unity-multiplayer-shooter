@@ -23,12 +23,13 @@ public class Leaderboard : MonoBehaviour
     public Text kdPos3;
     public Text kdPos4;
     public Text kdPos5;
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
     // Start is called before the first frame update
     void Start()
     {
-        Connector.instance.onPubNubMessage += OnPnMessage;
-        Connector.instance.OnConnectorReady += ConnectorReady;       
+        PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
+        PNManager.pubnubInstance.onPubNubReady += OnPnReady;
     }
 
     /// <summary>
@@ -36,13 +37,13 @@ public class Leaderboard : MonoBehaviour
     /// </summary>
     void OnDestroy()
     {
-        Connector.instance.onPubNubMessage -= OnPnMessage;
+        PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
     }
 
     /// <summary>
     /// Waits until the connector is ready before attempting to publish using pubnub object.
     /// </summary>
-    private async void ConnectorReady()
+    private async void OnPnReady()
     {
         //fire a refresh command to the pubnub function to get the leaderboard to update
         await PublishMessage("{\"username\":\"\",\"score\":\"\",\"refresh\":\"true\"}", PubNubUtilities.chanLeaderboardPub);
@@ -54,7 +55,7 @@ public class Leaderboard : MonoBehaviour
     /// <param name="text"></param>
     private async Task<bool> PublishMessage(string text, string channel)
     {
-        PNResult<PNPublishResult> publishResponse = await Connector.instance.GetPubNubObject().Publish()
+        PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
          .Channel(channel)
          .Message(text)
          .ExecuteAsync();

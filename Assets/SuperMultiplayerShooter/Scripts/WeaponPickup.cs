@@ -26,6 +26,7 @@ namespace Visyde
         int index;
 
         PubNubUtilities pubNubUtilities;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         // Use this for initialization
         void Start()
@@ -37,7 +38,7 @@ namespace Visyde
             PubNubItemProps initProps = GetComponent<PubNubItemProps>();
 
             //Listeners
-            Connector.instance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
 
             if (initProps)
             {
@@ -70,7 +71,7 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            Connector.instance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
         }
 
         void Allow()
@@ -94,8 +95,8 @@ namespace Visyde
 
                         if (PubNubUtilities.IsMasterClient)
                         {
-                            pubNubUtilities.GrabWeapon(gm.pubnub, p.playerInstance.playerID, weaponIndex, spawnPointIndex);
-                            pubNubUtilities.PickedUpWeapon(gm.pubnub, index);
+                            pubNubUtilities.GrabWeapon(pubnub, p.playerInstance.playerID, weaponIndex, spawnPointIndex);
+                            pubNubUtilities.PickedUpWeapon(pubnub, index);
                         }
                     }
                 }

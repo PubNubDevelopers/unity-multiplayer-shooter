@@ -32,6 +32,8 @@ namespace Visyde
         [HideInInspector] public Transform[] currentPowerUpSpawns;                      // used for checking if a certain spawn point still has a power-up pickup
 
         private PubNubUtilities pubNubUtilities;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
+
 
         void Start()
         {
@@ -45,7 +47,7 @@ namespace Visyde
             pubNubUtilities = new PubNubUtilities();
 
             //Add Listeners
-            Connector.instance.onPubNubMessage += OnPnMessage;
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
         }
 
         // Update is called once per frame
@@ -80,7 +82,7 @@ namespace Visyde
         /// </summary>
         private void OnDestroy()
         {
-            Connector.instance.onPubNubMessage -= OnPnMessage;
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
         }
 
         /// <summary>
@@ -135,7 +137,7 @@ namespace Visyde
         {
             GameMap map = gm.maps[gm.chosenMap];
             int weaponIndex = Random.Range(0, map.spawnableWeapons.Length);
-            pubNubUtilities.SpawnWeapon(gm.pubnub, i, weaponIndex);
+            pubNubUtilities.SpawnWeapon(pubnub, i, weaponIndex);
         }
 
         void SpawnWeapon(int index, int spawnId)
@@ -162,7 +164,7 @@ namespace Visyde
         {
             GameMap map = gm.maps[gm.chosenMap];
             int powerUpIndex = Random.Range(0, map.spawnablePowerUps.Length);
-            pubNubUtilities.SpawnPowerUp(gm.pubnub, i, powerUpIndex);
+            pubNubUtilities.SpawnPowerUp(pubnub, i, powerUpIndex);
         }
 
         void SpawnPowerUp(int index, int spawnId)
