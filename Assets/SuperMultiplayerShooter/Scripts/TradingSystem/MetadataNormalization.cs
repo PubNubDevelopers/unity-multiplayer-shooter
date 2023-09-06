@@ -41,7 +41,7 @@ namespace PubNubUnityShowcase
             PNManager.pubnubInstance.CachedPlayers[userId].Custom = customMetadata;
 
             //If updating active metdata, update current inventory.
-            if(userId.Equals(PNManager.pubnubInstance.pubnub.GetCurrentUserId()))
+            if(userId.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
             {
                 Connector.instance.UpdateAvailableHats(updatedInventory);
             }
