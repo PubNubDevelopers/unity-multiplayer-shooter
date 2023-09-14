@@ -34,17 +34,23 @@ namespace PubNubUnityShowcase
             List<int> updatedInventory = currentInventory.Select(hat => hat == existing ? newHat : hat).ToList();         
             //note: hats' keyvalue is seriliazed as <string,string> not as <string,List<int>> !!!
             string listAsJson = JsonConvert.SerializeObject(updatedInventory);
-
             customMetadata["hats"] = listAsJson;
+                       
+            //Update current inventory.
+            if(userId.Equals(PNManager.pubnubInstance.pubnub.GetCurrentUserId()))
+            {
+                //If the hat that is being traded away is currently equipped, equip the new hat that was just tradded to the user.
+                if (DataCarrier.chosenHat == existing)
+                {
+                    DataCarrier.chosenHat = newHat;
+                    customMetadata["chosen_hat"] = DataCarrier.chosenHat;
+                }
+
+                Connector.instance.UpdateAvailableHats(updatedInventory);
+            }
 
             //For any player, update the CachedPlayersList with the new updated inventory
             PNManager.pubnubInstance.CachedPlayers[userId].Custom = customMetadata;
-
-            //If updating active metdata, update current inventory.
-            if(userId.Equals(Connector.instance.GetPubNubObject().GetCurrentUserId()))
-            {
-                Connector.instance.UpdateAvailableHats(updatedInventory);
-            }
         }
     }
 }

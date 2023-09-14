@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using PubnubApi;
 using PubNubUnityShowcase;
 using UnityEngine;
 
@@ -22,6 +24,8 @@ namespace Visyde
 
         List<InventorySlot> curSlots = new List<InventorySlot>();   // the current instatiated slots
         PlayerController preview;                                   // the instantiated player prefab for preview
+
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         // Start is called before the first frame update
         void Start()
@@ -103,7 +107,7 @@ namespace Visyde
         /// <summary>
         /// Equips an item from the database:
         /// </summary>
-        public void Equip(CosmeticItemData item){
+        public async void Equip(CosmeticItemData item){
             
             switch (item.itemType){
                 case CosmeticType.Hat:
@@ -117,6 +121,27 @@ namespace Visyde
             // Refresh the player preview:
             Cosmetics c = new Cosmetics(DataCarrier.chosenHat);
             playerPrefabController.cosmeticsManager.Refresh(c);
+
+            //Update metadata
+            var metadata = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+            if(metadata != null)
+            {
+                if(metadata.ContainsKey("chosen_hat")) 
+                {
+                    metadata["chosen_hat"] = DataCarrier.chosenHat;
+                }
+
+                //First time saving a new hat.
+                else
+                {
+                    metadata.Add("chosen_hat", DataCarrier.chosenHat);
+                }
+
+                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = metadata;
+
+                //Store the new update in the metadata
+                await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, metadata);
+            }           
         }
     }
 }

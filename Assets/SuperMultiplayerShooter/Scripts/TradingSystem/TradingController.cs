@@ -1,7 +1,10 @@
+using PubnubApi;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Profiling.Memory.Experimental;
 using Visyde;
 
 namespace PubNubUnityShowcase
@@ -53,13 +56,23 @@ namespace PubNubUnityShowcase
 
             if (PNManager.pubnubInstance.CachedPlayers.TryGetValue(traderID, out var metadata))
                 inventory = new TradeInventoryData(MetadataNormalization.GetHats(metadata.Custom));
-
+            int chosenCharacter = 0;
+            if (metadata.Custom.ContainsKey("chosen_character"))
+            {
+                chosenCharacter = Int32.Parse(metadata.Custom["chosen_character"].ToString());               
+            }
+            //Legacy Default situations
+            else
+            {
+                metadata.Custom.Add("chosen_character", 0); // Defaults to the first character.
+                PNManager.pubnubInstance.CachedPlayers[traderID].Custom = metadata.Custom;
+            }
             return new TraderData(
                 traderID,
                 metadata.Name,
-                DataCarrier.chosenCharacter,
+                chosenCharacter,
                 inventory,
-                inventory.CosmeticItems[0]); //TODO: find a way to get this 
+                inventory.CosmeticItems[0]); // using the first hat in the player's inventory, not their selected hat.
         }
 
         async void ITrading.JoinTradingAsync()
@@ -226,8 +239,7 @@ namespace PubNubUnityShowcase
                     }
                     break;
                 case OfferData.OfferState.accepted:
-                    if (target.Equals(You))
-                        await Network.ApplyMetadata(SessionData, offer);
+                    await Network.ApplyMetadata(SessionData, offer);
 
                     foreach (var sub in sessionSubscribers)
                         sub.OnTradingCompleted(offer);

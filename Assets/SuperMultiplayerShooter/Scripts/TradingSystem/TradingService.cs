@@ -1,3 +1,4 @@
+using PubnubApi;
 using PubNubUnityShowcase.ScriptableObjects;
 using PubNubUnityShowcase.UIComponents;
 using System;
@@ -32,7 +33,7 @@ namespace PubNubUnityShowcase
 
         //private CancellationTokenSource cts;
         private TradingView view;
-        private Connector _connector;
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         private TradingController _tradingController;
         private TraderDataCached _cachedTraders;
 
@@ -71,39 +72,27 @@ namespace PubNubUnityShowcase
 
         private async void Start()
         {
-            InitializeAsSingleton("TradingService", true);
-
-            var cts = new CancellationTokenSource(10000);
-            try
-            {
-                while (_connector == null || _connector?.Connected == false)
-                {
-                    _connector = Connector.instance;
-                    cts.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(100);
-                    await Task.Yield();
-                }
-
-                _tradingController = new TradingController(_connector.GetPubNubObject().GetCurrentUserId());
-                Trading.SubscribeTradeInvites(this);
-                Trading.JoinTradingAsync();
-
-                Datastore = _tradingController; //requests are done every time view is opened
-                //Datastore = new TraderDataCached(); //data is taken from cache
-
-                if (debugText != null)
-                    debugText.text = _connector.GetPubNubObject().GetCurrentUserId();
-            }
-            catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
-            {
-                Debug.LogError($"{typeof(Connector).Name} didn't initialize for 10+ seconds.");
-                gameObject.SetActive(false);
-            }
+            PNManager.pubnubInstance.onPubNubReady += OnPnReady;          
         }
 
         private void OnDestroy()
         {
             Dispose();
+        }
+
+        private void OnPnReady()
+        {
+            InitializeAsSingleton("TradingService", true);
+            _tradingController = new TradingController(pubnub.GetCurrentUserId());
+            Trading.SubscribeTradeInvites(this);
+            Trading.JoinTradingAsync();
+
+            Datastore = _tradingController; //requests are done every time view is opened
+                                            //Datastore = new TraderDataCached(); //data is taken from cache
+            if (debugText != null)
+            {
+                debugText.text = pubnub.GetCurrentUserId();
+            }
         }
 
         /// <summary>
@@ -131,7 +120,7 @@ namespace PubNubUnityShowcase
         {
             TradingView.Services services = new TradingView.Services(CosmeticAssets, AvatarAssets, Trading, token);
 
-            var initiator = await Datastore.GetTraderData(_connector.GetPubNubObject().GetCurrentUserId());
+            var initiator = await Datastore.GetTraderData(pubnub.GetCurrentUserId());
             var respondent = await Datastore.GetTraderData(targetUser);
 
             TradingViewData viewData = new TradingViewData(initiator, respondent, services, TradingView.StateType.initiator);

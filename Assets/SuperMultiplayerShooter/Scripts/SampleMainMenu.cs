@@ -12,6 +12,8 @@ using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
 using PubNubUnityShowcase;
 using System.Runtime.ConstrainedExecution;
+using Unity.VisualScripting;
+using System;
 
 namespace Visyde
 {
@@ -59,7 +61,7 @@ namespace Visyde
             Invoke("GetActiveGlobalPlayers", 2.0f); //  Give the system time to settle down before calling global player count
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
             customMatchBTN.interactable = true;
-            customizeCharacterButton.interactable = true;
+            customizeCharacterButton.interactable = true;       
             //  todo set friends button interactable
             //  todo set chat button interactable
             MainMenuSetup();
@@ -272,6 +274,43 @@ namespace Visyde
                         bool.TryParse(customData["60fps"].ToString(), out result);
                         Connector.IsFPSSettingEnabled = result;
                     }
+
+                    //Set the Selected Hat
+                    if (customData.ContainsKey("chosen_hat"))
+                    {
+                       int result;
+                       if(Int32.TryParse(customData["chosen_hat"].ToString(), out result))
+                       {
+                            DataCarrier.chosenHat = result;
+                       }
+                    }
+
+                    //Legacy Default situations
+                    else
+                    {
+                        customData.Add("chosen_hat", DataCarrier.chosenHat);
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+
+                    //Set the Selected Avatar
+                    if (customData.ContainsKey("chosen_character"))
+                    {
+                        int result;
+                        if (Int32.TryParse(customData["chosen_character"].ToString(), out result))
+                        {
+                            DataCarrier.chosenCharacter = result;
+                        }
+                    }
+
+                    //Legacy Default situations
+                    else
+                    {
+                        customData.Add("chosen_character", DataCarrier.chosenCharacter);
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+
+                    //Update the sprite image
+                    characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
             }                        
         }
