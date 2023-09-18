@@ -21,7 +21,7 @@ namespace PubNubUnityShowcase
         private readonly string _you;
 
         public bool InLobbyOrMatch => Connector.instance.CurrentRoom != null;
-        public bool InSession { get => SessionData.Id > 0; } //todo: may be buggy -> implement session state in session data
+        public bool InSession { get => SessionData.Id > 0; }
         private PubNubTrading Network => _network;
         private string You { get => _you; }
         private TradeSessionData SessionData { get; set; }

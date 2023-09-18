@@ -9,11 +9,11 @@ namespace PubNubUnityShowcase.UIComponents
     {
         [Header("Components")]
         [SerializeField] private RectTransform gridRoot;
-        [SerializeField] private InventorySlot slotPrefab; //TODO: inject
+        [SerializeField] private InventorySlot slotPrefab;
         [SerializeField] private CanvasGroup panelGroup;
 
         private int _slotCount = 8;
-        private ICosmeticItemLibrary _cosmeticsLibrary; //TODO: inject
+        private ICosmeticItemLibrary _cosmeticsLibrary;
         private Dictionary<int, InventorySlot> slots = new Dictionary<int, InventorySlot>();
 
         public event Action<CosmeticItem> ItemTaken;

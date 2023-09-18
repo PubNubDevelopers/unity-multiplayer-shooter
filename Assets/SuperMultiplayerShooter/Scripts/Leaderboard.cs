@@ -74,8 +74,7 @@ public class Leaderboard : MonoBehaviour
     /// <param name="result"></param>
     private void OnPnMessage(PNMessageResult<object> result)
     {
-        // Enable the button once we have established connection to PubNub, todo it is better to use a status listener here. 
-        // Leaderboard Updates
+        // Enable the button once we have established connection to PubNub 
         if (result.Channel.Equals(PubNubUtilities.chanLeaderboardSub))
         {
             Dictionary<string, object> msg = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Message.ToString());// as Dictionary<string, object>;

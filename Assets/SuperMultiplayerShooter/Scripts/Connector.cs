@@ -1059,7 +1059,6 @@ namespace Visyde
 
         /// <summary>
         /// Returns the language of the user
-        /// TODO: Will be replaced by getting the metadata of the user.
         /// </summary>
         /// <returns></returns>
         public string GetUserLanguage()

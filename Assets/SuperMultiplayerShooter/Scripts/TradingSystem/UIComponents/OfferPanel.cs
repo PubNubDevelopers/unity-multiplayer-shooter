@@ -10,7 +10,7 @@ namespace PubNubUnityShowcase.UIComponents
         [SerializeField] private InventorySlot initiatorSlot;
         [SerializeField] private InventorySlot responderSlot;
         [SerializeField] private Text labelText;
-        [SerializeField] private Text sessionStatusText; //TODO: move this to different UIElement (Trading Status panel)
+        [SerializeField] private Text sessionStatusText;
 
         public InventorySlot InitiatorSlot => initiatorSlot;
         public InventorySlot ResponderSlot => responderSlot;
