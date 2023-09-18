@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using PubnubApi;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,6 +17,9 @@ namespace Visyde
         public Transform content;
         public Connector connector;
         public SampleMainMenu mainMenu;
+
+        private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
+
 
         void Start()
         {
@@ -43,7 +47,7 @@ namespace Visyde
         }
 
         // Character selection:
-        public void SelectCharacter(CharacterData data)
+        public async void SelectCharacter(CharacterData data)
         {
             // Close the character selection panel:
             mainMenu.characterSelectionPanel.SetActive(false);
@@ -58,6 +62,27 @@ namespace Visyde
             }
 
             mainMenu.characterIconPresenter.sprite = data.icon;
+
+            //Update local metadata
+            var metadata = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+            if (metadata != null)
+            {
+                if (metadata.ContainsKey("chosen_character"))
+                {
+                    metadata["chosen_character"] = DataCarrier.chosenCharacter;
+                }
+
+                //First time saving a new hat.
+                else
+                {
+                    metadata.Add("chosen_character", DataCarrier.chosenCharacter);
+                }
+
+                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = metadata;
+
+                //Store the new update in the metadata
+                await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, metadata);
+            }
         }
     }
 }

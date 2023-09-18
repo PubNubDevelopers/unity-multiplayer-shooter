@@ -12,6 +12,8 @@ using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
 using PubNubUnityShowcase;
 using System.Runtime.ConstrainedExecution;
+using Unity.VisualScripting;
+using System;
 
 namespace Visyde
 {
@@ -38,9 +40,14 @@ namespace Visyde
         public GameObject lobbyBrowserPanel;
         public GameObject settingsPanel;
         public GameObject cosmeticsPanel;
+        public Button nameChangeBtn;
+        public Button chatBtn;
+        public Button friendsBtn;
+        public Button settingsBtn;
+
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
-        void Awake(){
+        void Awake() {
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
         }
 
@@ -60,8 +67,12 @@ namespace Visyde
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
             customMatchBTN.interactable = true;
             customizeCharacterButton.interactable = true;
-            //  todo set friends button interactable
-            //  todo set chat button interactable
+            chatBtn.interactable = true;
+            friendsBtn.interactable = true;
+            settingsBtn.interactable = true;
+            playerNameInput.interactable = true;
+            nameChangeBtn.interactable = true;
+            nameChangeBtn.onClick.AddListener(async () => await SetPlayerName());
             MainMenuSetup();
         }
 
@@ -120,9 +131,9 @@ namespace Visyde
                     };
 
                     // Add new or update existing player
-                    if(result.Event.Equals("set"))
+                    if (result.Event.Equals("set"))
                     {
-                        if(PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
+                        if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                         {
                             PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
                         }
@@ -138,45 +149,57 @@ namespace Visyde
                     {
                         PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
                     }
-                }            
+                }
             }
         }
-      
-        // Update is called once per frame
+
+        // Update is called once per frame.
+        // Note: Ensuring each Gameobject is not null due to the connection not being destroyed when
+        // transitioning scenes.
         void Update()
         {
             // Handling panels:
-            customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
+            if (customGameRoomPanel != null)
+            {
+                customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
+
+            }
 
             // Messages popup system (used for checking if we we're kicked or we quit the match ourself from the last game etc):
-            if (DataCarrier.message.Length > 0)
+            if (messagePopupObj != null && DataCarrier.message.Length > 0)
             {
                 messagePopupObj.SetActive(true);
                 messagePopupText.text = DataCarrier.message;
                 DataCarrier.message = "";
             }
 
-            //Listen for whenever user opens the chat window.
-            if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
+            if (chat != null)
             {
-                //Don't allow interaction with chat if windows
-                if(!characterSelectionPanel.activeSelf && !lobbyBrowserPanel.activeSelf && !settingsPanel.activeSelf && !cosmeticsPanel.activeSelf)
+                //Listen for whenever user opens the chat window.
+                if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
                 {
-                    //opens the chat window.
+                    //Don't allow interaction with chat if windows
+                    if (!characterSelectionPanel.activeSelf && !lobbyBrowserPanel.activeSelf && !settingsPanel.activeSelf && !cosmeticsPanel.activeSelf)
+                    {
+                        //opens the chat window.
+                        chat.SetActive(true);
+                    }
+                }
+            }
+
+            if (lobbyBrowserPanel != null && customGameRoomPanel != null)
+            {
+                //Don't allow chatting while searching for games.
+                if (lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
+                {
+                    chat.SetActive(false);
+                }
+
+                else
+                {
                     chat.SetActive(true);
-                }           
-            }
-
-            //Don't allow chatting while searching for games.
-            if(lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
-            {
-                chat.SetActive(false);
-            }
-
-            else
-            {
-                chat.SetActive(true);
-            }
+                }
+            }       
         }
 
         /// <summary>
@@ -224,7 +247,7 @@ namespace Visyde
         /// Extracts metadata for active user and performs menu setup.
         /// </summary>
         private void MainMenuSetup()
-        {          
+        {
             //Change playerInput name to be set to username of the user as long as the name was originally set.
             if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
@@ -260,15 +283,68 @@ namespace Visyde
                         bool.TryParse(customData["60fps"].ToString(), out result);
                         Connector.IsFPSSettingEnabled = result;
                     }
+
+                    //Set the Selected Hat
+                    if (customData.ContainsKey("chosen_hat"))
+                    {
+                        int result;
+                        if (Int32.TryParse(customData["chosen_hat"].ToString(), out result))
+                        {
+                            DataCarrier.chosenHat = result;
+                        }
+                    }
+
+                    //Legacy Default situations
+                    else
+                    {
+                        customData.Add("chosen_hat", DataCarrier.chosenHat);
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+
+                    //Set the Selected Avatar
+                    if (customData.ContainsKey("chosen_character"))
+                    {
+                        int result;
+                        if (Int32.TryParse(customData["chosen_character"].ToString(), out result))
+                        {
+                            DataCarrier.chosenCharacter = result;
+                        }
+                    }
+
+                    //Legacy Default situations
+                    else
+                    {
+                        customData.Add("chosen_character", DataCarrier.chosenCharacter);
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+
+                    //Update the sprite image
+                    characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
-            }                        
+            }
+        }
+
+        public void OnUserNameChanged()
+        {
+            //Only enable name change button interactivity if there's changes to be made
+            if (Connector.PNNickName.Equals(playerNameInput.text))
+            {
+                nameChangeBtn.interactable = false;
+            }
+
+            else
+            {
+                nameChangeBtn.interactable = true;
+            }
         }
       
-        // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
-        public async void SetPlayerName()
+        // Changes the player name
+        public async Task<bool> SetPlayerName()
         {
             await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom);
-            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;     
+            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
+            nameChangeBtn.interactable = false;
+            return true;
         }
     }
 }

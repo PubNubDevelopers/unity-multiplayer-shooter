@@ -9,13 +9,14 @@ Welcome to PubNub's Unity Game!
 This is a Unity game built using the [Super Multiplayer Shooter Unity](https://assetstore.unity.com/packages/templates/systems/super-multiplayer-shooter-template-124977) game, an online shooting brawler game enhanced with the following PubNub real-time functionality:
 
 * In-App Messaging: Send and receive messages in the lobby and main menu.
-* Presence: Detect when users are online/offline
-* Friend List: Add, Remove, and Check when new players come online/offline
-* Leaderboard: Update player scores after matches
+* Presence: Detect when users are online/offline.
+* Friend List: Add, Remove, and Check when new players come online/offline.
+* Leaderboard: Update player scores after matches.
 * Language Translation: Translate your messages to a variety of languages using Message Filters.
 * Profanity Filtering: Block profane and hateful messages while in-game using Message Filters.
 * User Metadata: Search and filter for players and view their usernames via App Context.
-* Player movement: Send small, ephemeral updates for player movement and state
+* Item Trading: Trade hats with your online friends to wear while playing matches.
+* Player movement: Send small, ephemeral updates for player movement and state.
 
 While this README is focused on the PubNub functionality added to the game, please review Assets > SuperMultiplayerShooter > Guide.pdf. The developers of the original asset have provided detail instructions on how to play the game itself, how to add your own skins/weapons/bullets, and various settings to adjust in the game.
 
@@ -28,7 +29,7 @@ Note:
 
 This game is a work in progress, please bear with us whilst we make it awesome.  Any issues are a result of our implementation, not a limitation of PubNub :) 
 
-- Player trading has not been implemented.  The 'trade' button in the friend list will not do anything.
+- Player trading has been implemented, but has been to occassionally display the incorrect number of players online in the total player count when users begin trading. Please note that other users online have not been kicked offline and does not affect trading or creating/searching rooms.
 - Playing the game with players located on different continents can lead to unexpected results, such as characters not respawning.
 
 ## Prerequisites
@@ -181,12 +182,15 @@ Players can:
 * Search for other users that have logged into the game by clicking on the magnifying glass search icon. Add them as friends
 * See the total number of users connected online via the Presence indicator in the top left corner of the screen.
 * See the Leaderboard statistics in the bottom left of the screen.
+* Trade hats with friends
 
-The following files are of focus to review for this scene that pertain to PubNub Functionality.
+The following files (or folders of files) are of focus to review for this scene that pertain to PubNub Functionality.
 - Assets > SuperMultiplayerShooter > Scripts > SampleMainMenu.cs
 - Assets > SuperMultiplayerShooter > Scripts > ChatSystem.cs
 - Assets > SuperMultiplayerShooter > Scripts > PubNubManager.cs
 - Assets > SuperMultiplayerShooter > Scripts > MessageModeration.cs
+- Assets > SuperMultiplayerShooter > Scripts > FriendsList
+- Assets > SuperMultiplayerShooter > Scripts > TradingSystem
 
 ### LoadingScene
 The Scene that is loaded between the MainMenu and Game Scenes. No PubNub functionality occurs here.
@@ -227,6 +231,9 @@ The following files are of focus to review for this scene that pertain to PubNub
 This application uses [PubNub presence state](https://www.pubnub.com/docs/general/presence/presence-state) to create and track lobby ownership, this allows the lobby to be automatically closed when the owner (creator) goes offline for whatever reason.  New players who join the lobby indicate their membership by publishing a [PubNub message](https://www.pubnub.com/docs/general/messages/publish) to the lobby creator, meaning new players can only join lobbies whose owners are online.
 
 An alternative lobby implementation would be to use [PubNub messages](https://www.pubnub.com/docs/general/messages/publish) in conujnction with [message persistence](https://www.pubnub.com/docs/general/storage), so a lobby creator would publish a message in a `lobbies` channel.  Other players could read the lobby state by reading the `lobbies` channel history, along with any associated lobby metadata, stored in [message actions](https://www.pubnub.com/docs/general/messages/actions#retrieving-actions).
+
+### Item Trading
+The implementation of item trading in this application is deliberately simple. Typically when receiving a trade request, the recipient will be informed through a notification but this demo will instead immediately initiate the trading window and workflow. One limitation of this streamlined approach worth bearing in mind is that the recipient of your trade must be online.
 
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");

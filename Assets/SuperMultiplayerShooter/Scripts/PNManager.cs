@@ -37,6 +37,8 @@ public class PNManager : PNManagerBehaviour
     public PNPresenceEvent onPubNubPresence;  
     public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
     public PNObjectEvent onPubNubObject;
+    public delegate void PNStatusEvent(PNStatus status); // Receive status updates
+    public PNStatusEvent onPubNubStatus;
     public delegate void PubNubReady(); //  PubNub is initialized, ok to call PubNub object
     public PubNubReady onPubNubReady;
 
@@ -95,6 +97,7 @@ public class PNManager : PNManagerBehaviour
         pnListener.onSignal += OnPnSignal;
         pnListener.onObject += OnPnObject;
         pnListener.onPresence += OnPnPresence;
+        pnListener.onStatus += OnPnStatus;
         await SubscribeToStaticChannels();
         try { onPubNubReady(); } catch (System.Exception) { }
     }
@@ -164,6 +167,17 @@ public class PNManager : PNManagerBehaviour
         try
         {
             onPubNubObject(result);
+        }
+        catch (System.Exception) { }
+    }
+
+    // Handler for PubNub Status event.
+    private void OnPnStatus(Pubnub pn, PNStatus status)
+    {
+        //  Notify other listeners
+        try
+        {
+            onPubNubStatus(status);
         }
         catch (System.Exception) { }
     }
@@ -251,6 +265,9 @@ public class PNManager : PNManagerBehaviour
             customData["hats"] = JsonConvert.SerializeObject(Connector.instance.GenerateRandomHats());
             customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
             customData["60fps"] = false;
+            customData["chosen_hat"] = DataCarrier.chosenHat;
+            customData["chosen_character"] = DataCarrier.chosenCharacter;
+
             // Update
             await UpdateUserMetadata(pubnub.GetCurrentUserId(), pubnub.GetCurrentUserId(), customData);
         }
@@ -331,13 +348,6 @@ public class PNManager : PNManagerBehaviour
                 Custom = setUuidMetadataResult.Custom,
                 Updated = setUuidMetadataResult.Updated
             };
-
-            //Update hat inventory.
-            if (setUuidMetadataResult.Custom != null && setUuidMetadataResult.Custom.ContainsKey("hats"))
-            {
-                List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(setUuidMetadataResult.Custom["hats"].ToString());
-                Connector.instance.UpdateAvailableHats(availableHats);
-            }
 
             //Existing player
             if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
