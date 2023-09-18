@@ -267,7 +267,7 @@ namespace Visyde
         //  changes (e.g. they go offline) on the same channel but there are other ways to implement a lobby and
         //  room system with PubNub.  Alternatively you could use PubNub's message history
         //  to store a created room, then others could read a channel's history to decide which room to join.
-        public async Task<bool> CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots)
+        public async Task<bool> CreateCustomGame(int selectedMap, int maxPlayers, bool allowBots, int gameLength)
         {
             if (pubnub != null)
             {
@@ -282,6 +282,7 @@ namespace Visyde
                 metaData["started"] = 0;
                 metaData["map"] = selectedMap;
                 metaData["customAllowBots"] = allowBots ? 1 : 0;
+                metaData["gameLength"] = gameLength * 60; //Match Duration will be set in seconds
                 string channelName = PubNubUtilities.chanGlobal;
                 PNResult<PNSetStateResult> setPresenceStateResponse = await pubnub.SetPresenceState()
                     .Channels(new string[] { channelName })
@@ -625,6 +626,7 @@ namespace Visyde
                         int map = System.Convert.ToInt32(userState["map"]);
                         int maxPlayers = System.Convert.ToInt32(userState["maxPlayers"]);
                         bool allowBots = (System.Convert.ToInt32(userState["customAllowBots"]) == 1);
+                        GAME_LENGTH_MAKE_ME_CONFIGURABLE = System.Convert.ToInt32(userState["gameLength"]);
                         string ownerId = (string)userState["ownerId"];
                         bool inProgress = System.Convert.ToInt32(userState["inProgress"]) == 1;
                         PNRoomInfo roomInfo = new PNRoomInfo(uuid, name, map, maxPlayers, allowBots, roomCounter, GAME_LENGTH_MAKE_ME_CONFIGURABLE);

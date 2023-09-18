@@ -47,7 +47,7 @@ namespace Visyde
 
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
-        void Awake(){
+        void Awake() {
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
         }
 
@@ -70,6 +70,7 @@ namespace Visyde
             chatBtn.interactable = true;
             friendsBtn.interactable = true;
             settingsBtn.interactable = true;
+            playerNameInput.interactable = true;
             nameChangeBtn.interactable = true;
             nameChangeBtn.onClick.AddListener(async () => await SetPlayerName());
             MainMenuSetup();
@@ -130,9 +131,9 @@ namespace Visyde
                     };
 
                     // Add new or update existing player
-                    if(result.Event.Equals("set"))
+                    if (result.Event.Equals("set"))
                     {
-                        if(PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
+                        if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                         {
                             PNManager.pubnubInstance.CachedPlayers[result.UuidMetadata.Uuid] = meta;
                         }
@@ -148,17 +149,17 @@ namespace Visyde
                     {
                         PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
                     }
-                }            
+                }
             }
         }
-      
+
         // Update is called once per frame.
         // Note: Ensuring each Gameobject is not null due to the connection not being destroyed when
         // transitioning scenes.
         void Update()
         {
             // Handling panels:
-            if(customGameRoomPanel != null)
+            if (customGameRoomPanel != null)
             {
                 customGameRoomPanel.SetActive(Connector.instance.isInCustomGame);
 
@@ -172,7 +173,7 @@ namespace Visyde
                 DataCarrier.message = "";
             }
 
-            if(chat != null)
+            if (chat != null)
             {
                 //Listen for whenever user opens the chat window.
                 if (chat.activeSelf == false && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
@@ -185,8 +186,8 @@ namespace Visyde
                     }
                 }
             }
-           
-            if(lobbyBrowserPanel != null && customGameRoomPanel != null)
+
+            if (lobbyBrowserPanel != null && customGameRoomPanel != null)
             {
                 //Don't allow chatting while searching for games.
                 if (lobbyBrowserPanel.activeSelf && !customGameRoomPanel.activeSelf)
@@ -198,7 +199,7 @@ namespace Visyde
                 {
                     chat.SetActive(true);
                 }
-            }          
+            }       
         }
 
         /// <summary>
@@ -246,7 +247,7 @@ namespace Visyde
         /// Extracts metadata for active user and performs menu setup.
         /// </summary>
         private void MainMenuSetup()
-        {          
+        {
             //Change playerInput name to be set to username of the user as long as the name was originally set.
             if (PNManager.pubnubInstance.CachedPlayers.Count > 0 && PNManager.pubnubInstance.CachedPlayers.ContainsKey(pubnub.GetCurrentUserId()))
             {
@@ -286,11 +287,11 @@ namespace Visyde
                     //Set the Selected Hat
                     if (customData.ContainsKey("chosen_hat"))
                     {
-                       int result;
-                       if(Int32.TryParse(customData["chosen_hat"].ToString(), out result))
-                       {
+                        int result;
+                        if (Int32.TryParse(customData["chosen_hat"].ToString(), out result))
+                        {
                             DataCarrier.chosenHat = result;
-                       }
+                        }
                     }
 
                     //Legacy Default situations
@@ -320,7 +321,21 @@ namespace Visyde
                     //Update the sprite image
                     characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
-            }                        
+            }
+        }
+
+        public void OnUserNameChanged()
+        {
+            //Only enable name change button interactivity if there's changes to be made
+            if (Connector.PNNickName.Equals(playerNameInput.text))
+            {
+                nameChangeBtn.interactable = false;
+            }
+
+            else
+            {
+                nameChangeBtn.interactable = true;
+            }
         }
       
         // Changes the player name
@@ -328,6 +343,7 @@ namespace Visyde
         {
             await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom);
             Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
+            nameChangeBtn.interactable = false;
             return true;
         }
     }

@@ -23,6 +23,7 @@ namespace Visyde
         public Text mapNameText;
         public SelectorUI mapSelector;
         public SelectorUI playerNumberSelector;
+        public SelectorUI gameLengthSelector;
         public Toggle enableBotsOption;
 
         [Header("Joined Screen:")]
@@ -133,7 +134,7 @@ namespace Visyde
             }
         }
         public async void Create(){
-            await Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn);
+            await Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn, gameLengthSelector.items[gameLengthSelector.curSelected].value);
         }
         public void StartGame(){
             Connector.instance.StartCustomGame();
