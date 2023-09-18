@@ -40,6 +40,11 @@ namespace Visyde
         public GameObject lobbyBrowserPanel;
         public GameObject settingsPanel;
         public GameObject cosmeticsPanel;
+        public Button nameChangeBtn;
+        public Button chatBtn;
+        public Button friendsBtn;
+        public Button settingsBtn;
+
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
         void Awake(){
@@ -61,9 +66,12 @@ namespace Visyde
             Invoke("GetActiveGlobalPlayers", 2.0f); //  Give the system time to settle down before calling global player count
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
             customMatchBTN.interactable = true;
-            customizeCharacterButton.interactable = true;       
-            //  todo set friends button interactable
-            //  todo set chat button interactable
+            customizeCharacterButton.interactable = true;
+            chatBtn.interactable = true;
+            friendsBtn.interactable = true;
+            settingsBtn.interactable = true;
+            nameChangeBtn.interactable = true;
+            nameChangeBtn.onClick.AddListener(async () => await SetPlayerName());
             MainMenuSetup();
         }
 
@@ -315,11 +323,12 @@ namespace Visyde
             }                        
         }
       
-        // Changes the player name whenever the user edits the Nickname input (on enter or click out of input field)
-        public async void SetPlayerName()
+        // Changes the player name
+        public async Task<bool> SetPlayerName()
         {
             await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), playerNameInput.text, PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom);
-            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;     
+            Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
+            return true;
         }
     }
 }
