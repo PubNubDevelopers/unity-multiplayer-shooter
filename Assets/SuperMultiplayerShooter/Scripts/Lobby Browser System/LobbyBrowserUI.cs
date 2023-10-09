@@ -23,6 +23,7 @@ namespace Visyde
         public Text mapNameText;
         public SelectorUI mapSelector;
         public SelectorUI playerNumberSelector;
+        public SelectorUI gameLengthSelector;
         public Toggle enableBotsOption;
 
         [Header("Joined Screen:")]
@@ -40,14 +41,16 @@ namespace Visyde
         // Internals:
         string randomRoomName;
 
-        void OnEnable(){
+        void OnEnable()
+        {
             Connector.instance.onRoomListChange += onRoomListUpdate;
             Connector.instance.onCreateRoomFailed += onCreateRoomFailed;
             Connector.instance.onJoinRoom += OnJoinedRoom;
             Connector.instance.onPlayerJoin += OnPlayerJoined;
             Connector.instance.onPlayerLeave += OnPlayerLeft;
         }
-        void OnDisable(){
+        void OnDisable()
+        {
             Connector.instance.onRoomListChange -= onRoomListUpdate;
             Connector.instance.onCreateRoomFailed -= onCreateRoomFailed;
             Connector.instance.onJoinRoom -= OnJoinedRoom;
@@ -63,7 +66,8 @@ namespace Visyde
             mapNameText.text = Connector.instance.maps[mapSelector.curSelected];
         }
 
-        public void RefreshBrowser(){
+        public void RefreshBrowser()
+        {
             // Clear UI room list:
             foreach (Transform t in roomItemHandler)
             {
@@ -120,7 +124,8 @@ namespace Visyde
             startBTN.interactable = Connector.instance.isMasterClient && ((Connector.instance.CurrentRoom.PlayerList.Count > 1 && !allowBots) || (allowBots));
             refreshLobbyBTN.interactable = !Connector.instance.isMasterClient;
         }
-        public void Join(PNRoomInfo room){
+        public void Join(PNRoomInfo room)
+        {
             Connector.instance.JoinCustomGame(room);
         }
         public void Leave()
@@ -132,10 +137,12 @@ namespace Visyde
                 Connector.instance.PlayerSelected("chat-remove", "Lobby");
             }
         }
-        public async void Create(){
-            await Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn);
+        public async void Create()
+        {
+            await Connector.instance.CreateCustomGame(mapSelector.curSelected, playerNumberSelector.items[playerNumberSelector.curSelected].value, enableBotsOption.isOn, gameLengthSelector.items[gameLengthSelector.curSelected].value);
         }
-        public void StartGame(){
+        public void StartGame()
+        {
             Connector.instance.StartCustomGame();
         }
         public async void RefreshRooms()
@@ -175,7 +182,8 @@ namespace Visyde
             messageDisplay.text += message;
         }
         // Subscribed to Connector's "onCreateRoomFailed" event:
-        void onCreateRoomFailed(){
+        void onCreateRoomFailed()
+        {
             // Display error:
             DataCarrier.message = "Custom game creation failed.";
         }
@@ -191,7 +199,7 @@ namespace Visyde
             if (Connector.instance.CurrentRoom.AllowBots) enableBotsText.text = Connector.instance.CurrentRoom.AllowBots ? "Yes" : "No";
 
             //Send updates to Chat.cs
-            Connector.instance.PlayerSelected("chat-add","Lobby");      
+            Connector.instance.PlayerSelected("chat-add", "Lobby");
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using PubnubApi;
 using PubNubUnityShowcase;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,29 +26,29 @@ namespace Visyde
         /// <param name="uuid"></param>
         /// <param name="name"></param>
         public void Set(string uuid, string name)
-        {           
+        {
             nameText.text = name;
             userId = uuid;
             onlineStatus.color = Color.gray;
             messageButton.onClick.AddListener(() => OnMessageClick());
-            //tradeBtn.onClick.AddListener(() => OnTradeClick()); To update when trade is implemented.
             acceptButton.onClick.AddListener(async () => await OnAcceptFriendClick());
             removeButton.onClick.AddListener(async () => await OnRemoveClick());
+            tradeButton.onClick.AddListener(() => OnTradeClick());
         }
 
         /// <summary>
         /// Called when the user wants to send a private message to a friend.
         /// </summary>
         public void OnMessageClick()
-        {       
+        {
             Connector.instance.PlayerSelected("chat-add", userId);
         }
         /// <summary>
         /// Called when the user clicks the trade button
         /// </summary>
-        public void OnTradeClick()
+        public async void OnTradeClick()
         {
-            //TODO, once player trading is integrated.
+            //TODO: Will be integrated in a future update.
         }
         /// <summary>
         /// Remove friend
@@ -58,7 +59,7 @@ namespace Visyde
 
             //Determine if need to remove player from friend group.
             //remove = added to friend group, reject = yet to add friend to friend group.
-            if(removeButton.name.Equals("remove"))
+            if (removeButton.name.Equals("remove"))
             {
                 await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupStatus + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanPresence + userId });
                 await PNManager.pubnubInstance.RemoveChannelsFromChannelGroup(PubNubUtilities.chanFriendChanGroupChat + pubnub.GetCurrentUserId(), new string[] { PubNubUtilities.chanFriendChat + userId });
@@ -100,6 +101,6 @@ namespace Visyde
                .ExecuteAsync();
 
             return true;
-        }   
+        }
     }
 }
