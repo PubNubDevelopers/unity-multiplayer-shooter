@@ -33,7 +33,8 @@ namespace Visyde
             messageButton.onClick.AddListener(() => OnMessageClick());
             acceptButton.onClick.AddListener(async () => await OnAcceptFriendClick());
             removeButton.onClick.AddListener(async () => await OnRemoveClick());
-            tradeButton.onClick.AddListener(() => OnTradeClick());
+            tradeButton.interactable = false; // To be removed once player trading is fully implemented.
+            //tradeButton.onClick.AddListener(() => OnTradeClick()); // will be implemented in future updates
         }
 
         /// <summary>
@@ -44,12 +45,16 @@ namespace Visyde
             Connector.instance.PlayerSelected("chat-add", userId);
         }
         /// <summary>
-        /// Called when the user clicks the trade button
+        /// Called when the user clicks the trade button.
+        /// To be implemented in future updates.
         /// </summary>
+        /// 
+        /*
         public async void OnTradeClick()
         {
             //TODO: Will be integrated in a future update.
         }
+        */
         /// <summary>
         /// Remove friend
         /// </summary>
