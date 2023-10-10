@@ -187,6 +187,7 @@ The following files are of focus to review for this scene that pertain to PubNub
 - Assets > SuperMultiplayerShooter > Scripts > ChatSystem.cs
 - Assets > SuperMultiplayerShooter > Scripts > PubNubManager.cs
 - Assets > SuperMultiplayerShooter > Scripts > MessageModeration.cs
+- Assets > SuperMultiplayerShooter > Scripts > FriendsList
 
 ### LoadingScene
 The Scene that is loaded between the MainMenu and Game Scenes. No PubNub functionality occurs here.

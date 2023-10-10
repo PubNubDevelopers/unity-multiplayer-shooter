@@ -30,13 +30,15 @@ public class PNManager : PNManagerBehaviour
 
     //  Callbacks
     public delegate void PNMessageEvent(PNMessageResult<object> message);
-    public PNMessageEvent onPubNubMessage;  
+    public PNMessageEvent onPubNubMessage;
     public delegate void PNSignalEvent(PNSignalResult<object> message);
     public PNSignalEvent onPubNubSignal;
     public delegate void PNPresenceEvent(PNPresenceEventResult result);
-    public PNPresenceEvent onPubNubPresence;  
+    public PNPresenceEvent onPubNubPresence;
     public delegate void PNObjectEvent(PNObjectEventResult result); // Receive app context (metadata) updates
     public PNObjectEvent onPubNubObject;
+    public delegate void PNStatusEvent(PNStatus status); // Receive status updates
+    public PNStatusEvent onPubNubStatus;
     public delegate void PubNubReady(); //  PubNub is initialized, ok to call PubNub object
     public PubNubReady onPubNubReady;
 
@@ -95,6 +97,7 @@ public class PNManager : PNManagerBehaviour
         pnListener.onSignal += OnPnSignal;
         pnListener.onObject += OnPnObject;
         pnListener.onPresence += OnPnPresence;
+        pnListener.onStatus += OnPnStatus;
         await SubscribeToStaticChannels();
         try { onPubNubReady(); } catch (System.Exception) { }
     }
@@ -164,6 +167,17 @@ public class PNManager : PNManagerBehaviour
         try
         {
             onPubNubObject(result);
+        }
+        catch (System.Exception) { }
+    }
+
+    // Handler for PubNub Status event.
+    private void OnPnStatus(Pubnub pn, PNStatus status)
+    {
+        //  Notify other listeners
+        try
+        {
+            onPubNubStatus(status);
         }
         catch (System.Exception) { }
     }
@@ -251,6 +265,9 @@ public class PNManager : PNManagerBehaviour
             customData["hats"] = JsonConvert.SerializeObject(Connector.instance.GenerateRandomHats());
             customData["language"] = LocalizationSettings.SelectedLocale.Identifier.Code;
             customData["60fps"] = false;
+            customData["chosen_hat"] = DataCarrier.chosenHat;
+            customData["chosen_character"] = DataCarrier.chosenCharacter;
+
             // Update
             await UpdateUserMetadata(pubnub.GetCurrentUserId(), pubnub.GetCurrentUserId(), customData);
         }
@@ -289,7 +306,7 @@ public class PNManager : PNManagerBehaviour
                     Updated = pnUUIDMetadataResult.Updated
                 };
 
-                if(!PNManager.pubnubInstance.CachedPlayers.ContainsKey(pnUUIDMetadataResult.Uuid))
+                if (!PNManager.pubnubInstance.CachedPlayers.ContainsKey(pnUUIDMetadataResult.Uuid))
                 {
                     PNManager.pubnubInstance.CachedPlayers.Add(pnUUIDMetadataResult.Uuid, meta);
                 }
@@ -307,7 +324,7 @@ public class PNManager : PNManagerBehaviour
     /// <param name="name">The nickname of the player</param>
     /// <param name="metadata">The metadata to update</param>
     public async Task<bool> UpdateUserMetadata(string uuid, string name, Dictionary<string, object> metadata)
-    {        
+    {
         PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
             .Uuid(uuid)
             .Name(name)
@@ -331,13 +348,6 @@ public class PNManager : PNManagerBehaviour
                 Custom = setUuidMetadataResult.Custom,
                 Updated = setUuidMetadataResult.Updated
             };
-
-            //Update hat inventory.
-            if (setUuidMetadataResult.Custom != null && setUuidMetadataResult.Custom.ContainsKey("hats"))
-            {
-                List<int> availableHats = JsonConvert.DeserializeObject<List<int>>(setUuidMetadataResult.Custom["hats"].ToString());
-                Connector.instance.UpdateAvailableHats(availableHats);
-            }
 
             //Existing player
             if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(setUuidMetadataResult.Uuid))
@@ -412,7 +422,7 @@ public class PNManager : PNManagerBehaviour
         .ChannelGroup("family")
         .ExecuteAsync();
 
-        if(delCgResponse.Status != null && !delCgResponse.Status.Error)
+        if (delCgResponse.Status != null && !delCgResponse.Status.Error)
         {
             return true;
         }
