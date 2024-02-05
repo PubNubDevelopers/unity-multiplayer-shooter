@@ -29,6 +29,7 @@ namespace Visyde
         public Button customMatchBTN;
         public GameObject customGameRoomPanel;
         public Button customizeCharacterButton;
+        public Button shopButton;
         public InputField playerNameInput;
         public GameObject messagePopupObj;
         public Text messagePopupText;
@@ -68,6 +69,7 @@ namespace Visyde
             await PNManager.pubnubInstance.GetAllUserMetadata(); //Loading Player Cache.
             customMatchBTN.interactable = true;
             customizeCharacterButton.interactable = true;
+            shopButton.interactable = true;
             chatBtn.interactable = true;
             friendsBtn.interactable = true;
             settingsBtn.interactable = true;
