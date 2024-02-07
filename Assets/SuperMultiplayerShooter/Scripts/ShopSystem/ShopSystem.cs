@@ -1,39 +1,62 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Purchasing;
 using UnityEngine.UI;
 
 public class ShopSystem : MonoBehaviour
 {
-    public UIProduct shopItemPrefab; // Assign your item prefab in the Inspector
+    public ShopItem shopItemPrefab; // Assign your item prefab in the Inspector
     public Transform itemsParent; // Assign the content area of your Scroll View in the Inspector
-    private IStoreController m_StoreController; // The Unity Purchasing system's store controller
+    private List<ShopItemData> shopItems;
+
 
     // Start is called before the first frame update
     void Start()
     {
-        DisplayIAPItems();
-
+        LoadShopData();
     }
-    private void DisplayIAPItems()
+    private void LoadShopData()
     {
-        var productCatalog = ProductCatalog.LoadDefaultCatalog();
-
-        foreach (var product in productCatalog.allValidProducts)
+        try
         {
-            // Instantiate an item prefab for each product
-            UIProduct item = Instantiate(shopItemPrefab, itemsParent);
-
-            // Here we directly access Unity IAP's store controller to fetch the price
-            if (CodelessIAPStoreListener.Instance.HasProductInCatalog(product.id))
+            // Assuming the JSON string is loaded into jsonText from Resources or another source
+            TextAsset jsonText = Resources.Load<TextAsset>("shop_data");
+            if (jsonText == null)
             {
-                var storeProduct = CodelessIAPStoreListener.Instance.GetProduct(product.id);
-                if (storeProduct != null)
-                {
-                    item.Setup(storeProduct);
-                }
+                Debug.LogError("Failed to load shop_data.json. Make sure the file exists and the path is correct.");
+                return;
             }
+
+            ShopDataWrapper shopDataWrapper = JsonUtility.FromJson<ShopDataWrapper>(jsonText.text);
+
+            if (shopDataWrapper?.items == null)
+            {
+                Debug.LogError("Failed to parse shop items from JSON.");
+                return;
+            }
+
+            shopItems = new List<ShopItemData>(shopDataWrapper.items);
+
+            // Post-process items if necessary (e.g., converting category strings to enum, loading sprites)
+            foreach (var item in shopItems)
+            {
+                //item.CategoryEnum = (Categories)Enum.Parse(typeof(Categories), item.category, true);
+                // Load icon sprite for each item here if applicable
+                ShopItem shopItem = Instantiate(shopItemPrefab, itemsParent);
+                shopItem.Setup(item);
+            }
+
+            // Now shopItems contains all your shop item data
+
+            // ShopItem item = Instantiate(shopItemPrefab, itemsParent);
+            //item.Setup(shopField);
+        }
+
+        catch (Exception e)
+        {
+            // Log the error to the Unity console
+            Debug.LogError($"Failed to load or parse shop data: {e.Message}");
         }
     }
 
@@ -41,5 +64,11 @@ public class ShopSystem : MonoBehaviour
     {
         // Code to initiate purchase...
         //CodelessIAPStoreListener.Instance.InitiatePurchase(productId);
+    }
+
+    [System.Serializable]
+    public class ShopDataWrapper
+    {
+        public ShopItemData[] items;
     }
 }

@@ -1,0 +1,34 @@
+{
+    "items":
+    [
+        {
+            "id": "santa_hat",
+            "description": "Enjoy the Festivities!",
+            "category": "HATS",
+            "original_cost": 2,
+            "quantity_given": 1,
+            "discounted": false,
+            "discounted_price": null
+        },
+        {
+            "id": "pirate_hat",
+            "description": "Argh Matey!",
+            "category": "HATS",
+            "original_cost": 1,
+            "quantity_given": 1,
+            "discounted": false,
+            "discounted_price": null
+        },
+        {
+            "id": "smg_red",
+            "description": "Red Skin for SMG.",
+            "category": "WEAPON_SKINS",
+            "original_cost": 3,
+            "quantity_given": 1,
+            "discounted": false,
+            "discounted_price": null
+        }
+    ]
+}
+
+

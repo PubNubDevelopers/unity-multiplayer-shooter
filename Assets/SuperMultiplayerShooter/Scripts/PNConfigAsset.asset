@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1befe917005a589459d5844ea4154b7c, type: 3}
   m_Name: PNConfigAsset
   m_EditorClassIdentifier: 
-  PublishKey: 
-  SubscribeKey: 
+  PublishKey: pub-c-27c9a7a7-bbb0-4210-8dd7-850512753b31
+  SubscribeKey: sub-c-68a629b6-9566-4f83-b74b-000b0fad8a69
   AuthKey: 
   CipherKey: 
   EnableTelemetry: 0
