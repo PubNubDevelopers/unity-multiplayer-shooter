@@ -321,6 +321,41 @@ namespace Visyde
                         PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
                     }
 
+                    // Add Coins (earned in-game currency) for the player
+                    if(customData.ContainsKey("coins"))
+                    {
+                        if (Int32.TryParse(customData["coins"].ToString(), out int result))
+                        {
+                            DataCarrier.coins = result;
+                        }
+                    }
+                    
+                    // Legacy Situations: All players should have at least 0 coins.
+                    else
+                    {
+                        customData.Add("coins", "0");
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+                  
+                    //Add Gems (purchased in-game currency) for the player.
+                    if (customData.ContainsKey("gems"))
+                    {
+                        if (Int32.TryParse(customData["gems"].ToString(), out int result))
+                        {
+                            DataCarrier.gems = result;
+                        }
+                    }
+
+                    // Legacy Situations: Add Gems (purchased in-game currency) for the player. All players should have at least 0 gems.
+                    else
+                    {
+                        customData.Add("gems", "0");
+                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    }
+
+                    // Update the player's currency fields
+                    //TODO: function to update currency hud.
+                  
                     //Update the sprite image
                     characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
@@ -348,6 +383,11 @@ namespace Visyde
             Connector.PNNickName = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name = playerNameInput.text;
             nameChangeBtn.interactable = false;
             return true;
+        }
+
+        public void DisplayCurrency()
+        {
+
         }
     }
 }
