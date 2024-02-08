@@ -3,13 +3,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Visyde;
 
 public class ShopSystem : MonoBehaviour
 {
     public ShopItem shopItemPrefab; // Assign your item prefab in the Inspector
     public Transform itemsParent; // Assign the content area of your Scroll View in the Inspector
+    [SerializeField]
+    public PurchasePopup PurchasePopup;
+
     private List<ShopItemData> shopItems;
 
+
+    public static ShopSystem instance;
+
+    void Awake()
+    {
+        instance = this;
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -59,11 +70,11 @@ public class ShopSystem : MonoBehaviour
             Debug.LogError($"Failed to load or parse shop data: {e.Message}");
         }
     }
-
-    private void PurchaseProduct(string productId)
+ 
+    // Open the Purchased Item Popup and set new sprite.
+    public void OpenPurchasePopup(Sprite purchasedItemSprite)
     {
-        // Code to initiate purchase...
-        //CodelessIAPStoreListener.Instance.InitiatePurchase(productId);
+        PurchasePopup.Show(purchasedItemSprite);
     }
 
     [System.Serializable]

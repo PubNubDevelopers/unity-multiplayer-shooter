@@ -1132,5 +1132,11 @@ namespace Visyde
 
             return true;
         }
+
+        // Open the Purchased Item Popup and set new sprite.
+        public void OpenPurchasePopup(Sprite purchasedItemSprite)
+        {
+            ShopSystem.instance.OpenPurchasePopup(purchasedItemSprite);
+        }
     }
 }

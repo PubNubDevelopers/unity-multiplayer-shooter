@@ -2,6 +2,7 @@ using System;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
+using Visyde;
 
 public class ShopItem : MonoBehaviour
 {
@@ -48,17 +49,16 @@ public class ShopItem : MonoBehaviour
         //shopItemData.Icon = TODO
 
     }
-
-    public void ShopItemSelected()
-    {
-        //TODO: If item is selected, open pop-up asking if want to purchase.
-        // Send Item Data with it
-    }
-    
+ 
+    // TODO: HANDLE DUPLICATE PURCHASE ATTEMPTS - PERHAPS DONE THROUGH UI BY DISABLING ITEM BY COMPARING TO PLAYER"S INVENTORY?
     public void Purchase()
     {
-       // PurchaseButton.enabled = false;
-       // OnPurchase?.Invoke(Model, HandlePurchaseComplete);
+        // Update the player's app context for inventory and resources based on purchase (item obtained and cost)
+
+        // 
+
+        // Open the Purchase Popup ti display success
+        Connector.instance.OpenPurchasePopup(Icon.sprite);        
     }
 
     private void HandlePurchaseComplete()
