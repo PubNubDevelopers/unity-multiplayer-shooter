@@ -267,6 +267,8 @@ public class PNManager : PNManagerBehaviour
             customData["60fps"] = false;
             customData["chosen_hat"] = DataCarrier.chosenHat;
             customData["chosen_character"] = DataCarrier.chosenCharacter;
+            customData["coins"] = 0;
+            customData["gems"] = 0;
 
             // Update
             await UpdateUserMetadata(pubnub.GetCurrentUserId(), pubnub.GetCurrentUserId(), customData);

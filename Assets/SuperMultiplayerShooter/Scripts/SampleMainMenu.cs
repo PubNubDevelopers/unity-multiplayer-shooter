@@ -45,6 +45,8 @@ namespace Visyde
         public Button chatBtn;
         public Button friendsBtn;
         public Button settingsBtn;
+        public Text coinsText;
+        public Text gemsText;
 
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
@@ -354,8 +356,7 @@ namespace Visyde
                     }
 
                     // Update the player's currency fields
-                    //TODO: function to update currency hud.
-                  
+                    DisplayCurrency();                  
                     //Update the sprite image
                     characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
@@ -385,9 +386,13 @@ namespace Visyde
             return true;
         }
 
+        /// <summary>
+        /// Displays the currency updates in the UI
+        /// </summary>
         public void DisplayCurrency()
         {
-
+            coinsText.text = DataCarrier.coins.ToString();
+            gemsText.text = DataCarrier.gems.ToString();
         }
     }
 }

@@ -3159,7 +3159,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: -31.000011, y: 0}
-  m_SizeDelta: {x: 0, y: 48.233}
+  m_SizeDelta: {x: 124, y: 48.233}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &166147295
 MonoBehaviour:
@@ -4323,6 +4323,8 @@ MonoBehaviour:
   chatBtn: {fileID: 879919664}
   friendsBtn: {fileID: 1240961055}
   settingsBtn: {fileID: 877440447}
+  coinsText: {fileID: 635501591}
+  gemsText: {fileID: 1746515408}
 --- !u!4 &232236243
 Transform:
   m_ObjectHideFlags: 0
@@ -6819,10 +6821,10 @@ RectTransform:
   m_Father: {fileID: 166147294}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 100}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 6, y: -50}
+  m_SizeDelta: {x: 12, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &498185145
 MonoBehaviour:
@@ -8385,7 +8387,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 0
+  m_Text: -1
 --- !u!222 &635501592
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -21504,7 +21506,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 0
+  m_Text: -1
 --- !u!222 &1746515409
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -21854,10 +21856,10 @@ RectTransform:
   m_Father: {fileID: 166147294}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 100}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 118, y: -50}
+  m_SizeDelta: {x: 12, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1780924668
 MonoBehaviour:
@@ -23749,7 +23751,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1937101243
 RectTransform:
   m_ObjectHideFlags: 0
@@ -25482,8 +25484,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 282.77133, y: 0}
-  m_SizeDelta: {x: 557.54266, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2138168473
 MonoBehaviour:
