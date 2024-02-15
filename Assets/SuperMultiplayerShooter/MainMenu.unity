@@ -11363,7 +11363,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -5.8286133, y: -0.74798584}
+  m_AnchoredPosition: {x: -5.8286743, y: -0.74798584}
   m_SizeDelta: {x: 11.800049, y: 0.18609619}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &847217821
@@ -21360,7 +21360,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -5.8286133, y: -0.74798584}
+  m_AnchoredPosition: {x: -5.8286743, y: -0.74798584}
   m_SizeDelta: {x: 11.800049, y: 0.18609619}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1741571821
@@ -23770,7 +23770,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -5.8286133, y: -0.74798584}
+  m_AnchoredPosition: {x: -5.8286743, y: -0.74798584}
   m_SizeDelta: {x: 11.800049, y: 0.18609619}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1937101244
@@ -23826,6 +23826,9 @@ MonoBehaviour:
   shopItemPrefab: {fileID: 187855113379175012, guid: f7a743f73c4f883418b1ef14ff3908a2,
     type: 3}
   itemsParent: {fileID: 1258252995}
+  categoryButtonsContainerGroup: {fileID: 184528741}
+  categoryButtonPrefab: {fileID: 5931566458773025867, guid: be2306e290c9711429a70cba56b81630,
+    type: 3}
   PurchasePopup: {fileID: 1741571823}
 --- !u!1 &1950985926
 GameObject:

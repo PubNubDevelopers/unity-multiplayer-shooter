@@ -26,44 +26,45 @@ public class ShopItem : MonoBehaviour
     {
         shopItem = shopItemData;
         PriceText.text = shopItem.original_cost.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
-        //PriceText.text = ($"{Product.metadata.localizedPriceString} " +
-            
-        /*
-        Texture2D texture = StoreIconProvider.GetIcon(Product.definition.id);
-        if (texture != null)
-        {
-            Sprite sprite = Sprite.Create(texture,
-                new Rect(0, 0, texture.width, texture.height),
-                Vector2.one / 2f
-            );
-
-            Icon.sprite = sprite;
-        }
-        else
-        {
-            Debug.LogError($"No Sprite found for {Product.definition.id}!");
-        }
-        */
-
-        //Set the Item Data
-        //shopItemData.Icon = TODO
-
+        LoadImage();       
     }
  
     // TODO: HANDLE DUPLICATE PURCHASE ATTEMPTS - PERHAPS DONE THROUGH UI BY DISABLING ITEM BY COMPARING TO PLAYER"S INVENTORY?
     public void Purchase()
     {
         // Update the player's app context for inventory and resources based on purchase (item obtained and cost)
-
-        // 
-
         // Open the Purchase Popup ti display success
-        Connector.instance.OpenPurchasePopup(Icon.sprite);        
+        Connector.instance.OpenPurchasePopup(Icon.sprite);
+
+        int cost = shopItem.currency_type.Equals("coins") ? DataCarrier.coins-- : DataCarrier.gems--;
+
+        // Update and Display New Value of Purchase
+        Connector.instance.CurrencyUpdated(shopItem.currency_type, cost);
+
     }
 
-    private void HandlePurchaseComplete()
+    /// <summary>
+    /// Loads the image from Assets > Resources based on category and product id
+    /// </summary>
+    void LoadImage()
     {
-       // PurchaseButton.enabled = true;
+        // Construct the path with category and id to load the specific image.
+        // For example, the path could be "Images/Category1/imageID"
+        string imagePath = shopItem.category + "/" + shopItem.id; // Adjust folder structure as needed.
+
+        // Load the image as a Sprite.
+        Sprite loadedSprite = Resources.Load<Sprite>(imagePath);
+
+        // Check if the image was successfully loaded.
+        if (loadedSprite != null)
+        {
+            // Set the loaded image to your display component.
+            Icon.sprite = loadedSprite;
+        }
+        else
+        {
+            Debug.LogError("Image with ID " + shopItem.id + " in category " + shopItem.category + " could not be loaded.");
+        }
     }
-    
+
 }

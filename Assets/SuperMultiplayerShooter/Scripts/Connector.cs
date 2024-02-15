@@ -85,6 +85,8 @@ namespace Visyde
 
         public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
+        public List<ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
+
         //  PubNub properties
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private static string userId = null;    //  The PubNub user ID for the current instance
@@ -112,6 +114,7 @@ namespace Visyde
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
+        public event Action<string, int> OnCurrencyUpdated;
 
         // Internal variables:
         private Bot[] curBots;
@@ -1065,6 +1068,15 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Update the calling class when the currency has been updated.
+        /// </summary>
+        /// <param name="action">The action that is occurring (adding a friend, creating private message option, etc)</param>
+        public void CurrencyUpdated(string currencyKey, int value)
+        {
+            OnCurrencyUpdated?.Invoke(currencyKey, value);
+        }
+
+        /// <summary>
         /// Returns the language of the user
         /// </summary>
         /// <returns></returns>
@@ -1137,6 +1149,15 @@ namespace Visyde
         public void OpenPurchasePopup(Sprite purchasedItemSprite)
         {
             ShopSystem.instance.OpenPurchasePopup(purchasedItemSprite);
+        }
+
+        /// <summary>
+        /// Returns the category id (name) that is used to filter the shop items. 
+        /// </summary>
+        /// <param name="categoryId">The Id of the Category (Name, i.e. "Hats")</param>
+        public void FilterShopItems(string categoryId)
+        {
+            ShopSystem.instance.FilterShopItems(categoryId);
         }
     }
 }

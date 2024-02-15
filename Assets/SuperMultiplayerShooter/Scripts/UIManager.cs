@@ -180,31 +180,7 @@ public class MyClass
                         winningPlayerText.text = GameManager.isDraw ? "Draw!" : gm.playerRankings[0];
                         subTextObject.SetActive(!GameManager.isDraw);
 
-                        // Update the player's number of rewards earned after completing a match
-                        //If successful, update the Connector object.
-                        if (PNManager.pubnubInstance.CachedPlayers.ContainsKey(Connector.instance.LocalPlayer.UserId)
-                            && PNManager.pubnubInstance.CachedPlayers[Connector.instance.LocalPlayer.UserId].Custom != null)
-                        {
-                            Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[Connector.instance.LocalPlayer.UserId].Custom;
-
-                            // Add Coins (earned in-game currency) for the player
-                            if (customData.ContainsKey("coins"))
-                            {
-                                if (Int32.TryParse(customData["coins"].ToString(), out int result))
-                                {
-                                    customData["coins"] = result + 1;
-                                }
-                            }
-
-                            // Legacy Situations: All players should have at least 0 coins.
-                            else
-                            {
-                                customData.Add("coins", "1");
-                            }
-                            //Fine if this is not performed async
-                            PNManager.pubnubInstance.UpdateUserMetadata(Connector.instance.LocalPlayer.UserId, Connector.instance.LocalPlayer.NickName, customData);
-                        }
-
+                        //Update the player rewards
                         DataCarrier.coins++;
                     }
                    

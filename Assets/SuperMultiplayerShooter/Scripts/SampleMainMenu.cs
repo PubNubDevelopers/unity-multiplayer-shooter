@@ -49,6 +49,8 @@ namespace Visyde
         public Text gemsText;
 
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
+        public event Action<string, string> OnCurrencyUpdate;
+
 
         void Awake()
         {
@@ -78,6 +80,9 @@ namespace Visyde
             playerNameInput.interactable = true;
             nameChangeBtn.interactable = true;
             nameChangeBtn.onClick.AddListener(async () => await SetPlayerName());
+
+            //Subscribe to trigger events whenever a new dropdown option is added.
+            Connector.instance.OnCurrencyUpdated += UpdateCurrency;
             MainMenuSetup();
         }
 
@@ -235,6 +240,33 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Updates the player's currency after successfully playing the game.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> UpdateCurrency()
+        {
+            //  Determine who is present based on who is subscribed to the global channel.
+            //  Called when we first launch to determine the game state
+            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
+                .Channels(new string[]
+                {
+                    PubNubUtilities.chanGlobal
+                })
+                .ExecuteAsync();
+            PNHereNowResult hereNowResult = herenowResponse.Result;
+            PNStatus status = herenowResponse.Status;
+            if (status != null && status.Error)
+            {
+                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+            }
+            else
+            {
+                UpdateGlobalPlayers(hereNowResult.TotalOccupancy);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Called whenever the scene or game ends. Unsubscribe event listeners.
         /// </summary>
         void OnDestroy()
@@ -328,8 +360,18 @@ namespace Visyde
                     {
                         if (Int32.TryParse(customData["coins"].ToString(), out int result))
                         {
-                            DataCarrier.coins = result;
-                        }
+                            // Check to see if the player has played a game. Update coins if they don't match.
+                            if(DataCarrier.coins > 0 && DataCarrier.coins > result)
+                            {
+                                //Update coins.
+                                Connector.instance.CurrencyUpdated("coins", DataCarrier.coins);
+                            }
+
+                            else
+                            {
+                                DataCarrier.coins = result;
+                            }
+                        }                     
                     }
                     
                     // Legacy Situations: All players should have at least 0 coins.
@@ -344,7 +386,17 @@ namespace Visyde
                     {
                         if (Int32.TryParse(customData["gems"].ToString(), out int result))
                         {
-                            DataCarrier.gems = result;
+                            // Check to see if the player has played a game. Update coins if they don't match.
+                            if (DataCarrier.gems > 0 && DataCarrier.gems > result)
+                            {
+                                //Update coins.
+                                Connector.instance.CurrencyUpdated("gems", DataCarrier.gems);
+                            }
+
+                            else
+                            {
+                                DataCarrier.gems = result;
+                            }
                         }
                     }
 
@@ -355,8 +407,8 @@ namespace Visyde
                         PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
                     }
 
-                    // Update the player's currency fields
-                    DisplayCurrency();                  
+                    // Displays the player's currency fields
+                    DisplayCurrency();
                     //Update the sprite image
                     characterIconPresenter.sprite = DataCarrier.characters[DataCarrier.chosenCharacter].icon;
                 }
@@ -393,6 +445,25 @@ namespace Visyde
         {
             coinsText.text = DataCarrier.coins.ToString();
             gemsText.text = DataCarrier.gems.ToString();
+        }
+
+        /// <summary>
+        /// Updates the player's metadata with the currency.
+        /// </summary>
+        /// <param name="currencyKey"></param>
+        private async void UpdateCurrency(string currencyKey, int value)
+        {
+            
+            Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+
+            // Add Coins (earned in-game currency) for the player
+            if (customData.ContainsKey(currencyKey))
+            {
+                customData[currencyKey] = value;                 
+            }
+              
+            await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), Connector.PNNickName, customData);
+            DisplayCurrency();
         }
     }
 }

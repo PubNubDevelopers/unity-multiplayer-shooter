@@ -237,7 +237,7 @@ public class PNManager : PNManagerBehaviour
             .ExecuteAsync();
         PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
         PNStatus status = getUuidMetadataResponse.Status;
-        if (!status.Error && getUuidMetadataResult != null)
+        if (!status.Error && getUuidMetadataResult != null && getUuidMetadataResult.Custom != null)
         {
 
             UserMetadata meta = new UserMetadata
@@ -257,7 +257,7 @@ public class PNManager : PNManagerBehaviour
             }
         }
 
-        //User has logged into the app for the first time. Set-up Metadata and register.
+        //User has logged into the app for the first time or is a legacy user. Set-up Metadata and register.
         else
         {
             // Setup metadata.
