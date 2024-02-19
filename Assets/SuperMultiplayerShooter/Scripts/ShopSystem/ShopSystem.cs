@@ -117,10 +117,10 @@ public class ShopSystem : MonoBehaviour
         ClearShopItems();
 
         // Filter the shop items based on the category.
-        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category == currentCategoryId).ToList();
+        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category == categoryId.ToLowerInvariant()).ToList();
 
         // Post-process items if necessary (e.g., converting category strings to enum, loading sprites)
-        foreach (var item in Connector.instance.ShopItemDataList)
+        foreach (var item in filteredItems)
         {
             ShopItem shopItem = Instantiate(shopItemPrefab, itemsParent);
             shopItem.Setup(item);

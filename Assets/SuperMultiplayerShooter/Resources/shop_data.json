@@ -110,6 +110,16 @@
             "quantity_given": 1,
             "discounted": false,
             "discounted_price": null
+        },
+        {
+            "id": "10_gems_bundle",
+            "description": "Get 10 Gems in this bundle",
+            "category": "currency",
+            "currency_type": "currency",
+            "original_cost": 2.99,
+            "quantity_given": 1,
+            "discounted": false,
+            "discounted_price": null
         }
     ]
 }
