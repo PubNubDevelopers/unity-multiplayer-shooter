@@ -2,7 +2,7 @@
     "items":
     [
         {
-            "id": "santa_hat",
+            "id": "1",
             "description": "Enjoy the Festivities!",
             "category": "hats",
             "currency_type": "coins",
@@ -12,7 +12,7 @@
             "discounted_price": null
         },
         {
-            "id": "pirate_hat",
+            "id": "2",
             "description": "Argh Matey!",
             "category": "hats",
             "currency_type": "coins",
@@ -22,7 +22,7 @@
             "discounted_price": null
         },
         {
-            "id": "daper_hat",
+            "id": "3",
             "description": "For those feeling fancy.",
             "category": "hats",
             "currency_type": "coins",
@@ -32,7 +32,7 @@
             "discounted_price": null
         },
         {
-            "id": "lucky_hat",
+            "id": "4",
             "description": "Are you feeling lucky, punk?",
             "category": "hats",
             "currency_type": "coins",
@@ -42,7 +42,7 @@
             "discounted_price": null
         },
         {
-            "id": "lucky_hat",
+            "id": "5",
             "description": "Are you feeling lucky, punk?",
             "category": "hats",
             "currency_type": "coins",
@@ -52,7 +52,7 @@
             "discounted_price": null
         },
         {
-            "id": "safari_hat",
+            "id": "6",
             "description": "Explore the wilds!",
             "category": "hats",
             "currency_type": "coins",
@@ -62,7 +62,7 @@
             "discounted_price": null
         },
         {
-            "id": "propeller_hat",
+            "id": "7",
             "description": "Relive your childhood!",
             "category": "hats",
             "currency_type": "coins",
@@ -72,7 +72,7 @@
             "discounted_price": null
         },
         {
-            "id": "red_hat",
+            "id": "8",
             "description": "For the inner hacker.",
             "category": "hats",
             "currency_type": "coins",

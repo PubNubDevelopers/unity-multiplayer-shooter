@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+using PubnubApi;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -18,6 +20,8 @@ public class ShopSystem : MonoBehaviour
 
     public static ShopSystem instance;
     private string currentCategoryId;
+    private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
+
 
     void Awake()
     {
@@ -98,11 +102,12 @@ public class ShopSystem : MonoBehaviour
     }
 
     // Open the Purchased Item Popup and set new sprite.
-    public void OpenPurchasePopup(Sprite purchasedItemSprite)
+    public void OpenPurchasePopup(Sprite purchasedItemSprite, bool canPurchase)
     {
-        PurchasePopup.Show(purchasedItemSprite);
+        PurchasePopup.Show(purchasedItemSprite, canPurchase);
 
-        // Deduct rewards points from player
+        //TODO: Deduct rewards points from player
+        //TODO: Also, if a player attempts to purchase an item they don't have enough money for, don't allow them. (show purchaseFailedWindow).
 
     }
 
@@ -119,24 +124,43 @@ public class ShopSystem : MonoBehaviour
         // Filter the shop items based on the category.
         var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category == categoryId.ToLowerInvariant()).ToList();
 
+        //  Populate the available hat inventory and other settings, read from PubNub App Context
+        Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+        List<int> availableHats = new List<int>();
+        if (customData.ContainsKey("hats"))
+        {
+            availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
+        }
         // Post-process items if necessary (e.g., converting category strings to enum, loading sprites)
         foreach (var item in filteredItems)
         {
             ShopItem shopItem = Instantiate(shopItemPrefab, itemsParent);
             shopItem.Setup(item);
+            if(availableHats != null && availableHats.Contains(int.Parse(item.id) - 1))
+            {
+                shopItem.ItemButton.interactable = false;
+            }    
         }
     }
 
     /// <summary>
     /// Removes all shop items from the shop (when opening for the first time, changing fitlers, etc)
     /// </summary>
-    private void ClearShopItems()
+    public void ClearShopItems()
     {
         for (int i = itemsParent.childCount - 1; i >= 0; i--)
         {
             GameObject child = itemsParent.GetChild(i).gameObject;
             Destroy(child);
         }
+    }
+
+    /// <summary>
+    /// When the coin debug button is clicked, gain a coin immediately.
+    /// </summary>
+    public void OnCoinGainedDebug()
+    {
+        Connector.instance.CurrencyUpdated("coins", DataCarrier.coins++);
     }
 
     [System.Serializable]

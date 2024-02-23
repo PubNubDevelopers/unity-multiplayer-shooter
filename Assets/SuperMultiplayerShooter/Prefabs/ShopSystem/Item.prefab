@@ -151,6 +151,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Icon: {fileID: 5933665559803495458}
   PriceText: {fileID: 7730409609368744180}
+  ItemButton: {fileID: 673825139640312721}
 --- !u!1 &2226179979815750291
 GameObject:
   m_ObjectHideFlags: 0
