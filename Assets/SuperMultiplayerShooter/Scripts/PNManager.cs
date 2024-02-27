@@ -10,6 +10,7 @@ using Visyde;
 using System.Linq;
 using PubNubUnityShowcase;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
+using UnityEditor;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -466,5 +467,19 @@ public class PNManager : PNManagerBehaviour
     {
         get { return privateMessageUUID; }
         set { privateMessageUUID = value; }
+    }
+
+    public async Task<PNGetChannelMetadataResult> GetChannelMetadata(string channel)
+    {
+        // Get Metadata for a specific channel
+        PNResult<PNGetChannelMetadataResult> getChannelMetadataResponse = await pubnub.GetChannelMetadata()
+            .Channel(channel)
+            .IncludeCustom(true)
+            .ExecuteAsync();
+
+        PNGetChannelMetadataResult getChannelMetadataResult = getChannelMetadataResponse.Result;
+        PNStatus status = getChannelMetadataResponse.Status;
+
+        return getChannelMetadataResult;
     }
 }

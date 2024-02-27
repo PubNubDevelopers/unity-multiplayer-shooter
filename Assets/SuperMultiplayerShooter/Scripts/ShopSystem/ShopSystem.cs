@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,11 +30,11 @@ public class ShopSystem : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
+    async void Start()
     {
         LoadCategories();
         currentCategoryId = SetDefaultCategory();
-        LoadShopData();
+        await LoadShopData();
         FilterShopItems(currentCategoryId);
     }
 
@@ -41,34 +42,60 @@ public class ShopSystem : MonoBehaviour
     /// Loads the shop data from the json file.
     /// </summary>
     /// <param name="currentCategoryId"></param>
-    private void LoadShopData()
+    private async Task<bool> LoadShopData()
     {
-        try
+        // Simply return if the shop data has already been loaded.
+        if (Connector.instance.ShopItemDataList != null && Connector.instance.ShopItemDataList.Count > 0)
         {
-            // Assuming the JSON string is loaded into jsonText from Resources or another source
-            TextAsset jsonText = Resources.Load<TextAsset>("shop_data");
-            if (jsonText == null)
-            {
-                Debug.LogError("Failed to load shop_data.json. Make sure the file exists and the path is correct.");
-                return;
-            }
-
-            ShopDataWrapper shopDataWrapper = JsonUtility.FromJson<ShopDataWrapper>(jsonText.text);
-
-            if (shopDataWrapper?.items == null)
-            {
-                Debug.LogError("Failed to parse shop items from JSON.");
-                return;
-            }
-
-            Connector.instance.ShopItemDataList = shopDataWrapper.items;        
+            return true;
         }
 
-        catch (Exception e)
+        else
         {
-            // Log the error to the Unity console
-            Debug.LogError($"Failed to load or parse shop data: {e.Message}");
-        }
+            try
+            {
+                PNGetChannelMetadataResult channelMetadata = await PNManager.pubnubInstance.GetChannelMetadata("shop_items");
+                if (channelMetadata != null && channelMetadata.Custom != null && channelMetadata.Custom.Count > 0)
+                {
+                    var shopItems = new Dictionary<string, ShopItemData>();
+
+                    foreach (KeyValuePair<string, object> item in channelMetadata.Custom)
+                    {
+                        string itemId = item.Key;
+                        string itemJson = item.Value.ToString(); // This is the JSON string representation of the item's data
+
+                        // Deserialize the JSON string back into a ShopItemData object or a Dictionary as needed
+                        var itemData = JsonConvert.DeserializeObject<Dictionary<string, object>>(itemJson);
+                        ShopItemData shopItem = new ShopItemData
+                        {
+                            id = itemId,
+                            description = itemData["description"].ToString(),
+                            category = itemData["category"].ToString(),
+                            currency_type = itemData["currency_type"].ToString(),
+                            original_cost = Convert.ToInt32(itemData["original_cost"]),
+                            quantity_given = Convert.ToInt32(itemData["quantity_given"]),
+                            discounted = Convert.ToBoolean(itemData["discounted"]),
+                            discount_codes = JsonConvert.DeserializeObject<List<string>>(itemData["discount_codes"].ToString())
+                        };
+
+                        // Add the deserialized ShopItemData to the dictionary
+                        shopItems.Add(itemId, shopItem);
+                    }
+
+                    Connector.instance.ShopItemDataList = shopItems;
+
+                    return true;
+                }
+                return false;
+            }
+
+            catch (Exception e)
+            {
+                // Log the error to the Unity console
+                Debug.LogError($"Failed to load or parse shop data: {e.Message}");
+                return false;
+            }
+        }     
     }
 
     void LoadCategories()
@@ -122,7 +149,9 @@ public class ShopSystem : MonoBehaviour
         ClearShopItems();
 
         // Filter the shop items based on the category.
-        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category == categoryId.ToLowerInvariant()).ToList();
+        var filteredItems = Connector.instance.ShopItemDataList.Values
+              .Where(item => item.category.Equals(categoryId, StringComparison.OrdinalIgnoreCase))
+              .ToList();
 
         //  Populate the available hat inventory and other settings, read from PubNub App Context
         Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;

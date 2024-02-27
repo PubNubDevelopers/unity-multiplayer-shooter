@@ -85,7 +85,7 @@ namespace Visyde
 
         public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
-        public List<ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
+        public Dictionary<string, ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
 
         //  PubNub properties
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();

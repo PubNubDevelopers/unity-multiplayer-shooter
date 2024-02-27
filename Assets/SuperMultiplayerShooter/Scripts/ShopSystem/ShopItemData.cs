@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /*
@@ -15,5 +16,5 @@ public class ShopItemData
     public int original_cost;
     public int quantity_given;
     public bool discounted;
-    public float? discounted_price; // Nullable float to handle null values
+    public List<string> discount_codes;
 }
