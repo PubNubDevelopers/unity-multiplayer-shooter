@@ -61,6 +61,7 @@ namespace Visyde
         async void Start()
         {
             //Add Listeners
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
             PNManager.pubnubInstance.onPubNubPresence += OnPnPresence;
             PNManager.pubnubInstance.onPubNubObject += OnPnObject;
             PNManager.pubnubInstance.onPubNubReady += OnPnReady;
@@ -93,6 +94,32 @@ namespace Visyde
         private void UpdateGlobalPlayers(int count)
         {
             totalCountPlayers.text = count.ToString();
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(PNMessageResult<object> result)
+        {
+            //Ignore messages from self (they are not translated / ran through profanity filter).
+            if (result != null)
+            {
+                // Illuminate - Handle New Price Changes.
+                // Workaround until Object Event Listeners are Working
+                if (result.Channel.StartsWith("illuminate"))
+                {
+                    if(result.Channel.Equals("illuminate.itemshop"))
+                    {
+                        // The metadata has already been updated. Simply fetch the updated data and display new shop items.
+                        Connector.instance.LoadShopData();
+                    }
+                  
+                }
+
+                // Illuminate - Handle Receiving New Discount Code
+            }
         }
 
         /// Listen for status updates to update metadata cache
@@ -158,6 +185,36 @@ namespace Visyde
                     else if (result.Event.Equals("delete") && PNManager.pubnubInstance.CachedPlayers.ContainsKey(result.UuidMetadata.Uuid))
                     {
                         PNManager.pubnubInstance.CachedPlayers.Remove(result.UuidMetadata.Uuid);
+                    }
+                }
+
+                else if(result.Type.Equals("channel"))
+                {
+                    // Setup Shop Items
+                    ShopItemData shopItem = new ShopItemData
+                    {
+                        id = result.ChannelMetadata.Custom["id"].ToString(),
+                        description = result.ChannelMetadata.Custom["description"].ToString(),
+                        category = result.ChannelMetadata.Custom["category"].ToString(),
+                        currency_type = result.ChannelMetadata.Custom["currency_type"].ToString(),
+                        price = Convert.ToInt32(result.ChannelMetadata.Custom["price"]),
+                        quantity_given = Convert.ToInt32(result.ChannelMetadata.Custom["quantity_given"]),
+                        discounted = Convert.ToBoolean(result.ChannelMetadata.Custom["discounted"]),
+                        discount_codes = JsonConvert.DeserializeObject<List<string>>(result.ChannelMetadata.Custom["discount_codes"].ToString())
+                    };
+
+                    // Step 1: Find the index of the item with the matching id
+                    int index = Connector.instance.ShopItemDataList.FindIndex(item => item.id == shopItem.id);
+
+                    if (index != -1)
+                    {
+                        // Step 2: Item exists, so update it
+                        Connector.instance.ShopItemDataList[index] = shopItem;
+                    }
+                    else
+                    {
+                        // Item not found, you might want to add it to the list instead
+                        Connector.instance.ShopItemDataList.Add(shopItem);
                     }
                 }
             }
@@ -271,6 +328,7 @@ namespace Visyde
         /// </summary>
         void OnDestroy()
         {
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
             PNManager.pubnubInstance.onPubNubPresence -= OnPnPresence;
             PNManager.pubnubInstance.onPubNubObject -= OnPnObject;
             PNManager.pubnubInstance.onPubNubReady -= OnPnReady;

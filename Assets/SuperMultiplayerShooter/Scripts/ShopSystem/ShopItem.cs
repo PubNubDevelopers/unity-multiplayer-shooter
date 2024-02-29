@@ -32,7 +32,7 @@ public class ShopItem : MonoBehaviour
     public void Setup(ShopItemData shopItemData)
     {
         shopItem = shopItemData;
-        PriceText.text = shopItem.original_cost.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
+        PriceText.text = shopItem.price.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
         LoadImage();       
     }
  
@@ -41,8 +41,8 @@ public class ShopItem : MonoBehaviour
     {
         bool canPurchase = true;
         // Check to determine if the player can purchase the item.
-        if((shopItem.currency_type.Equals("coins") && shopItem.original_cost > DataCarrier.coins)
-            || (shopItem.currency_type.Equals("gems") && shopItem.original_cost > DataCarrier.gems))
+        if((shopItem.currency_type.Equals("coins") && shopItem.price > DataCarrier.coins)
+            || (shopItem.currency_type.Equals("gems") && shopItem.price > DataCarrier.gems))
         {
             canPurchase = false;
         }
@@ -50,7 +50,7 @@ public class ShopItem : MonoBehaviour
         else
         {
             //Calculate cost of item
-            int cost = shopItem.currency_type.Equals("coins") ? DataCarrier.coins -= shopItem.original_cost : DataCarrier.gems -= shopItem.original_cost;
+            int cost = shopItem.currency_type.Equals("coins") ? DataCarrier.coins -= shopItem.price : DataCarrier.gems -= shopItem.price;
 
             // Add the Item to Player Inventory
             Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;

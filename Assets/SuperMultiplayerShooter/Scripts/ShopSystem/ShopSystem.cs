@@ -20,7 +20,7 @@ public class ShopSystem : MonoBehaviour
     public PurchasePopup PurchasePopup;
 
     public static ShopSystem instance;
-    private string currentCategoryId;
+    public string currentCategoryId;
     private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
 
 
@@ -36,66 +36,57 @@ public class ShopSystem : MonoBehaviour
         currentCategoryId = SetDefaultCategory();
         await LoadShopData();
         FilterShopItems(currentCategoryId);
+
+        // Event Listeners
     }
+
+  
 
     /// <summary>
     /// Loads the shop data from the json file.
     /// </summary>
-    /// <param name="currentCategoryId"></param>
-    private async Task<bool> LoadShopData()
+    public async Task<bool> LoadShopData()
     {
+        /*
         // Simply return if the shop data has already been loaded.
         if (Connector.instance.ShopItemDataList != null && Connector.instance.ShopItemDataList.Count > 0)
         {
             return true;
         }
+        */
+        Connector.instance.ShopItemDataList = new List<ShopItemData>();
 
-        else
+        var allChannelMetadata = await PNManager.pubnubInstance.GetAllChannelMetadata();
+
+        //Filter the channel metadata for shop items.
+       // var shopItemChannels = allChannelMetadata.Channels.Where(channel => String.IsNullOrWhiteSpace(channel.Channel) && channel.Channel.StartsWith("shop_items.")).ToList();
+        foreach(var item in allChannelMetadata.Channels)
         {
-            try
+            if (item.Channel.StartsWith("shop_items."))
             {
-                PNGetChannelMetadataResult channelMetadata = await PNManager.pubnubInstance.GetChannelMetadata("shop_items");
-                if (channelMetadata != null && channelMetadata.Custom != null && channelMetadata.Custom.Count > 0)
+                // Setup Shop Items
+                ShopItemData shopItem = new ShopItemData
                 {
-                    var shopItems = new Dictionary<string, ShopItemData>();
+                    id = item.Custom["id"].ToString(),
+                    description = item.Custom["description"].ToString(),
+                    category = item.Custom["category"].ToString(),
+                    currency_type = item.Custom["currency_type"].ToString(),
+                    price = Convert.ToInt32(item.Custom["price"]),
+                    quantity_given = Convert.ToInt32(item.Custom["quantity_given"]),
+                    discounted = Convert.ToBoolean(item.Custom["discounted"]),
+                    discount_codes = JsonConvert.DeserializeObject<List<string>>(item.Custom["discount_codes"].ToString())
+                };
+                Connector.instance.ShopItemDataList.Add(shopItem);
+            }      
+        }
 
-                    foreach (KeyValuePair<string, object> item in channelMetadata.Custom)
-                    {
-                        string itemId = item.Key;
-                        string itemJson = item.Value.ToString(); // This is the JSON string representation of the item's data
+        // No Channels Matched
+        if(Connector.instance.ShopItemDataList == null)
+        {
+            return false;
+        }
 
-                        // Deserialize the JSON string back into a ShopItemData object or a Dictionary as needed
-                        var itemData = JsonConvert.DeserializeObject<Dictionary<string, object>>(itemJson);
-                        ShopItemData shopItem = new ShopItemData
-                        {
-                            id = itemId,
-                            description = itemData["description"].ToString(),
-                            category = itemData["category"].ToString(),
-                            currency_type = itemData["currency_type"].ToString(),
-                            original_cost = Convert.ToInt32(itemData["original_cost"]),
-                            quantity_given = Convert.ToInt32(itemData["quantity_given"]),
-                            discounted = Convert.ToBoolean(itemData["discounted"]),
-                            discount_codes = JsonConvert.DeserializeObject<List<string>>(itemData["discount_codes"].ToString())
-                        };
-
-                        // Add the deserialized ShopItemData to the dictionary
-                        shopItems.Add(itemId, shopItem);
-                    }
-
-                    Connector.instance.ShopItemDataList = shopItems;
-
-                    return true;
-                }
-                return false;
-            }
-
-            catch (Exception e)
-            {
-                // Log the error to the Unity console
-                Debug.LogError($"Failed to load or parse shop data: {e.Message}");
-                return false;
-            }
-        }     
+        return true;
     }
 
     void LoadCategories()
@@ -132,10 +123,6 @@ public class ShopSystem : MonoBehaviour
     public void OpenPurchasePopup(Sprite purchasedItemSprite, bool canPurchase)
     {
         PurchasePopup.Show(purchasedItemSprite, canPurchase);
-
-        //TODO: Deduct rewards points from player
-        //TODO: Also, if a player attempts to purchase an item they don't have enough money for, don't allow them. (show purchaseFailedWindow).
-
     }
 
     /// <summary>
@@ -149,9 +136,7 @@ public class ShopSystem : MonoBehaviour
         ClearShopItems();
 
         // Filter the shop items based on the category.
-        var filteredItems = Connector.instance.ShopItemDataList.Values
-              .Where(item => item.category.Equals(categoryId, StringComparison.OrdinalIgnoreCase))
-              .ToList();
+        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category.Equals(categoryId, StringComparison.OrdinalIgnoreCase));
 
         //  Populate the available hat inventory and other settings, read from PubNub App Context
         Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;

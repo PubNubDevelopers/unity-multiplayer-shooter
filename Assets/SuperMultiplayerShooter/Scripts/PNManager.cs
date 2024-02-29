@@ -116,7 +116,8 @@ public class PNManager : PNManagerBehaviour
                         PubNubUtilities.chanPrivateChat,
                         PubNubUtilities.chanChatTranslate + userId,
                         PubNubUtilities.chanLeaderboardSub,
-                        PubNubUtilities.chanFriendRequest + userId
+                        PubNubUtilities.chanFriendRequest + userId,
+                        PubNubUtilities.chanIlluminate +"*"
         })
         .ChannelGroups(new List<string>() {
                         PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
@@ -469,17 +470,17 @@ public class PNManager : PNManagerBehaviour
         set { privateMessageUUID = value; }
     }
 
-    public async Task<PNGetChannelMetadataResult> GetChannelMetadata(string channel)
+    /// <summary>
+    /// Obtains and returns all channels that contain metadata via App Context.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<PNGetAllChannelMetadataResult> GetAllChannelMetadata()
     {
-        // Get Metadata for a specific channel
-        PNResult<PNGetChannelMetadataResult> getChannelMetadataResponse = await pubnub.GetChannelMetadata()
-            .Channel(channel)
-            .IncludeCustom(true)
-            .ExecuteAsync();
+        PNResult<PNGetAllChannelMetadataResult> getAllChannelMetadataResponse = await pubnub.GetAllChannelMetadata()
+           .IncludeCount(true)
+           .IncludeCustom(true)
+           .ExecuteAsync();
 
-        PNGetChannelMetadataResult getChannelMetadataResult = getChannelMetadataResponse.Result;
-        PNStatus status = getChannelMetadataResponse.Status;
-
-        return getChannelMetadataResult;
+       return getAllChannelMetadataResponse.Result;
     }
 }

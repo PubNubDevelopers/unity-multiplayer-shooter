@@ -85,7 +85,7 @@ namespace Visyde
 
         public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
-        public Dictionary<string, ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
+        public List<ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
 
         //  PubNub properties
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
@@ -1158,6 +1158,15 @@ namespace Visyde
         public void FilterShopItems(string categoryId)
         {
             ShopSystem.instance.FilterShopItems(categoryId);
+        }
+
+        public async void LoadShopData()
+        {
+            if(ShopSystem.instance != null)
+            {
+                await ShopSystem.instance.LoadShopData();
+                FilterShopItems(ShopSystem.instance.currentCategoryId);
+            }         
         }
     }
 }

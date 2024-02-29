@@ -49,6 +49,7 @@ namespace PubNubUnityShowcase
         static public string chanChat = "chat.";
         static public string chanLeaderboardPub = "score.leaderboard";
         static public string chanLeaderboardSub = "leaderboard_scores";
+        static public string chanIlluminate = "illuminate.";
         //  --  Channels specific for chat messages
         static public string chanChatAll = "chat.all";
         static public string chanPrivateChat = "chat.private.*";
@@ -60,6 +61,9 @@ namespace PubNubUnityShowcase
         static public string chanFriendChat = "chat.friends.";
         static public string chanFriendChanGroupStatus = "friendsCG_status_";
         static public string chanFriendChanGroupChat = "friendsCG_feed_";
+
+        //  --  Other   --
+        static public string chanShopItems = "shopitems";
 
         /// </summary>
 
