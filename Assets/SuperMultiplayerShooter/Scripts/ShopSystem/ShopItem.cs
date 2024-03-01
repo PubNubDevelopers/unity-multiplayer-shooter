@@ -38,7 +38,6 @@ public class ShopItem : MonoBehaviour
         LoadImage();       
     }
  
-    // TODO: HANDLE DUPLICATE PURCHASE ATTEMPTS - PERHAPS DONE THROUGH UI BY DISABLING ITEM BY COMPARING TO PLAYER"S INVENTORY?
     public void Purchase()
     {
         bool canPurchase = true;
@@ -70,8 +69,10 @@ public class ShopItem : MonoBehaviour
             Connector.instance.CurrencyUpdated(shopItem.currency_type, cost);
         }
 
+        string message = "You've purchased the following item.";
+
         // Open the Purchase Popup to display success/failure
-        Connector.instance.OpenPurchasePopup(Icon.sprite, canPurchase);
+        Connector.instance.OpenPurchasePopup(Icon.sprite, message,canPurchase);
 
         // Refresh shop items
         Connector.instance.FilterShopItems(shopItem.category);

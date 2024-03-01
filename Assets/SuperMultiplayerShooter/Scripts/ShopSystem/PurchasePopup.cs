@@ -14,12 +14,12 @@ public class PurchasePopup : MonoBehaviour
     private Image PurchasedItemImage;
    
     // Open the Purchased Item Popup and set new sprite.
-    public void Show(Sprite purchasedItemSprite, bool canPurchase)
+    public void Show(Sprite purchasedItemSprite, string message, bool canPurchase)
     {
         this.gameObject.SetActive(true);
         if(canPurchase)
         {
-            MessageText.text = "Success!\r\n";
+            MessageText.text = "Success!\r\n" + message;
             PurchasedItemImage.sprite = purchasedItemSprite;
         }
 

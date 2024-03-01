@@ -33,7 +33,9 @@ public class DiscountCodePopup : MonoBehaviour
         if(customData.ContainsKey("discount_codes"))
         {
             discount_codes = JsonConvert.DeserializeObject<List<string>>(customData["discount_codes"].ToString());
-            foreach(var code in discount_codes)
+
+            // There might be duplicates. Only display distinct codes.
+            foreach(var code in discount_codes.Distinct().ToList())
             {
                 // Create button and append to list.
                 Button codeButton = Instantiate(userCodeButton, userDiscountCodesParent);
@@ -91,26 +93,22 @@ public class DiscountCodePopup : MonoBehaviour
         {
             // Update price of item based on code. Discount codes are always broken up in the following way: item id : percetnage off
             var codePieces = enteredCode.Split(':');
-            item.price = (Convert.ToInt32(codePieces[1]) / 100) * item.price;
-            /*
-            // Update global list and refresh shop item list.
-            int index = Connector.instance.ShopItemDataList.FindIndex(shopItem => shopItem.id == item.id);
-            if (index != -1)
-            {
-                Connector.instance.ShopItemDataList[index] = item; // Replace the old item with the new one
-            }
-            */
+            item.price = (int)((Convert.ToDouble(codePieces[1]) / 100) * item.price);
+
             Connector.instance.FilterShopItems(ShopSystem.instance.currentCategoryId);
 
+            string message = $"The following item is now {codePieces[1]}% off!";
+
             // Display Popup indicating what occurred with a success message, including the image sprite.
-            Connector.instance.OpenPurchasePopup(item.sprite, true);
+            Connector.instance.OpenPurchasePopup(item.sprite, message, true);
         }
 
         // Code is invalid
         else
         {
+            string message = $"Discount code is invalid. Please Try Again.";
             // Display Popup indicating that it failed and to try again.
-            Connector.instance.OpenPurchasePopup(null, false);
+            Connector.instance.OpenPurchasePopup(null, message, false);
         }
     }
 }

@@ -120,9 +120,9 @@ public class ShopSystem : MonoBehaviour
     }
 
     // Open the Purchased Item Popup and set new sprite.
-    public void OpenPurchasePopup(Sprite purchasedItemSprite, bool canPurchase)
+    public void OpenPurchasePopup(Sprite purchasedItemSprite, string message,bool canPurchase)
     {
-        PurchasePopup.Show(purchasedItemSprite, canPurchase);
+        PurchasePopup.Show(purchasedItemSprite, message,canPurchase);
     }
 
     /// <summary>

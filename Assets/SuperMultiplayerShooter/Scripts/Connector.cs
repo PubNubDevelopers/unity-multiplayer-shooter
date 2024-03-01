@@ -1146,9 +1146,9 @@ namespace Visyde
         }
 
         // Open the Purchased Item Popup and set new sprite.
-        public void OpenPurchasePopup(Sprite purchasedItemSprite, bool canPurchase)
+        public void OpenPurchasePopup(Sprite purchasedItemSprite, string message, bool canPurchase)
         {
-            ShopSystem.instance.OpenPurchasePopup(purchasedItemSprite, canPurchase);
+            ShopSystem.instance.OpenPurchasePopup(purchasedItemSprite, message, canPurchase);
         }
 
         /// <summary>
