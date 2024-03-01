@@ -136,7 +136,7 @@ public class ShopSystem : MonoBehaviour
         ClearShopItems();
 
         // Filter the shop items based on the category.
-        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category.Equals(categoryId, StringComparison.OrdinalIgnoreCase));
+        var filteredItems = Connector.instance.ShopItemDataList.Where(item => item.category.Equals(categoryId, StringComparison.OrdinalIgnoreCase)).ToList();
 
         //  Populate the available hat inventory and other settings, read from PubNub App Context
         Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;

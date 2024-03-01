@@ -2,7 +2,9 @@ using Newtonsoft.Json;
 using PubnubApi;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Unity.VisualScripting;
+using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 using UnityEngine.UI;
 using Visyde;
@@ -91,7 +93,15 @@ public class ShopItem : MonoBehaviour
         if (loadedSprite != null)
         {
             // Set the loaded image to your display component.
-            Icon.sprite = loadedSprite;
+            Icon.sprite = shopItem.sprite = loadedSprite;
+
+            int index = Connector.instance.ShopItemDataList.FindIndex(item => item.id == shopItem.id);
+
+            // Update sprite image
+            if (index != -1)
+            {
+                Connector.instance.ShopItemDataList[index] = shopItem; // Replace the old item with the new one
+            }
         }
         else
         {

@@ -19,14 +19,15 @@ public class PurchasePopup : MonoBehaviour
         this.gameObject.SetActive(true);
         if(canPurchase)
         {
-            MessageText.text = "Success!\r\nYou've Purchased";
+            MessageText.text = "Success!\r\n";
+            PurchasedItemImage.sprite = purchasedItemSprite;
         }
 
         else
         {
-            MessageText.text = "Failed! \r\nYou don't have enough to purchase this item";
+            MessageText.text = "Failed! \r\nPlease Try Again.";
+            //PurchasedItemImage.sprite = purchasedItemSprite;
         }
 
-        PurchasedItemImage.sprite = purchasedItemSprite;     
     } 
 }
