@@ -47,6 +47,7 @@ namespace Visyde
         public Button settingsBtn;
         public Text coinsText;
         public Text gemsText;
+        public NotificationPopup notificationPopup;
 
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
         public event Action<string, string> OnCurrencyUpdate;
@@ -110,14 +111,24 @@ namespace Visyde
                 // Workaround until Object Event Listeners are Working
                 if (result.Channel.StartsWith("illuminate"))
                 {
+                    string message = "";
                     if(result.Channel.Equals("illuminate.itemshop"))
                     {
                         // The metadata has already been updated. Simply fetch the updated data and display new shop items.
                         Connector.instance.LoadShopData();
+                        message = "Item" + result.Message.ToString() + "was just discounted in the shop!\r\nGo check it out!";
                     }
-                  
-                }
+                    
+                    else if (result.Channel.Equals("illuminate.discountcodes"))
+                    {
+                        // Force a reload on user discount codes as well
+                        Connector.instance.LoadDiscountCodes();
+                        message = "You've received the following discount code:\r\n" + result.Message.ToString();
 
+                    }
+
+                    notificationPopup.ShowPopup(message);
+                }
                 // Illuminate - Handle Receiving New Discount Code
             }
         }

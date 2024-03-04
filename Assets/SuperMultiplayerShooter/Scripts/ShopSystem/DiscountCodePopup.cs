@@ -15,6 +15,9 @@ public class DiscountCodePopup : MonoBehaviour
     public Button userCodeButton; // A prefab for displaying each discount code in the list
     public Transform userDiscountCodesParent;
 
+    public static DiscountCodePopup instance;
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -39,28 +42,11 @@ public class DiscountCodePopup : MonoBehaviour
             {
                 // Create button and append to list.
                 Button codeButton = Instantiate(userCodeButton, userDiscountCodesParent);
-
-                codeButton.gameObject.SetActive(true); // Make sure the new button is active
-
-                // Update the text of the new button to display the discount code
+                codeButton.gameObject.SetActive(true);
                 codeButton.GetComponentInChildren<Text>().text = code;
-
-                // Optionally, add a click listener for the new button
                 codeButton.onClick.AddListener(() => OnDiscountCodeButtonClicked(code));
-
-                // Important: Ensure the RectTransform is configured to work with your layout
-               // RectTransform rt = codeButton.GetComponent<RectTransform>();
-               // rt.localScale = Vector3.one; // Reset scale
-               // rt.localPosition = Vector3.zero; // Reset position
-               // rt.localRotation = Quaternion.identity; // Reset rotation
-
-                // Ensure the new button is properly scaled and positioned
-               // codeButton.transform.localScale = Vector3.one;
             }
         }
-
-        //userCodeButton.gameObject.SetActive(false);
-
     }
 
     /// <summary>

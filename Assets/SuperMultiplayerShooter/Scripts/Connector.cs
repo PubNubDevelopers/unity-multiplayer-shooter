@@ -1168,5 +1168,18 @@ namespace Visyde
                 FilterShopItems(ShopSystem.instance.currentCategoryId);
             }         
         }
+
+        /// <summary>
+        /// Refreshes the User Metadata and the user discount codes if updated from Illuminate.
+        /// Work around due to Objects event listener issues.
+        /// </summary>
+        public async void LoadDiscountCodes()
+        {
+            await PNManager.pubnubInstance.GetUserMetadata(pubnub.GetCurrentUserId());
+            if (DiscountCodePopup.instance != null)
+            {
+                DiscountCodePopup.instance.LoadUserDiscountCodes();
+            }
+        }
     }
 }
