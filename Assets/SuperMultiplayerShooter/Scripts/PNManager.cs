@@ -332,6 +332,7 @@ public class PNManager : PNManagerBehaviour
         PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
             .Uuid(uuid)
             .Name(name)
+            .ExternalId(name)  // testing for Illuminate
             .Custom(metadata)
             .IncludeCustom(true)
             .ExecuteAsync();

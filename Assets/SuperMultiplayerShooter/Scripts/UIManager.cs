@@ -182,8 +182,14 @@ public class MyClass
 
                         //Update the player rewards
                         DataCarrier.coins++;
+
+                        // --- ILLUMINATE --- Publish a message to indicate that the game is over
+                        string msg = "Game Over";
+                        PublishMessage(msg, "${Connector.PNNickName}.gamesplayed");
+                        // Illuminate will receive the message and then send a discount code to the user.
+                        // --- END ILLUMINATE DEMO ---
                     }
-                   
+
                     // Show the scoreboard after the "Return to main menu" button is shown:
                     // (Note: The "Return to main menu" button is not shown/enabled by this code, instead, the gameOverPanel's animation does that)
                     scoreboardObj.SetActive(returnToMenuButton.gameObject.activeSelf);

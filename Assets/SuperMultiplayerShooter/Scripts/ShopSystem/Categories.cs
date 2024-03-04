@@ -3,5 +3,9 @@ public enum Categories
 {
     HATS,
     EMOTES,
-    CURRENCY
+    WEAPON_SKINS,
+    HEALTH,
+    SHIELDS,
+    CHARACTER,
+    CURRENCY,
 }

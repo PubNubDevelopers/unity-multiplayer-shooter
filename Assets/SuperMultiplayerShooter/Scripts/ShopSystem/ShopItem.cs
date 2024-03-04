@@ -21,6 +21,8 @@ public class ShopItem : MonoBehaviour
     [SerializeField]
     private Text PriceText;
     [SerializeField]
+    public Image CostIcon;
+    [SerializeField]
     public Button ItemButton;
 
     // public delegate void PurchaseEvent(Product Model, Action OnComplete);
@@ -34,39 +36,55 @@ public class ShopItem : MonoBehaviour
     public void Setup(ShopItemData shopItemData)
     {
         shopItem = shopItemData;
-        PriceText.text = shopItem.price.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
-        LoadImage();       
+        PriceText.text = shopItem.currency_type.Equals("usd") ? "$" + shopItem.price.ToString() : shopItem.price.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
+        // Only set the image active for coin based items.
+        if (!shopItem.category.Equals("hats"))
+        {
+            CostIcon.gameObject.SetActive(false);
+        }
+
+        LoadImage();
     }
  
     public void Purchase()
     {
         bool canPurchase = true;
         // Check to determine if the player can purchase the item.
-        if((shopItem.currency_type.Equals("coins") && shopItem.price > DataCarrier.coins)
-            || (shopItem.currency_type.Equals("gems") && shopItem.price > DataCarrier.gems))
+        if((shopItem.currency_type.Equals("coins") && shopItem.price > DataCarrier.coins))
         {
             canPurchase = false;
         }
 
         else
         {
-            //Calculate cost of item
-            int cost = shopItem.currency_type.Equals("coins") ? DataCarrier.coins -= shopItem.price : DataCarrier.gems -= shopItem.price;
-
-            // Add the Item to Player Inventory
-            Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
-            List<int> availableHats = new List<int>();
-            if (customData.ContainsKey("hats"))
+            int cost = 0;
+            if (shopItem.currency_type.Equals("coins"))
             {
-                availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
-                availableHats.Add(int.Parse(shopItem.id) - 1); // Adjust for hats starting at index 1
-                customData["hats"] = JsonConvert.SerializeObject(availableHats);
-                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
-                Connector.instance.UpdateAvailableHats(availableHats);
+                //Calculate cost of item
+                cost = DataCarrier.coins -= shopItem.price;
+
+                // Add the Item to Player Inventory
+                Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+                List<int> availableHats = new List<int>();
+                if (customData.ContainsKey("hats"))
+                {
+                    availableHats = JsonConvert.DeserializeObject<List<int>>(customData["hats"].ToString());
+                    availableHats.Add(int.Parse(shopItem.id) - 1); // Adjust for hats starting at index 1
+                    customData["hats"] = JsonConvert.SerializeObject(availableHats);
+                    PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
+                    Connector.instance.UpdateAvailableHats(availableHats);
+                }
             }
 
+            // currency type is usd - update with new number of coins.
+            else
+            {
+                cost = DataCarrier.coins += shopItem.quantity_given;
+            }
+           
+
             // Update and Display New Value of Purchase, including new items in inventory.
-            Connector.instance.CurrencyUpdated(shopItem.currency_type, cost);
+            Connector.instance.CurrencyUpdated("coins", cost);
         }
 
         string message = "You've purchased the following item.";
@@ -76,6 +94,24 @@ public class ShopItem : MonoBehaviour
 
         // Refresh shop items
         Connector.instance.FilterShopItems(shopItem.category);
+
+        // Signal that we've successfully purchased an item by publishing the item in message contents.
+        SendMessage();
+
+    }
+
+    public async void SendMessage()
+    {
+        string pubnubMessage = $"Purchased {shopItem.id}";
+        string channelId = pubnub.GetCurrentUserId() + shopItem.id;
+        PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
+                                                    .Message(pubnubMessage)
+                                                    .Channel(channelId)
+                                                    .ExecuteAsync();
+        PNPublishResult publishResult = publishResponse.Result;
+        PNStatus status = publishResponse.Status;
+        Debug.Log("pub timetoken: " + publishResult.Timetoken.ToString());
+        Debug.Log("pub status code : " + status.StatusCode.ToString());
     }
 
     /// <summary>

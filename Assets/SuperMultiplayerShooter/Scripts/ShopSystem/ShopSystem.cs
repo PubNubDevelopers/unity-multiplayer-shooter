@@ -98,7 +98,13 @@ public class ShopSystem : MonoBehaviour
 
             // Set the button text
             // enum value to have space and proper casing
-            categoryButton.CategoryText.text = FormatCategoryName(category.ToString());     
+            categoryButton.CategoryText.text = FormatCategoryName(category.ToString());
+
+            // temporarily disable every category but hats and currency
+            if(!categoryButton.CategoryText.text.ToLowerInvariant().Equals("hats") && !categoryButton.CategoryText.text.ToLowerInvariant().Equals("currency"))
+            {
+                categoryButton.gameObject.GetComponent<Button>().interactable = false;
+            }
         }    
     }
 
@@ -150,7 +156,7 @@ public class ShopSystem : MonoBehaviour
         {
             ShopItem shopItem = Instantiate(shopItemPrefab, itemsParent);
             shopItem.Setup(item);
-            if(availableHats != null && availableHats.Contains(int.Parse(item.id) - 1))
+            if(categoryId.ToLowerInvariant() == "hats" && availableHats != null && availableHats.Contains(int.Parse(item.id) - 1))
             {
                 shopItem.ItemButton.interactable = false;
             }    
