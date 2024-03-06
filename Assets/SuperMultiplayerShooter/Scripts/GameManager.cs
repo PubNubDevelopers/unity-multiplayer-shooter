@@ -918,12 +918,13 @@ namespace Visyde
             }
 
             // Illuminate Demo - Gameplay Adjustments
-            else if (result != null && result.Channel.StartsWith("illuminate_gameplay"))
+            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate"))
             {
-          
-                if (result.Channel.Equals("illuminate_gameplay.respawn_timer") && result.Message != null)
+                if (result.Channel.Equals("illuminate.respawn_timer") && result.Message != null)
                 {
+                    Debug.Log($"Old respawn timer: {respawnTime}");
                     respawnTime = System.Convert.ToInt32(result.Message);
+                    Debug.Log($"New respawn timer: {respawnTime}");
                 }
             }
         }

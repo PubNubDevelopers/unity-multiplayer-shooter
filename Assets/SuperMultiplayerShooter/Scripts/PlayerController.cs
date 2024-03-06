@@ -271,14 +271,17 @@ namespace Visyde
             }
 
             // Illuminate Demo - Gameplay Adjustments
-            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate_gameplay"))
+            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate"))
             {
 
-                if (result.Channel.Equals("illuminate_gameplay.movement_speed"))
+                if (result.Channel.Equals("illuminate.movement_speed"))
                 {
-                    float adjustmentFactor = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    Debug.Log($"Speed is being adjusted. Old Speed: {movementController.moveSpeed}");
+
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
                     // Adjust the movement speed
-                    movementController.moveSpeed *= adjustmentFactor;
+                    movementController.moveSpeed += (movementController.moveSpeed * modifier);
+                    Debug.Log($"New Speed: {movementController.moveSpeed}");
                 }
             }
         }
