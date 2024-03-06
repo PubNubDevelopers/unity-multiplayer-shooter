@@ -74,6 +74,7 @@ public class ShopSystem : MonoBehaviour
                     price = Convert.ToInt32(item.Custom["price"]),
                     quantity_given = Convert.ToInt32(item.Custom["quantity_given"]),
                     discounted = Convert.ToBoolean(item.Custom["discounted"]),
+                    discounted_price = Convert.ToInt32(item.Custom["discounted_price"]),
                     discount_codes = JsonConvert.DeserializeObject<List<string>>(item.Custom["discount_codes"].ToString())
                 };
                 Connector.instance.ShopItemDataList.Add(shopItem);

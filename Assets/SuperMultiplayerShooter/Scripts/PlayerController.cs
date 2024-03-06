@@ -269,6 +269,18 @@ namespace Visyde
                     //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
                 }
             }
+
+            // Illuminate Demo - Gameplay Adjustments
+            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate_gameplay"))
+            {
+
+                if (result.Channel.Equals("illuminate_gameplay.movement_speed"))
+                {
+                    float adjustmentFactor = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    // Adjust the movement speed
+                    movementController.moveSpeed *= adjustmentFactor;
+                }
+            }
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ public class ShopItemData
     public int price;
     public int quantity_given;
     public bool discounted;
+    public int discounted_price;
     public List<string> discount_codes;
     public Sprite sprite; // not storing in metadata, for internal use.
 }

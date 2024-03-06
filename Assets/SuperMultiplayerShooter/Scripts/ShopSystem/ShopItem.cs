@@ -2,9 +2,6 @@ using Newtonsoft.Json;
 using PubnubApi;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Unity.VisualScripting;
-using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 using UnityEngine.UI;
 using Visyde;
@@ -35,8 +32,16 @@ public class ShopItem : MonoBehaviour
 
     public void Setup(ShopItemData shopItemData)
     {
-        shopItem = shopItemData;
-        PriceText.text = shopItem.currency_type.Equals("usd") ? "$" + shopItem.price.ToString() : shopItem.price.ToString();        // Configure the Displayed Icon and Price to be displayed in the shop
+        shopItem = shopItemData;      
+        // Use Discounted price in place of price if the item is marked as such.
+        if(shopItem.discounted)
+        {
+            shopItem.price = shopItem.discounted_price;
+        }
+
+        // Configure the Displayed Icon and Price to be displayed in the shop
+        PriceText.text = shopItem.currency_type.Equals("usd") ? "$" + shopItem.price.ToString() : shopItem.price.ToString();
+
         // Only set the image active for coin based items.
         if (!shopItem.category.Equals("hats"))
         {
