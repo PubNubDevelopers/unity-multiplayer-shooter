@@ -108,7 +108,7 @@ public class ShopItem : MonoBehaviour
     public async void SendMessage()
     {
         string pubnubMessage = $"Purchased {shopItem.id}";
-        string channelId = pubnub.GetCurrentUserId() + shopItem.id;
+        string channelId = $"{pubnub.GetCurrentUserId()}_{shopItem.id}_shop_purchases";
         PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                                     .Message(pubnubMessage)
                                                     .Channel(channelId)

@@ -283,6 +283,32 @@ namespace Visyde
                     movementController.moveSpeed += (movementController.moveSpeed * modifier);
                     Debug.Log($"New Speed: {movementController.moveSpeed}");
                 }
+
+                else if (result.Channel.Equals("illuminate.melee_speed"))
+                {
+                    Debug.Log($"Melee Speed is being adjusted. Old Speed: {meleeWeapon.attackSpeed}");
+
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    // Adjust the movement speed
+                    meleeWeapon.attackSpeed += (meleeWeapon.attackSpeed * modifier);
+                    Debug.Log($"New Speed: {meleeWeapon.attackSpeed}");
+                }
+
+                else if (result.Channel.Equals("illuminate.melee_damage"))
+                {
+                    Debug.Log($"Melee Damage is being adjusted. Old Damage: {meleeWeapon.damage}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    meleeWeapon.damage += (int)System.Math.Round(meleeWeapon.damage * modifier);
+                    Debug.Log($"New Damage: {meleeWeapon.attackSpeed}");
+                }
+
+                else if (result.Channel.Equals("illuminate.health"))
+                {
+                    Debug.Log($"health is being adjusted. Old Player health: {health}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    health += (int)System.Math.Round(health * modifier);
+                    Debug.Log($"New health: {health}");
+                }
             }
         }
 

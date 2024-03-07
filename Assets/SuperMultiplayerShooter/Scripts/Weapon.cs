@@ -166,13 +166,16 @@ namespace Visyde
         private void OnPnMessage(PNMessageResult<object> result)
         {
             //  There is one subscribe handler per weapon
+            //  Adjusts the Rate of Fire and Damage for the CURRENTLY EQUIPPED weapon. Not a global update. Resets on new weapon pickup.
             if (result != null && result.Channel.StartsWith("illuminate"))
             {
                 // Adjust Rate of Fire - resulting message is a percentage modifier
                 if (result.Channel.Equals("illuminate.rof") && result.Message != null)
                 {
+                    Debug.Log($"Rate of Fire is being adjusted. Old rof: {rateOfFire}");
                     float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
                     rateOfFire += (rateOfFire * modifier);
+                    Debug.Log($"Rate of Fire is being adjusted. New rof: {rateOfFire}");
                 }
 
                 // Adjust Damage - resulting message is a percentage modifier
@@ -182,6 +185,24 @@ namespace Visyde
                     float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
                     damage += (int)Math.Round(damage * modifier);
                     Debug.Log($"Damage is being adjusted. New Dmg: {damage}");
+                }
+
+                // Adjust Kickback - resulting message is a percentage modifier
+                else if (result.Channel.Equals("illuminate.kickback") && result.Message != null)
+                {
+                    Debug.Log($"Kickback is being adjusted. Old Kickback: {kickbackAmount}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    kickbackAmount += (kickbackAmount * modifier);
+                    Debug.Log($"kickback is being adjusted. New kickback: {kickbackAmount}");
+                }
+
+                // Adjust Ammo - resulting message is a percentage modifier
+                else if (result.Channel.Equals("illuminate.projectile_speed") && result.Message != null)
+                {
+                    Debug.Log($"Projectile Speed is being adjusted. Old Projectile Speed: {projectileSpeed}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    projectileSpeed += (projectileSpeed * modifier);
+                    Debug.Log($"Projectile Speed is being adjusted. New Projectile Speed: {projectileSpeed}");
                 }
             }
         }
