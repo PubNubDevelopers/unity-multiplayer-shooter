@@ -146,14 +146,16 @@ namespace PubNubUnityShowcase
         }
 
         //  Notify others we have hurt them, through Publish message
-        public async void ApplyDamage(Pubnub pubnub, int playerID, int fromPlayer, int value, bool gun)
+        public async void ApplyDamage(Pubnub pubnub, int playerID, int fromPlayer, int value, bool gun, int weaponNumber, int weaponDamage)
         {
-            int[] applyDamageMsg = new int[5];
+            int[] applyDamageMsg = new int[7];
             applyDamageMsg[0] = playerID;
             applyDamageMsg[1] = MessageConstants.idMsgApplyDamage;
             applyDamageMsg[2] = fromPlayer;
             applyDamageMsg[3] = value;
             applyDamageMsg[4] = gun ? 1 : 0;
+            applyDamageMsg[5] = weaponNumber;
+            applyDamageMsg[6] = weaponDamage; 
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                          .Channel(ToGameChannel(chanItems))
                          .Message(applyDamageMsg)

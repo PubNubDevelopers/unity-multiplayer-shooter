@@ -193,7 +193,7 @@ namespace Visyde
                                         {
                                             if (thisIsMine)
                                             {
-                                                p.ApplyDamage(owner.playerID, weaponId, true);
+                                                p.ApplyDamage(owner.playerID, weaponId, true, weaponId);
                                             }
 
                                             // VFX
@@ -264,7 +264,7 @@ namespace Visyde
                                     // Calculate the damage based on distance:
                                     int finalDamage = Mathf.RoundToInt(GameManager.instance.maps[GameManager.instance.chosenMap].spawnableWeapons[weaponId].damage * (1 - ((transform.position - new Vector3(hit.point.x, hit.point.y)).magnitude / explosionRadius)));
                                     // Apply damage:
-                                    p.ApplyDamage(owner.playerID, finalDamage, false);
+                                    p.ApplyDamage(owner.playerID, finalDamage, false, 8);
                                     break;
                                 }
                             }

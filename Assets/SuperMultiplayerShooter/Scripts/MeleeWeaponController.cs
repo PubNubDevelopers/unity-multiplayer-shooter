@@ -55,7 +55,7 @@ namespace Visyde
                             // Don't hurt self and the invulnerable:
                             if (p.playerInstance != ourPlayer.playerInstance && !p.invulnerable)
                             {
-                                pubNubUtilities.ApplyDamage(pubnub, p.playerInstance.playerID, ourPlayer.playerInstance.playerID, damage, false);
+                                pubNubUtilities.ApplyDamage(pubnub, p.playerInstance.playerID, ourPlayer.playerInstance.playerID, damage, false,8, damage);
 
                                 // VFX
                                 GameManager.instance.pooler.Spawn("BodyHit", p.transform.position);

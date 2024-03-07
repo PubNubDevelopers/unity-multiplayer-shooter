@@ -973,8 +973,8 @@ namespace Visyde
         /// <param name="fromPlayer">Damage dealer player name.</param>
         /// <param name="value">Can be either a weapon id (if a gun was used) or a damage value (if melee attack or grenade).</param>
         /// <param name="gun">If set to <c>true</c>, "value" will be used as weapon id.</param>
-        public void ApplyDamage(int fromPlayer, int value, bool gun){
-            pubNubUtilities.ApplyDamage(pubnub, playerInstance.playerID, fromPlayer, value, gun);
+        public void ApplyDamage(int fromPlayer, int value, bool gun, int weaponNumber){
+            pubNubUtilities.ApplyDamage(pubnub, playerInstance.playerID, fromPlayer, value, gun, weaponNumber, curWeapon.damage);
         }
 
         void Hurt(int fromPlayer, int value, bool gun)
