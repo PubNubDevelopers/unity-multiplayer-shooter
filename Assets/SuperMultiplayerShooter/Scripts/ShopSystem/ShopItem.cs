@@ -37,6 +37,7 @@ public class ShopItem : MonoBehaviour
         if(shopItem.discounted)
         {
             shopItem.price = shopItem.discounted_price;
+            PriceText.color = Color.red;
         }
 
         // Configure the Displayed Icon and Price to be displayed in the shop

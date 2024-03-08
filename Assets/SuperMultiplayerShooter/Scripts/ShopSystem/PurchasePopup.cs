@@ -12,7 +12,10 @@ public class PurchasePopup : MonoBehaviour
     // private Text DescriptionText;
     [SerializeField]
     private Image PurchasedItemImage;
-   
+
+    [SerializeField]
+    private Sprite ErrorSprite;
+
     // Open the Purchased Item Popup and set new sprite.
     public void Show(Sprite purchasedItemSprite, string message, bool canPurchase)
     {
@@ -25,8 +28,9 @@ public class PurchasePopup : MonoBehaviour
 
         else
         {
+            // Reset back to error message
+            PurchasedItemImage.sprite = ErrorSprite;
             MessageText.text = "Failed! \r\nPlease Try Again.";
-            //PurchasedItemImage.sprite = purchasedItemSprite;
         }
 
     } 

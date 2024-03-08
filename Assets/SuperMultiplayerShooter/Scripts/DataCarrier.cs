@@ -20,7 +20,6 @@ namespace Visyde
         public static int chosenHat = -1;
 
         public static int coins = 0;
-        public static int gems = 0;
 
         public static void LoadScene(string sceneName)
         {

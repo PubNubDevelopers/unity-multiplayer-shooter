@@ -3,7 +3,7 @@ public enum Categories
 {
     HATS,
     EMOTES,
-    WEAPON_SKINS,
+    WEAPONS,
     HEALTH,
     SHIELDS,
     CHARACTER,

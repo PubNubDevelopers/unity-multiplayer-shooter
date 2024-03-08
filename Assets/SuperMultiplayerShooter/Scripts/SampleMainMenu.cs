@@ -46,7 +46,6 @@ namespace Visyde
         public Button friendsBtn;
         public Button settingsBtn;
         public Text coinsText;
-        public Text gemsText;
         public NotificationPopup notificationPopup;
 
         private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
@@ -449,33 +448,7 @@ namespace Visyde
                         customData.Add("coins", "0");
                         PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
                     }
-                  
-                    //Add Gems (purchased in-game currency) for the player.
-                    if (customData.ContainsKey("gems"))
-                    {
-                        if (Int32.TryParse(customData["gems"].ToString(), out int result))
-                        {
-                            // Check to see if the player has played a game. Update coins if they don't match.
-                            if (DataCarrier.gems > 0 && DataCarrier.gems > result)
-                            {
-                                //Update coins.
-                                Connector.instance.CurrencyUpdated("gems", DataCarrier.gems);
-                            }
-
-                            else
-                            {
-                                DataCarrier.gems = result;
-                            }
-                        }
-                    }
-
-                    // Legacy Situations: Add Gems (purchased in-game currency) for the player. All players should have at least 0 gems.
-                    else
-                    {
-                        customData.Add("gems", "0");
-                        PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = customData;
-                    }
-
+                                  
                     // Displays the player's currency fields
                     DisplayCurrency();
                     //Update the sprite image
@@ -513,7 +486,6 @@ namespace Visyde
         public void DisplayCurrency()
         {
             coinsText.text = DataCarrier.coins.ToString();
-            gemsText.text = DataCarrier.gems.ToString();
         }
 
         /// <summary>
