@@ -123,10 +123,9 @@ namespace Visyde
                         // Force a reload on user discount codes as well
                         Connector.instance.LoadDiscountCodes();
                         message = "You've received the following discount code:\r\n" + result.Message.ToString();
-
                     }
-
-                    notificationPopup.ShowPopup(message);
+                    // Temporarily disabling - causing in influx of unnecessary messages. Should only need to display this message once Object Event Listeners are working.
+                    // notificationPopup.ShowPopup(message);
                 }
                 // Illuminate - Handle Receiving New Discount Code
             }
