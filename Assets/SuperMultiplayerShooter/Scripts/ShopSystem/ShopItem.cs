@@ -100,19 +100,23 @@ public class ShopItem : MonoBehaviour
 
         // Refresh shop items
         Connector.instance.FilterShopItems(shopItem.category);
-
+        string shopMessage = $"Purchased {shopItem.id}";
+        //Metadata setup
+        Dictionary<string, object> metadata = new Dictionary<string, object>
+        {
+            { "coins", shopItem.quantity_given }
+        };
         // Signal that we've successfully purchased an item by publishing the item in message contents.
-        SendMessage();
-
+        SendMessage(message, metadata);
     }
 
-    public async void SendMessage()
+    public async void SendMessage(string message, Dictionary<string, object> meta)
     {
-        string pubnubMessage = $"Purchased {shopItem.id}";
         string channelId = $"{pubnub.GetCurrentUserId()}_{shopItem.id}_shop_purchases";
         PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
-                                                    .Message(pubnubMessage)
+                                                    .Message(message)
                                                     .Channel(channelId)
+                                                    .Meta(meta)
                                                     .ExecuteAsync();
         PNPublishResult publishResult = publishResponse.Result;
         PNStatus status = publishResponse.Status;

@@ -331,7 +331,6 @@ public class PNManager : PNManagerBehaviour
         PNResult<PNSetUuidMetadataResult> setUuidMetadataResponse = await pubnub.SetUuidMetadata()
             .Uuid(uuid)
             .Name(name)
-            .ExternalId(name)  // testing for Illuminate
             .Custom(metadata)
             .IncludeCustom(true)
             .ExecuteAsync();
@@ -482,5 +481,18 @@ public class PNManager : PNManagerBehaviour
            .ExecuteAsync();
 
        return getAllChannelMetadataResponse.Result;
+    }
+
+    public async Task<PNSetChannelMetadataResult> SetChannelMetadata(string channel, string name, Dictionary<string, object> metadata)
+    {
+        // Set Metadata for a specific channel
+        PNResult<PNSetChannelMetadataResult> setChannelMetadataResponse = await pubnub.SetChannelMetadata()
+            .Channel(channel)
+            .Name(name)
+            .Custom(metadata)
+            .IncludeCustom(true)
+            .ExecuteAsync();
+
+        return setChannelMetadataResponse.Result;
     }
 }

@@ -34,60 +34,9 @@ public class ShopSystem : MonoBehaviour
     {
         LoadCategories();
         currentCategoryId = SetDefaultCategory();
-        await LoadShopData();
         FilterShopItems(currentCategoryId);
 
         // Event Listeners
-    }
-
-  
-
-    /// <summary>
-    /// Loads the shop data from the json file.
-    /// </summary>
-    public async Task<bool> LoadShopData()
-    {
-        /*
-        // Simply return if the shop data has already been loaded.
-        if (Connector.instance.ShopItemDataList != null && Connector.instance.ShopItemDataList.Count > 0)
-        {
-            return true;
-        }
-        */
-        Connector.instance.ShopItemDataList = new List<ShopItemData>();
-
-        var allChannelMetadata = await PNManager.pubnubInstance.GetAllChannelMetadata();
-
-        //Filter the channel metadata for shop items.
-       // var shopItemChannels = allChannelMetadata.Channels.Where(channel => String.IsNullOrWhiteSpace(channel.Channel) && channel.Channel.StartsWith("shop_items.")).ToList();
-        foreach(var item in allChannelMetadata.Channels)
-        {
-            if (item.Channel.StartsWith("shop_items."))
-            {
-                // Setup Shop Items
-                ShopItemData shopItem = new ShopItemData
-                {
-                    id = item.Custom["id"].ToString(),
-                    description = item.Custom["description"].ToString(),
-                    category = item.Custom["category"].ToString(),
-                    currency_type = item.Custom["currency_type"].ToString(),
-                    price = Convert.ToInt32(item.Custom["price"]),
-                    quantity_given = Convert.ToInt32(item.Custom["quantity_given"]),
-                    discounted = Convert.ToBoolean(item.Custom["discounted"]),
-                    discounted_price = Convert.ToInt32(item.Custom["discounted_price"]),
-                    discount_codes = JsonConvert.DeserializeObject<List<string>>(item.Custom["discount_codes"].ToString())
-                };
-                Connector.instance.ShopItemDataList.Add(shopItem);
-            }      
-        }
-
-        // No Channels Matched
-        if(Connector.instance.ShopItemDataList == null)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     void LoadCategories()

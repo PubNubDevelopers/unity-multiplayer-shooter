@@ -1160,11 +1160,10 @@ namespace Visyde
             ShopSystem.instance.FilterShopItems(categoryId);
         }
 
-        public async void LoadShopData()
+        public async void FilterShopItems()
         {
-            if(ShopSystem.instance != null)
+            if (ShopSystem.instance != null)
             {
-                await ShopSystem.instance.LoadShopData();
                 FilterShopItems(ShopSystem.instance.currentCategoryId);
             }         
         }
@@ -1180,6 +1179,46 @@ namespace Visyde
             {
                 DiscountCodePopup.instance.LoadUserDiscountCodes();
             }
+        }
+
+        public async Task<bool> LoadShopData()
+        {
+            Connector.instance.ShopItemDataList = new List<ShopItemData>();
+
+            var allChannelMetadata = await PNManager.pubnubInstance.GetAllChannelMetadata();
+
+            //Filter the channel metadata for shop items.
+            // var shopItemChannels = allChannelMetadata.Channels.Where(channel => String.IsNullOrWhiteSpace(channel.Channel) && channel.Channel.StartsWith("shop_items.")).ToList();
+            foreach (var item in allChannelMetadata.Channels)
+            {
+                if (item.Channel.StartsWith("shop_items."))
+                {
+                    // Setup Shop Items
+                    ShopItemData shopItem = new ShopItemData
+                    {
+                        id = item.Custom["id"].ToString(),
+                        description = item.Custom["description"].ToString(),
+                        category = item.Custom["category"].ToString(),
+                        currency_type = item.Custom["currency_type"].ToString(),
+                        price = Convert.ToInt32(item.Custom["price"]),
+                        quantity_given = Convert.ToInt32(item.Custom["quantity_given"]),
+                        discounted = Convert.ToBoolean(item.Custom["discounted"]),
+                        discounted_price = Convert.ToInt32(item.Custom["discounted_price"]),
+                        discount_codes = JsonConvert.DeserializeObject<List<string>>(item.Custom["discount_codes"].ToString()),
+                        channel = item.Channel,
+                        name = item.Name
+                    };
+                    Connector.instance.ShopItemDataList.Add(shopItem);
+                }
+            }
+
+            // No Channels Matched
+            if (Connector.instance.ShopItemDataList == null)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

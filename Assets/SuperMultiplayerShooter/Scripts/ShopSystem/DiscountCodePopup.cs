@@ -65,16 +65,18 @@ public class DiscountCodePopup : MonoBehaviour
         if(customData.ContainsKey("discount_codes"))
         {
             discount_codes = JsonConvert.DeserializeObject<List<string>>(customData["discount_codes"].ToString());
-
-            // There might be duplicates. Only display distinct codes.
-            foreach(var code in discount_codes.Distinct().ToList())
+            if(discount_codes != null)
             {
-                // Create button and append to list.
-                Button codeButton = Instantiate(userCodeButton, userDiscountCodesParent);
-                codeButton.gameObject.SetActive(true);
-                codeButton.GetComponentInChildren<Text>().text = code;
-                codeButton.onClick.AddListener(() => OnDiscountCodeButtonClicked(code));
-            }
+                // There might be duplicates. Only display distinct codes.
+                foreach (var code in discount_codes.Distinct().ToList())
+                {
+                    // Create button and append to list.
+                    Button codeButton = Instantiate(userCodeButton, userDiscountCodesParent);
+                    codeButton.gameObject.SetActive(true);
+                    codeButton.GetComponentInChildren<Text>().text = code;
+                    codeButton.onClick.AddListener(() => OnDiscountCodeButtonClicked(code));
+                }
+            }        
         }
     }
 

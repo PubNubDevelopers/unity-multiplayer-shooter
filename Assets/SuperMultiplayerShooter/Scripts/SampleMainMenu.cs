@@ -14,6 +14,8 @@ using PubNubUnityShowcase;
 using System.Runtime.ConstrainedExecution;
 using Unity.VisualScripting;
 using System;
+using System.Reflection;
+using System.Diagnostics;
 
 namespace Visyde
 {
@@ -82,7 +84,10 @@ namespace Visyde
             nameChangeBtn.interactable = true;
             nameChangeBtn.onClick.AddListener(async () => await SetPlayerName());
 
-            //Subscribe to trigger events whenever a new dropdown option is added.
+            // Get Shop Items Primmed for metadata updates
+           await Connector.instance.LoadShopData();
+
+            //Subscribe to trigger events whenever currency is updated
             Connector.instance.OnCurrencyUpdated += UpdateCurrency;
             MainMenuSetup();
         }
@@ -101,7 +106,7 @@ namespace Visyde
         /// </summary>
         /// <param name="pn"></param>
         /// <param name="result"></param>
-        private void OnPnMessage(PNMessageResult<object> result)
+        private async void OnPnMessage(PNMessageResult<object> result)
         {
             //Ignore messages from self (they are not translated / ran through profanity filter).
             if (result != null)
@@ -111,21 +116,110 @@ namespace Visyde
                 if (result.Channel.StartsWith("illuminate"))
                 {
                     string message = "";
-                    if(result.Channel.Equals("illuminate.itemshop"))
+
+                    // Determine if the special event status has changed
+                    if(result.Channel.Equals("illuminate.event_status"))
                     {
-                        // The metadata has already been updated. Simply fetch the updated data and display new shop items.
-                        Connector.instance.LoadShopData();
-                        message = "Item" + result.Message.ToString() + "was just discounted in the shop!\r\nGo check it out!";
+                        // the message will be either true or false.
+                        bool msgValue = bool.Parse(result.Message.ToString());
+                        // Active Sale = Every Item Discounted.
+                        bool isActiveSale = Connector.instance.ShopItemDataList.All(item => item.discounted);
+                        
+                        // Display a message if an event is active and update metadata.
+                        if(isActiveSale != msgValue)
+                        {
+                            var val = msgValue ? "is active.\r\nCheck out the shop now!" : "has ended.";
+                            message = $"The Event Sale {val}";
+
+                            // Make every item discounted in the store.
+                            foreach(var item in Connector.instance.ShopItemDataList)
+                            {
+                                item.discounted = msgValue;
+
+                                // Update metadata
+                                Dictionary<string, object> customData = new Dictionary<string, object>();
+                                customData["id"] = item.id;
+                                customData["description"] = item.description;
+                                customData["category"] = item.category;
+                                customData["currency_type"] = item.currency_type;
+                                customData["price"] = item.price;
+                                customData["quantity_given"] = item.quantity_given;
+                                customData["discounted"] = item.discounted;
+                                customData["discounted_price"] = item.discounted_price;
+                                customData["discount_codes"] = JsonConvert.SerializeObject(item.discount_codes);
+
+                                // No need to wait for completion.
+                                PNManager.pubnubInstance.SetChannelMetadata(item.channel, item.name, customData);
+                            }
+                        }                   
                     }
                     
+                    // A Discount Code was received
                     else if (result.Channel.Equals("illuminate.discountcodes"))
                     {
-                        // Force a reload on user discount codes as well
-                        Connector.instance.LoadDiscountCodes();
-                        message = "You've received the following discount code:\r\n" + result.Message.ToString();
+                        // Determine if user already has discount code               
+                        List<string> discountCodes = new List<string>();
+                        //  Populate the available hat inventory and other settings, read from PubNub App Context
+                        Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+                        if (customData.ContainsKey("discount_codes"))
+                        {
+                            discountCodes = JsonConvert.DeserializeObject<List<string>>(customData["discount_codes"].ToString());
+                            if(discountCodes == null)
+                            {
+                                discountCodes = new List<string>();
+                            }
+                            // Discount code is new. Only Display new discount codes received
+                            if (!discountCodes.Contains(result.Message.ToString()))
+                            {
+                                message = $"You've received the following discount code: {result.Message.ToString()}\r\nGo to the shop to check it out!";
+                                discountCodes.Add(result.Message.ToString());
+
+                                // Update metadata.
+                                customData["discount_codes"] = JsonConvert.SerializeObject(discountCodes);
+                                // Don't wait on update
+                                PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), Connector.PNNickName, customData);
+                            }
+                        }                      
                     }
-                    // Temporarily disabling - causing in influx of unnecessary messages. Should only need to display this message once Object Event Listeners are working.
-                    // notificationPopup.ShowPopup(message);
+
+                    // Adjust Coin Bundle Prices Based on the percentage adjustment. Update shop metadata for the coin bundles
+                    else if(result.Channel.Equals("illuminate.price_adjustment"))
+                    {
+                        // Adjust Coin Bundle Prices
+                        foreach(var item in Connector.instance.ShopItemDataList)
+                        {
+                            // Only update the coin package bundles.
+                            if(item.category.Equals("currency"))
+                            {
+                                int percentageDiscount = Convert.ToInt32(result.Message.ToString());
+                                item.price += (int)Math.Round(item.price * (percentageDiscount / 100.0));
+
+                                // At least one item has been adjusted. Update.
+                                message = $"The Coin Packages have items adjusted in the shop.\r\nGo to the shop to check it out!";
+
+                                // Setup metadata.
+                                Dictionary<string, object> customData = new Dictionary<string, object>();
+                                customData["id"] = item.id;
+                                customData["description"] = item.description;
+                                customData["category"] = item.category;
+                                customData["currency_type"] = item.currency_type;
+                                customData["price"] = item.price;
+                                customData["quantity_given"] = item.quantity_given;
+                                customData["discounted"] = item.discounted;
+                                customData["discounted_price"] = item.discounted_price;
+                                customData["discount_codes"] = JsonConvert.SerializeObject(item.discount_codes);
+
+                                //update the metadata for this item. No need to wait for completion.
+                                PNManager.pubnubInstance.SetChannelMetadata(item.channel, item.name, customData);
+                            }
+                        } 
+                    }
+
+                    // Display a notification popup if there is a message to display
+                    if(!string.IsNullOrWhiteSpace(message))
+                    {
+                        notificationPopup.ShowPopup(message);
+                    }
                 }
                 // Illuminate - Handle Receiving New Discount Code
             }
@@ -209,7 +303,8 @@ namespace Visyde
                         price = Convert.ToInt32(result.ChannelMetadata.Custom["price"]),
                         quantity_given = Convert.ToInt32(result.ChannelMetadata.Custom["quantity_given"]),
                         discounted = Convert.ToBoolean(result.ChannelMetadata.Custom["discounted"]),
-                        discount_codes = JsonConvert.DeserializeObject<List<string>>(result.ChannelMetadata.Custom["discount_codes"].ToString())
+                        discount_codes = JsonConvert.DeserializeObject<List<string>>(result.ChannelMetadata.Custom["discount_codes"].ToString()),
+                        recent_code = result.ChannelMetadata.Custom["recent_code"].ToString()
                     };
 
                     // Step 1: Find the index of the item with the matching id
@@ -219,6 +314,12 @@ namespace Visyde
                     {
                         // Step 2: Item exists, so update it
                         Connector.instance.ShopItemDataList[index] = shopItem;
+
+                        // Determine whether or not to display a notification. Display only if the notification is new.
+                        //if(!string.IsNullOrWhiteSpace(shopItem.recent_code) && !Connector.instance.ShopItemDataList[index].discount_codes.Contains(shopItem.recent_code))
+                        //{
+                         //   notificationPopup.ShowPopup(message);
+                       // }
                     }
                     else
                     {
@@ -296,7 +397,7 @@ namespace Visyde
             PNStatus status = herenowResponse.Status;
             if (status != null && status.Error)
             {
-                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
+                UnityEngine.Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
             }
             else
             {
@@ -311,23 +412,25 @@ namespace Visyde
         /// <returns></returns>
         public async Task<bool> UpdateCurrency()
         {
-            //  Determine who is present based on who is subscribed to the global channel.
-            //  Called when we first launch to determine the game state
-            PNResult<PNHereNowResult> herenowResponse = await pubnub.HereNow()
-                .Channels(new string[]
+            //Update local metadata
+            var metadata = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+            if (metadata != null)
+            {
+                if (metadata.ContainsKey("coins"))
                 {
-                    PubNubUtilities.chanGlobal
-                })
-                .ExecuteAsync();
-            PNHereNowResult hereNowResult = herenowResponse.Result;
-            PNStatus status = herenowResponse.Status;
-            if (status != null && status.Error)
-            {
-                Debug.Log($"Error calling PubNub HereNow ({PubNubUtilities.GetCurrentMethodName()}): {status.ErrorData.Information}");
-            }
-            else
-            {
-                UpdateGlobalPlayers(hereNowResult.TotalOccupancy);
+                    metadata["coins"] = DataCarrier.coins;
+                }
+
+                //First time saving a new hat.
+                else
+                {
+                    metadata.Add("coins", DataCarrier.coins);
+                }
+
+                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = metadata;
+
+                //Store the new update in the metadata
+                await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, metadata);
             }
             return true;
         }
