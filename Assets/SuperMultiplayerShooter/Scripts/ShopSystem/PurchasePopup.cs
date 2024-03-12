@@ -5,7 +5,6 @@ using UnityEngine.UI;
 
 public class PurchasePopup : MonoBehaviour
 {
-    // 
     [SerializeField]
     private Text MessageText;
     // [SerializeField]

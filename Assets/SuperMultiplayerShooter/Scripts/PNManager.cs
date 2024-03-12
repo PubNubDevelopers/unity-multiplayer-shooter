@@ -117,7 +117,8 @@ public class PNManager : PNManagerBehaviour
                         PubNubUtilities.chanChatTranslate + userId,
                         PubNubUtilities.chanLeaderboardSub,
                         PubNubUtilities.chanFriendRequest + userId,
-                        PubNubUtilities.chanIlluminate +"*"
+                        PubNubUtilities.chanIlluminate +"*",
+                        "usermetadata_updates." + userId
         })
         .ChannelGroups(new List<string>() {
                         PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
@@ -483,6 +484,10 @@ public class PNManager : PNManagerBehaviour
        return getAllChannelMetadataResponse.Result;
     }
 
+    /// <summary>
+    /// Updates the Channel Metadata given the channel, name, and metadata
+    /// </summary>
+    /// <returns></returns>
     public async Task<PNSetChannelMetadataResult> SetChannelMetadata(string channel, string name, Dictionary<string, object> metadata)
     {
         // Set Metadata for a specific channel

@@ -221,7 +221,6 @@ namespace Visyde
                         notificationPopup.ShowPopup(message);
                     }
                 }
-                // Illuminate - Handle Receiving New Discount Code
             }
         }
 
@@ -282,6 +281,14 @@ namespace Visyde
                         {
                             PNManager.pubnubInstance.CachedPlayers.Add(result.UuidMetadata.Uuid, meta);
                         }
+
+                        //  Populate the available hat inventory and other settings, read from PubNub App Context
+                        Dictionary<string, object> customData = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
+                        if (customData.ContainsKey("coins"))
+                        {
+                            DataCarrier.coins = Convert.ToInt32(customData["coins"]);
+                            Connector.instance.CurrencyUpdated("coins", DataCarrier.coins);
+                        }                        
                     }
 
                     // Remove player from cache
@@ -307,23 +314,16 @@ namespace Visyde
                         recent_code = result.ChannelMetadata.Custom["recent_code"].ToString()
                     };
 
-                    // Step 1: Find the index of the item with the matching id
+                    // Find the index of the item with the matching id
                     int index = Connector.instance.ShopItemDataList.FindIndex(item => item.id == shopItem.id);
 
                     if (index != -1)
                     {
-                        // Step 2: Item exists, so update it
                         Connector.instance.ShopItemDataList[index] = shopItem;
-
-                        // Determine whether or not to display a notification. Display only if the notification is new.
-                        //if(!string.IsNullOrWhiteSpace(shopItem.recent_code) && !Connector.instance.ShopItemDataList[index].discount_codes.Contains(shopItem.recent_code))
-                        //{
-                         //   notificationPopup.ShowPopup(message);
-                       // }
                     }
                     else
                     {
-                        // Item not found, you might want to add it to the list instead
+                        // Item not found, add it to the list instead
                         Connector.instance.ShopItemDataList.Add(shopItem);
                     }
                 }
@@ -402,35 +402,6 @@ namespace Visyde
             else
             {
                 UpdateGlobalPlayers(hereNowResult.TotalOccupancy);
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// Updates the player's currency after successfully playing the game.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<bool> UpdateCurrency()
-        {
-            //Update local metadata
-            var metadata = PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom;
-            if (metadata != null)
-            {
-                if (metadata.ContainsKey("coins"))
-                {
-                    metadata["coins"] = DataCarrier.coins;
-                }
-
-                //First time saving a new hat.
-                else
-                {
-                    metadata.Add("coins", DataCarrier.coins);
-                }
-
-                PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = metadata;
-
-                //Store the new update in the metadata
-                await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, metadata);
             }
             return true;
         }

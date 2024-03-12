@@ -22,13 +22,9 @@ public class ShopItem : MonoBehaviour
     [SerializeField]
     public Button ItemButton;
 
-    // public delegate void PurchaseEvent(Product Model, Action OnComplete);
-    // public event PurchaseEvent OnPurchase;
     // internals
-    private ShopItemData shopItem;// = new ShopItemData();
+    private ShopItemData shopItem;
     private Pubnub pubnub { get { return PNManager.pubnubInstance.pubnub; } }
-
-    //private Product Model;
 
     public void Setup(ShopItemData shopItemData)
     {
@@ -86,8 +82,7 @@ public class ShopItem : MonoBehaviour
             else
             {
                 cost = DataCarrier.coins += shopItem.quantity_given;
-            }
-           
+            }         
 
             // Update and Display New Value of Purchase, including new items in inventory.
             Connector.instance.CurrencyUpdated("coins", cost);
@@ -110,6 +105,11 @@ public class ShopItem : MonoBehaviour
         SendMessage(message, metadata);
     }
 
+    /// <summary>
+    /// Sends the message and the meatdata to PubNub.
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="meta"></param>
     public async void SendMessage(string message, Dictionary<string, object> meta)
     {
         string channelId = $"{pubnub.GetCurrentUserId()}_{shopItem.id}_shop_purchases";
