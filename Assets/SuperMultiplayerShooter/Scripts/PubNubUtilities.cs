@@ -169,9 +169,12 @@ namespace PubNubUnityShowcase
         //  Tell the recipient they are dead, to ensure game state consistency across all players.
         public async void ForceDead(Pubnub pubnub, int playerID)
         {
-            int[] forceDeadMsg = new int[2];
+            int[] forceDeadMsg = new int[7];
             forceDeadMsg[0] = playerID;
             forceDeadMsg[1] = MessageConstants.idMsgForceDead;
+           // Dummy Data. Illuminate currently needs to have every trackable chart contain the same payload as that of the measure, even if it's a dimension and has nothing to do with
+           // the dimension - in this case, weapondamage in index 6.
+            forceDeadMsg[6] = 0; // this is the data we are tracking.
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                          .Channel(ToGameChannel(chanItems))
                          .Message(forceDeadMsg)
@@ -202,11 +205,14 @@ namespace PubNubUnityShowcase
         //  Notify the player instance that they have recevied a power up (only sent from Master, who controls all power ups)
         public async void ReceivePowerUp(Pubnub pubnub, int playerID, int powerUpIndex, int spawnPointIndex)
         {
-            int[] receivePowerUpMsg = new int[4];
+            int[] receivePowerUpMsg = new int[7];
             receivePowerUpMsg[0] = playerID;
             receivePowerUpMsg[1] = MessageConstants.idMsgReceivePowerUp;
             receivePowerUpMsg[2] = powerUpIndex;
             receivePowerUpMsg[3] = spawnPointIndex;
+            // Dummy Data. Illuminate currently needs to have every trackable chart contain the same payload as that of the measure, even if it's a dimension and has nothing to do with
+            // the dimension - in this case, weapondamage in index 6.
+            receivePowerUpMsg[6] = 0; // this is the data we are tracking. set to 0 as to not cause any conflicts
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                          .Channel(ToGameChannel(chanItems))
                          .Message(receivePowerUpMsg)
@@ -237,11 +243,14 @@ namespace PubNubUnityShowcase
         public async void UpdateOthersPlayerStatus(Pubnub pubnub, int playerID, int health, int shield)
         {
             //  Notify other players that my health and shield have updated so they can render me correctly
-            int[] updateOthersMsg = new int[4];
+            int[] updateOthersMsg = new int[7];
             updateOthersMsg[0] = playerID;
             updateOthersMsg[1] = MessageConstants.idMsgUpdateOthers;
             updateOthersMsg[2] = health;
             updateOthersMsg[3] = shield;
+            // Dummy Data. Illuminate currently needs to have every trackable chart contain the same payload as that of the measure, even if it's a dimension and has nothing to do with
+            // the dimension - in this case, weapondamage in index 6.
+            updateOthersMsg[6] = 0; // this is the data we are tracking. set to 0 as to not cause any conflicts
             string channelName = ToGameChannel(chanPrefixPlayerActions + playerID);
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                     .Channel(channelName)
@@ -273,11 +282,14 @@ namespace PubNubUnityShowcase
         //  Notify the player instance that they have recevied a weapon (only sent from Master, who controls all weapons)
         public async void GrabWeapon(Pubnub pubnub, int playerID, int weaponIndex, int spawnPointIndex)
         {
-            int[] grabWeaponMsg = new int[4];
+            int[] grabWeaponMsg = new int[7];
             grabWeaponMsg[0] = playerID;
             grabWeaponMsg[1] = MessageConstants.idMsgGrabWeapon;
             grabWeaponMsg[2] = weaponIndex;
             grabWeaponMsg[3] = spawnPointIndex;
+            // Dummy Data. Illuminate currently needs to have every trackable chart contain the same payload as that of the measure, even if it's a dimension and has nothing to do with
+            // the dimension - in this case, weapondamage in index 6.
+            grabWeaponMsg[6] = 0; // this is the data we are tracking. set to 0 as to not cause any conflicts
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                      .Channel(ToGameChannel(chanItems))
                                      .Message(grabWeaponMsg)
@@ -307,16 +319,20 @@ namespace PubNubUnityShowcase
         //  You have been a right wally and falling in a hole, tell everyone else so they can laugh at you
         public async void TriggerDeadZone(Pubnub pubnub, int playerID, Vector2 position)
         {
-            float[] triggerDeadZoneData = new float[4];
+            float[] triggerDeadZoneData = new float[7];
             triggerDeadZoneData[0] = playerID;
             triggerDeadZoneData[1] = MessageConstants.idMsgTriggerDeadZone;
             triggerDeadZoneData[2] = position.x;
             triggerDeadZoneData[3] = position.y;
+            // Dummy Data. Illuminate currently needs to have every trackable chart contain the same payload as that of the measure, even if it's a dimension and has nothing to do with
+            // the dimension - in this case, weapondamage in index 6.
+            triggerDeadZoneData[6] = 0; // this is the data we are tracking. set to 0 as to not cause any conflicts
             string channelName = ToGameChannel(chanPrefixPlayerPos + playerID);
             PNResult<PNPublishResult> publishResponse = await pubnub.Publish()
                                      .Channel(channelName)
                                      .Message(triggerDeadZoneData)
                                      .ExecuteAsync();
+
             if (publishResponse.Status.Error)
             {
                 Debug.Log("Error sending PubNub Message (Trigger Dead Zone): " + publishResponse.Status.ErrorData.Information);
