@@ -154,8 +154,9 @@ Install [Unity](https://store.unity.com/download-nuo) if you do not have it. The
 	git clone https://github.com/PubNubDevelopers/unity-multiplayer-shooter.git
 	```  
 2. Open the Project in the Unity Hub.
-3. Follow the instructions at https://www.pubnub.com/docs/sdks/unity7 to add PubNub and configure it with your application
-4. Run the game in the editor.
+3. Follow the instructions at https://www.pubnub.com/docs/sdks/unity7 to add the latest version of PubNub.
+4. Navigate to Assets > SuperMultiplayerShooter > Scripts > PNConfigAsset to add the publish and subscribe keys.
+5. Run the game in the editor.
 
 ## Playing the Game
 There are three scenes in the game to pay attention to that exist in Assets > SuperMultiplayerShooter. In File > Build Settings, ensure they are in the following order:
