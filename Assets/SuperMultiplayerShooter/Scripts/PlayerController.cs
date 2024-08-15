@@ -176,6 +176,8 @@ namespace Visyde
                         long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                         if (payload[1] == MessageConstants.idMsgReceivePowerUp)
                         {
+                            Debug.Log($"received power up. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Receive Power up state
                             int playerId = System.Convert.ToInt32(payload[0]);
                             if (playerId == playerInstance.playerID)
@@ -187,6 +189,8 @@ namespace Visyde
                         }
                         else if (payload[1] == MessageConstants.idMsgUpdateOthers)
                         {
+                            Debug.Log($"someone wants state updated: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Someone wants their state updated
                             int playerId = System.Convert.ToInt32(payload[0]);
                             if (playerId == playerInstance.playerID)
@@ -198,6 +202,8 @@ namespace Visyde
                         }
                         else if (payload[1] == MessageConstants.idMsgGrabWeapon)
                         {
+                            Debug.Log($"received weapon state. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Receive Weapon state
                             int playerId = System.Convert.ToInt32(payload[0]);
                             if (playerId == playerInstance.playerID)
@@ -209,6 +215,8 @@ namespace Visyde
                         }
                         else if (payload[1] == MessageConstants.idMsgApplyDamage)
                         {
+                            Debug.Log($"apply damage: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Apply Damage
                             int playerId = System.Convert.ToInt32(payload[0]);
                             //  The condition is a little different for Apply Damage as we want
@@ -224,6 +232,8 @@ namespace Visyde
                         }
                         else if (payload[1] == MessageConstants.idMsgForceDead)
                         {
+                            Debug.Log($"we died: {result.Publisher}. Channel: {result.Channel}");
+
                             //  We have been killed
                             int playerId = System.Convert.ToInt32(payload[0]);
                             if (playerId == playerInstance.playerID)
@@ -240,6 +250,8 @@ namespace Visyde
                         {
                             if (System.Convert.ToInt32(payload[1]) == MessageConstants.idMsgTriggerDeadZone)
                             {
+                                Debug.Log($"dead zone: {result.Publisher}. Channel: {result.Channel}");
+
                                 //  Trigger Dead Zone
                                 int playerId = System.Convert.ToInt32(payload[0]);
                                 float positionX = (float)payload[2];
@@ -255,6 +267,47 @@ namespace Visyde
                 catch (System.Exception)
                 {
                     //Debug.Log("Issue parsing PubNub messages: " + ex.Message);
+                }
+            }
+
+            // Illuminate Demo - Gameplay Adjustments
+            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate"))
+            {
+
+                if (result.Channel.Equals("illuminate.movement_speed"))
+                {
+                    Debug.Log($"Speed is being adjusted. Old Speed: {movementController.moveSpeed}");
+
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    // Adjust the movement speed
+                    movementController.moveSpeed += (movementController.moveSpeed * modifier);
+                    Debug.Log($"New Speed: {movementController.moveSpeed}");
+                }
+
+                else if (result.Channel.Equals("illuminate.melee_speed"))
+                {
+                    Debug.Log($"Melee Speed is being adjusted. Old Speed: {meleeWeapon.attackSpeed}");
+
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    // Adjust the movement speed
+                    meleeWeapon.attackSpeed += (meleeWeapon.attackSpeed * modifier);
+                    Debug.Log($"New Speed: {meleeWeapon.attackSpeed}");
+                }
+
+                else if (result.Channel.Equals("illuminate.melee_damage"))
+                {
+                    Debug.Log($"Melee Damage is being adjusted. Old Damage: {meleeWeapon.damage}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    meleeWeapon.damage += (int)System.Math.Round(meleeWeapon.damage * modifier);
+                    Debug.Log($"New Damage: {meleeWeapon.attackSpeed}");
+                }
+
+                else if (result.Channel.Equals("illuminate.health"))
+                {
+                    Debug.Log($"health is being adjusted. Old Player health: {health}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    health += (int)System.Math.Round(health * modifier);
+                    Debug.Log($"New health: {health}");
                 }
             }
         }
@@ -281,6 +334,8 @@ namespace Visyde
                         long[] payload = JsonConvert.DeserializeObject<long[]>(result.Message.ToString());
                         if (payload[1] == MessageConstants.idMsgEmoji)
                         {
+                            Debug.Log($"Someone emoted. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Emote
                             int playerId = System.Convert.ToInt32(payload[0]);
                             int emote = System.Convert.ToInt32(payload[2]);
@@ -291,6 +346,8 @@ namespace Visyde
                         }
                         else if (payload[1] == MessageConstants.idMsgMelee)
                         {
+                            Debug.Log($"Someone meleed. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                             //  Melee Attack
                             int playerId = System.Convert.ToInt32(payload[0]);
                             if (playerId == playerInstance.playerID && !playerInstance.IsMine)
@@ -307,6 +364,8 @@ namespace Visyde
                             int command = System.Convert.ToInt32(payload[1]);
                             if (command == MessageConstants.idMsgPosition)
                             {
+                                Debug.Log($"Someone moved. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                                 //  Movement message 1
                                 int playerId = System.Convert.ToInt32(payload[0]);
                                 float positionX = (float)payload[2];
@@ -346,6 +405,8 @@ namespace Visyde
                             }
                             else if (command == MessageConstants.idMsgCursor)
                             {
+                                Debug.Log($"cursor movement. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                                 //  Cursor movement
                                 int playerId = System.Convert.ToInt32(payload[0]);
                                 float mousePosX = (float)payload[2];
@@ -375,6 +436,8 @@ namespace Visyde
                             }
                             else if (command == MessageConstants.idMsgShoot)
                             {
+                                Debug.Log($"Someone shot. UUID that sent it: {result.Publisher}. Channel: {result.Channel}");
+
                                 //  Shoot message
                                 int playerId = System.Convert.ToInt32(payload[0]);
                                 if (playerId == playerInstance.playerID && (!playerInstance.IsMine || gm.isBot(playerId)))
@@ -910,8 +973,8 @@ namespace Visyde
         /// <param name="fromPlayer">Damage dealer player name.</param>
         /// <param name="value">Can be either a weapon id (if a gun was used) or a damage value (if melee attack or grenade).</param>
         /// <param name="gun">If set to <c>true</c>, "value" will be used as weapon id.</param>
-        public void ApplyDamage(int fromPlayer, int value, bool gun){
-            pubNubUtilities.ApplyDamage(pubnub, playerInstance.playerID, fromPlayer, value, gun);
+        public void ApplyDamage(int fromPlayer, int value, bool gun, int weaponNumber){
+            pubNubUtilities.ApplyDamage(pubnub, playerInstance.playerID, fromPlayer, value, gun, weaponNumber, curWeapon.damage);
         }
 
         void Hurt(int fromPlayer, int value, bool gun)

@@ -34,7 +34,7 @@ namespace Visyde
         [Space]
         [Header("Game Settings:")]
         public bool useMobileControls;              	// if set to true, joysticks and on-screen buttons will be enabled
-        public int respawnTime = 5;             		// delay before respawning after death
+        public int respawnTime = 5;             		// delay before respawning after death | original value: 5
         public float invulnerabilityDuration = 3;		// how long players stay invulnerable after spawn
         private int preparationTime = 0;                // the starting countdown before the game starts
         public int gameLength = 120;                    // time in seconds
@@ -914,6 +914,17 @@ namespace Visyde
                             }
                         }
                     }
+                }
+            }
+
+            // Illuminate Demo - Gameplay Adjustments
+            else if (result != null && result.Message != null && result.Channel.StartsWith("illuminate"))
+            {
+                if (result.Channel.Equals("illuminate.respawn_timer") && result.Message != null)
+                {
+                    Debug.Log($"Old respawn timer: {respawnTime}");
+                    respawnTime = System.Convert.ToInt32(result.Message);
+                    Debug.Log($"New respawn timer: {respawnTime}");
                 }
             }
         }

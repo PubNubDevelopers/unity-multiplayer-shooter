@@ -85,6 +85,8 @@ namespace Visyde
 
         public int TotalPlayerCount { get; protected set; } // Number of players in a room
 
+        public List<ShopItemData> ShopItemDataList { get; set; } // Contains the list of shop items
+
         //  PubNub properties
         private PubNubUtilities pubNubUtilities = new PubNubUtilities();
         private static string userId = null;    //  The PubNub user ID for the current instance
@@ -112,6 +114,7 @@ namespace Visyde
         public delegate void PlayerEvent(PNPlayer player);
         public PlayerEvent onPlayerJoin;
         public PlayerEvent onPlayerLeave;
+        public event Action<string, int> OnCurrencyUpdated;
 
         // Internal variables:
         private Bot[] curBots;
@@ -1065,6 +1068,15 @@ namespace Visyde
         }
 
         /// <summary>
+        /// Update the calling class when the currency has been updated.
+        /// </summary>
+        /// <param name="action">The action that is occurring (adding a friend, creating private message option, etc)</param>
+        public void CurrencyUpdated(string currencyKey, int value)
+        {
+            OnCurrencyUpdated?.Invoke(currencyKey, value);
+        }
+
+        /// <summary>
         /// Returns the language of the user
         /// </summary>
         /// <returns></returns>
@@ -1129,6 +1141,82 @@ namespace Visyde
                 .ExecuteAsync();
             PNRemoveUuidMetadataResult removeUuidMetadataResult = removeUuidMetadataResponse.Result;
             PNStatus status = removeUuidMetadataResponse.Status;
+
+            return true;
+        }
+
+        // Open the Purchased Item Popup and set new sprite.
+        public void OpenPurchasePopup(Sprite purchasedItemSprite, string message, bool canPurchase)
+        {
+            ShopSystem.instance.OpenPurchasePopup(purchasedItemSprite, message, canPurchase);
+        }
+
+        /// <summary>
+        /// Returns the category id (name) that is used to filter the shop items. 
+        /// </summary>
+        /// <param name="categoryId">The Id of the Category (Name, i.e. "Hats")</param>
+        public void FilterShopItems(string categoryId)
+        {
+            ShopSystem.instance.FilterShopItems(categoryId);
+        }
+
+        public async void FilterShopItems()
+        {
+            if (ShopSystem.instance != null)
+            {
+                FilterShopItems(ShopSystem.instance.currentCategoryId);
+            }         
+        }
+
+        /// <summary>
+        /// Refreshes the User Metadata and the user discount codes if updated from Illuminate.
+        /// Work around due to Objects event listener issues.
+        /// </summary>
+        public async void LoadDiscountCodes()
+        {
+            await PNManager.pubnubInstance.GetUserMetadata(pubnub.GetCurrentUserId());
+            if (DiscountCodePopup.instance != null)
+            {
+                DiscountCodePopup.instance.LoadUserDiscountCodes();
+            }
+        }
+
+        public async Task<bool> LoadShopData()
+        {
+            Connector.instance.ShopItemDataList = new List<ShopItemData>();
+
+            var allChannelMetadata = await PNManager.pubnubInstance.GetAllChannelMetadata();
+
+            //Filter the channel metadata for shop items.
+            // var shopItemChannels = allChannelMetadata.Channels.Where(channel => String.IsNullOrWhiteSpace(channel.Channel) && channel.Channel.StartsWith("shop_items.")).ToList();
+            foreach (var item in allChannelMetadata.Channels)
+            {
+                if (item.Channel.StartsWith("shop_items."))
+                {
+                    // Setup Shop Items
+                    ShopItemData shopItem = new ShopItemData
+                    {
+                        id = item.Custom["id"].ToString(),
+                        description = item.Custom["description"].ToString(),
+                        category = item.Custom["category"].ToString(),
+                        currency_type = item.Custom["currency_type"].ToString(),
+                        price = Convert.ToInt32(item.Custom["price"]),
+                        quantity_given = Convert.ToInt32(item.Custom["quantity_given"]),
+                        discounted = Convert.ToBoolean(item.Custom["discounted"]),
+                        discounted_price = Convert.ToInt32(item.Custom["discounted_price"]),
+                        discount_codes = JsonConvert.DeserializeObject<List<string>>(item.Custom["discount_codes"].ToString()),
+                        channel = item.Channel,
+                        name = item.Name
+                    };
+                    Connector.instance.ShopItemDataList.Add(shopItem);
+                }
+            }
+
+            // No Channels Matched
+            if (Connector.instance.ShopItemDataList == null)
+            {
+                return false;
+            }
 
             return true;
         }

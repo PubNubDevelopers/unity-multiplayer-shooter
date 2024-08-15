@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿using Newtonsoft.Json;
+using PubnubApi;
+using PubNubUnityShowcase;
+using System;
+using UnityEngine;
 
 namespace Visyde
 {
@@ -54,6 +58,9 @@ namespace Visyde
 
             // Set the current ammo to full on start:
             curAmmo = ammo;
+
+            //Listeners
+            PNManager.pubnubInstance.onPubNubMessage += OnPnMessage;
         }
 
         // Update is called once per frame
@@ -90,7 +97,7 @@ namespace Visyde
                                 {
                                     // Dry fire sound:
                                     if (dry.Length > 0)
-                                        owner.aus.PlayOneShot(dry[Random.Range(0, dry.Length)]);
+                                        owner.aus.PlayOneShot(dry[UnityEngine.Random.Range(0, dry.Length)]);
 
                                     doneDrySound = true;
                                 }
@@ -112,13 +119,21 @@ namespace Visyde
             transform.localPosition = Vector3.Lerp(transform.localPosition, Vector3.zero, Time.deltaTime * 16f);
         }
 
+        /// <summary>
+        /// Called when the scene is changed. Remove any PubNub listeners.
+        /// </summary>
+        private void OnDestroy()
+        {
+            PNManager.pubnubInstance.onPubNubMessage -= OnPnMessage;
+        }
+
         // Called by the PlayerController (not by this weapon directly):
         public void Shoot()
         {
             curAmmo -= 1;
 
             // Sound:
-            owner.aus.PlayOneShot(shoot[Random.Range(0, shoot.Length)]);
+            owner.aus.PlayOneShot(shoot[UnityEngine.Random.Range(0, shoot.Length)]);
 
             // Spawn projectile:
             for (int i = 0; i < numberOfProjectilesPerShot; i++)
@@ -141,6 +156,55 @@ namespace Visyde
             // Muzzle flash VFX:
             muzzleFlash.SetActive(false);
             muzzleFlash.SetActive(true);
+        }
+
+        /// <summary>
+        /// Event listener to handle PubNub Message events
+        /// </summary>
+        /// <param name="pn"></param>
+        /// <param name="result"></param>
+        private void OnPnMessage(PNMessageResult<object> result)
+        {
+            //  There is one subscribe handler per weapon
+            //  Adjusts the Rate of Fire and Damage for the CURRENTLY EQUIPPED weapon. Not a global update. Resets on new weapon pickup.
+            if (result != null && result.Channel.StartsWith("illuminate"))
+            {
+                // Adjust Rate of Fire - resulting message is a percentage modifier
+                if (result.Channel.Equals("illuminate.rof") && result.Message != null)
+                {
+                    Debug.Log($"Rate of Fire is being adjusted. Old rof: {rateOfFire}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    rateOfFire += (rateOfFire * modifier);
+                    Debug.Log($"Rate of Fire is being adjusted. New rof: {rateOfFire}");
+                }
+
+                // Adjust Damage - resulting message is a percentage modifier
+                else if (result.Channel.Equals("illuminate.damage") && result.Message != null)
+                {
+                    Debug.Log($"Damage is being adjusted. Old Dmg: {damage}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    damage += (int)Math.Round(damage * modifier);
+                    Debug.Log($"Damage is being adjusted. New Dmg: {damage}");
+                }
+
+                // Adjust Kickback - resulting message is a percentage modifier
+                else if (result.Channel.Equals("illuminate.kickback") && result.Message != null)
+                {
+                    Debug.Log($"Kickback is being adjusted. Old Kickback: {kickbackAmount}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    kickbackAmount += (kickbackAmount * modifier);
+                    Debug.Log($"kickback is being adjusted. New kickback: {kickbackAmount}");
+                }
+
+                // Adjust Ammo - resulting message is a percentage modifier
+                else if (result.Channel.Equals("illuminate.projectile_speed") && result.Message != null)
+                {
+                    Debug.Log($"Projectile Speed is being adjusted. Old Projectile Speed: {projectileSpeed}");
+                    float modifier = float.Parse(result.Message.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    projectileSpeed += (projectileSpeed * modifier);
+                    Debug.Log($"Projectile Speed is being adjusted. New Projectile Speed: {projectileSpeed}");
+                }
+            }
         }
     }
 }

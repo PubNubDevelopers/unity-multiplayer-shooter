@@ -3,6 +3,7 @@ using PubnubApi;
 using PubnubApi.Unity;
 using PubNubUnityShowcase;
 using Newtonsoft.Json;
+using System;
 
 namespace Visyde
 {
@@ -118,6 +119,8 @@ namespace Visyde
                 {
                     if (payload[0] == MessageConstants.idMsgPickedUpWeapon)
                     {
+                        //Debug.Log("Player Picked Up Weapon");
+
                         //  Power Up has been picked up.  Check whether is corresponds to our instance
                         int destIndex = System.Convert.ToInt32(payload[1]);
                         if (index == destIndex)

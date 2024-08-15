@@ -10,6 +10,7 @@ using Visyde;
 using System.Linq;
 using PubNubUnityShowcase;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
+using UnityEditor;
 
 public class PNManager : PNManagerBehaviour
 {
@@ -115,7 +116,9 @@ public class PNManager : PNManagerBehaviour
                         PubNubUtilities.chanPrivateChat,
                         PubNubUtilities.chanChatTranslate + userId,
                         PubNubUtilities.chanLeaderboardSub,
-                        PubNubUtilities.chanFriendRequest + userId
+                        PubNubUtilities.chanFriendRequest + userId,
+                        PubNubUtilities.chanIlluminate +"*",
+                        "usermetadata_updates." + userId
         })
         .ChannelGroups(new List<string>() {
                         PubNubUtilities.chanFriendChanGroupStatus + userId + "-pnpres", // Used for Monitoring online status of friends
@@ -237,7 +240,7 @@ public class PNManager : PNManagerBehaviour
             .ExecuteAsync();
         PNGetUuidMetadataResult getUuidMetadataResult = getUuidMetadataResponse.Result;
         PNStatus status = getUuidMetadataResponse.Status;
-        if (!status.Error && getUuidMetadataResult != null)
+        if (!status.Error && getUuidMetadataResult != null && getUuidMetadataResult.Custom != null)
         {
 
             UserMetadata meta = new UserMetadata
@@ -257,7 +260,7 @@ public class PNManager : PNManagerBehaviour
             }
         }
 
-        //User has logged into the app for the first time. Set-up Metadata and register.
+        //User has logged into the app for the first time or is a legacy user. Set-up Metadata and register.
         else
         {
             // Setup metadata.
@@ -267,6 +270,7 @@ public class PNManager : PNManagerBehaviour
             customData["60fps"] = false;
             customData["chosen_hat"] = DataCarrier.chosenHat;
             customData["chosen_character"] = DataCarrier.chosenCharacter;
+            customData["coins"] = 0;
 
             // Update
             await UpdateUserMetadata(pubnub.GetCurrentUserId(), pubnub.GetCurrentUserId(), customData);
@@ -464,5 +468,36 @@ public class PNManager : PNManagerBehaviour
     {
         get { return privateMessageUUID; }
         set { privateMessageUUID = value; }
+    }
+
+    /// <summary>
+    /// Obtains and returns all channels that contain metadata via App Context.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<PNGetAllChannelMetadataResult> GetAllChannelMetadata()
+    {
+        PNResult<PNGetAllChannelMetadataResult> getAllChannelMetadataResponse = await pubnub.GetAllChannelMetadata()
+           .IncludeCount(true)
+           .IncludeCustom(true)
+           .ExecuteAsync();
+
+       return getAllChannelMetadataResponse.Result;
+    }
+
+    /// <summary>
+    /// Updates the Channel Metadata given the channel, name, and metadata
+    /// </summary>
+    /// <returns></returns>
+    public async Task<PNSetChannelMetadataResult> SetChannelMetadata(string channel, string name, Dictionary<string, object> metadata)
+    {
+        // Set Metadata for a specific channel
+        PNResult<PNSetChannelMetadataResult> setChannelMetadataResponse = await pubnub.SetChannelMetadata()
+            .Channel(channel)
+            .Name(name)
+            .Custom(metadata)
+            .IncludeCustom(true)
+            .ExecuteAsync();
+
+        return setChannelMetadataResponse.Result;
     }
 }

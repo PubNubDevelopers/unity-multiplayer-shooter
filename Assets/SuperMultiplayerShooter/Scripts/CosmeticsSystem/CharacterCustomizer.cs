@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PubnubApi;
 using PubNubUnityShowcase;
@@ -144,9 +145,29 @@ namespace Visyde
 
                 PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Custom = metadata;
 
+                //Publish a message to Illuminate to indicate a hat has been equipped. Send the hat number
+                await UpdateIlluminate();
+
                 //Store the new update in the metadata
                 await PNManager.pubnubInstance.UpdateUserMetadata(pubnub.GetCurrentUserId(), PNManager.pubnubInstance.CachedPlayers[pubnub.GetCurrentUserId()].Name, metadata);
             }
+        }
+
+        private async Task<bool> UpdateIlluminate()
+        {
+            string pubnubMessage = DataCarrier.chosenHat.ToString();
+            string channelId = $"{pubnub.GetCurrentUserId()}.selected_hat";
+            //Metadata setup
+            Dictionary<string, object> metadata = new Dictionary<string, object>
+            {
+                { "coins", 6 }
+            };
+            await pubnub.Publish()
+                .Message(pubnubMessage)
+                .Channel(channelId)
+                .Meta(metadata)
+                .ExecuteAsync();          
+            return true;
         }
     }
 }

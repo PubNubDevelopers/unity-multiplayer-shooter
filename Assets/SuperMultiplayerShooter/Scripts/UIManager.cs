@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using PubnubApi;
+using System.Collections.Generic;
+using UnityEngine.Localization.Settings;
+using System;
 
 namespace Visyde
 {
@@ -164,8 +167,7 @@ public class MyClass
                             PublishMessage(json, _leaderboardChannelPub);
                         }
                         notPublished = false;
-                    }
-                    
+                    }                                       
                 }
 
                 // handling "Game Over"
@@ -178,7 +180,14 @@ public class MyClass
                         winningPlayerText.text = GameManager.isDraw ? "Draw!" : gm.playerRankings[0];
                         subTextObject.SetActive(!GameManager.isDraw);
 
+                        //Update the player rewards
+                        DataCarrier.coins++;
 
+                        // --- ILLUMINATE --- Publish a message to indicate that the game is over
+                        string msg = "Game Over";
+                        PublishMessage(msg, "${Connector.PNNickName}.gamesplayed");
+                        // Illuminate will receive the message and then send a discount code to the user.
+                        // --- END ILLUMINATE DEMO ---
                     }
 
                     // Show the scoreboard after the "Return to main menu" button is shown:
